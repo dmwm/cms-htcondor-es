@@ -347,7 +347,7 @@ def convert_to_json(ad):
     result = {}
     ad.setdefault("MATCH_EXP_JOB_GLIDEIN_CMSSite", ad.get("MATCH_EXP_JOBGLIDEIN_CMSSite", "Unknown"))
     for key in ad.keys():
-        if key in ignore:
+        if key in ignore or key.startswith("HasBeen"):
             continue
         try:
             value = ad.eval(key)
