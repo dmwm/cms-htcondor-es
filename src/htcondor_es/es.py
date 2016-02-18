@@ -78,7 +78,9 @@ def get_index(timestamp):
     body = json.dumps({"mappings": {"job": {"properties": mappings} },
                        "settings": {"index": settings},
                       })
-    print _es_handle.indices.create(index=idx, body=body, ignore=400)
+    result = _es_handle.indices.create(index=idx, body=body, ignore=400)
+    if result.get("status") != 400:
+        print "Creation of index %s: %s" % (idx, str(result))
     _index_cache.add(idx)
     return idx
 
@@ -88,6 +90,6 @@ def post_ads(es, idx, ads):
     for id, ad in ads:
         body += json.dumps({"index": {"_index": idx, "_type": "job", "_id": id}}) + "\n"
         body += ad + "\n"
-    print es.bulk(body=body)['took']
+    es.bulk(body=body)
 
 
