@@ -83,6 +83,7 @@ string_vals = set([ \
   "DESIRED_CMSDataset",
   "DAGNodeName",
   "DAGParentNodeNames",
+  "OverflowType",
   "ScheddName",
 ])
 
@@ -147,6 +148,8 @@ int_vals = set([ \
   "TransferInputSizeMB",
   "WallClockCheckpoint",
   "WMAgent_JobID",
+  "DesiredSiteCount",
+  "DataLocationsCount",
 ])
 
 date_vals = set([ \
@@ -516,6 +519,8 @@ def convert_to_json(ad):
     result["MemoryMB"] = ad.get("ResidentSetSize_RAW", 0)/1024.
     result["DataLocations"] = _split_re.split(ad.get("DESIRED_CMSDataLocations", "UNKNOWN"))
     result["DESIRED_Sites"] = _split_re.split(ad.get("DESIRED_Sites", "UNKNOWN"))
+    result["DesiredSiteCount"] = len(result["DESIRED_Sites"])
+    result["DataLocationsCount"] = len(result["DataLocations"])
     result["Original_DESIRED_Sites"] = _split_re.split(ad.get("ExtDESIRED_Sites", "UNKNOWN"))
     if analysis:
         result["CMSGroups"] = _split_re.split(ad.get("CMSGroups", "UNKNOWN"))
@@ -536,6 +541,13 @@ def convert_to_json(ad):
         result["InputData"] = "Onsite"
     else:
         result["InputData"] = "Offsite"
+        if analysis:
+            if result["Site"] not in result["DESIRED_Sites"]:
+                result["OverflowType"] = "FrontendOverflow"
+            else:
+                result["OverflowType"] = "IgnoreLocality"
+        else:
+            result["OverflowType"] = "Unified"
     if result["WallClockHr"] == 0:
         result["CpuEff"] = 0
     else:
@@ -543,6 +555,8 @@ def convert_to_json(ad):
     result["Status"] = status.get(ad.get("JobStatus"), "Unknown")
     result["Universe"] = universe.get(ad.get("JobUniverse"), "Unknown")
     result["QueueHrs"] = (ad.get("JobCurrentStartDate", time.time()) - ad["QDate"])/3600.
+    result["Badput"] = max(result["CoreHr"] - result["CommittedCoreHr"], 0.0)
+    result["CpuBadput"] = max(result["CoreHr"] - result["CpuTimeHr"], 0.0)
     return json.dumps(result)
 
 
