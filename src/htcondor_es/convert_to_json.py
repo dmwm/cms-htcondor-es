@@ -83,6 +83,7 @@ string_vals = set([ \
   "DESIRED_CMSDataset",
   "DAGNodeName",
   "DAGParentNodeNames",
+  "ScheddName",
 ])
 
 int_vals = set([ \
@@ -406,8 +407,12 @@ def convert_to_json(ad):
     if ad.get("TaskType") == "ROOT":
         return None
     result = {}
-    result['DataCollection'] = _launch_time
-    result['DataCollectionDate'] = _launch_time
+    result['DataCollection'] = ad.get("CompletionDate", 0)
+    result['DataCollectionDate'] = ad.get("CompletionDate", 0)
+    if not result['DataCollection']:
+        result['DataCollection'] = _launch_time
+    if not result['DataCollectionDate']:
+        result['DataCollectionDate'] = _launch_time
     result['ScheddName'] = ad.get("GlobalJobId", "UNKNOWN").split("#")[0]
     if analysis:
         result["Type"] = "analysis"

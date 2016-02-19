@@ -11,7 +11,7 @@ import datetime
 import multiprocessing
 
 
-TIMEOUT_MINS = 8
+TIMEOUT_MINS = 9
 
 try:
     import htcondor_es.es
@@ -33,15 +33,15 @@ def get_schedds():
     return schedd_ads
 
 
-def clean_old_jobs(name, es):
+def clean_old_jobs(starttime, name, es):
     collection_date = htcondor_es.convert_to_json.get_data_collection_time()
     idx = htcondor_es.es.get_index(time.time())
     body = {"query": {
       "bool": {
         "must" : [
                   {"term": {"Status": "running"}},
-                  {"match": {"ScheddName": name}},
-                  {"range": {"DataCollection": {"lt": collection_date-600}}},
+                  {"match": {"ScheddName": name.split(".")[0]}},
+                  {"range": {"DataCollection": {"lt": collection_date-1200}}},
                  ],
         #"should": [
         #           {"bool": {"must_not": {"exists": {"field": "ScheddName"}}}},
@@ -54,7 +54,7 @@ def clean_old_jobs(name, es):
     print "Old job query:", body
     while True:
         print "Querying for stale jobs from", name
-        results = es.search(index="_all", size=200, body=body, _source=False)['hits']['hits']
+        results = es.search(index="_all", size=1000, body=body, _source=False)['hits']['hits']
         #print results
         if not results:
             print "No invalid results found for %s." % name
@@ -70,6 +70,9 @@ def clean_old_jobs(name, es):
         except Exception, e:
             print "Failure when updating stale documents:", str(e)
             raise
+        if time.time()-starttime > TIMEOUT_MINS*60:
+            print "Out of time for cleanup; exiting."
+            break
 
 
 def process_schedd_queue(starttime, schedd_ad):
@@ -115,7 +118,7 @@ def process_schedd_queue(starttime, schedd_ad):
     total_time = (time.time() - my_start)/60.
     total_upload = total_upload / 60.
     print "Schedd %s total response count: %d; total query time %.2f min; total upload time %.2f min" % (schedd_ad["Name"], count, total_time-total_upload, total_upload)
-    clean_old_jobs(schedd_ad["Name"], es)
+    clean_old_jobs(starttime, schedd_ad["Name"], es)
 
 
 def process_schedd(starttime, last_completion, schedd_ad):
@@ -126,7 +129,7 @@ def process_schedd(starttime, last_completion, schedd_ad):
     if time.time() - starttime > TIMEOUT_MINS*60:
         print "Crawler has been running for more than %d minutes; exiting." % TIMEOUT_MINS
         return last_completion
-    print "Querying %s for history: %s." % (schedd_ad["Name"], history_query)
+    print "Querying %s for history: %s.  %.1f minutes of ads" % (schedd_ad["Name"], history_query, (time.time()-last_completion)/60.)
     count = 0
     total_upload = 0
     es = htcondor_es.es.get_server_handle()
@@ -170,6 +173,19 @@ def process_schedd(starttime, last_completion, schedd_ad):
          total_time - total_upload,
          total_upload)
 
+    try:
+        checkpoint_new = json.load(open("checkpoint.json"))
+    except:
+        checkpoint_new = {}
+
+    if (schedd_ad["Name"] not in checkpoint_new) or (checkpoint_new[schedd_ad["Name"]] < last_completion):
+        checkpoint_new[schedd_ad["Name"]] = last_completion
+
+    fd = open("checkpoint.json.new", "w")
+    json.dump(checkpoint_new, fd)
+    fd.close()
+    os.rename("checkpoint.json.new", "checkpoint.json")
+
     # Now that we have the fresh history, process the queues themselves.
     process_schedd_queue(starttime, schedd_ad)
     return last_completion
@@ -199,6 +215,7 @@ def main():
         future = pool.apply_async(process_schedd, (starttime, last_completion, schedd_ad))
         futures.append((name, future))
         #break
+    pool.close()
 
     timed_out = False
     for name, future in futures:
@@ -214,13 +231,20 @@ def main():
             break
     if timed_out:
         pool.terminate()
-    else:
-        pool.close()
     pool.join()
 
 
+    try:
+        checkpoint_new = json.load(open("checkpoint.json"))
+    except:
+        checkpoint_new = {}
+
+    for key, val in checkpoint.items():
+        if (key not in checkpoint_new) or (val > checkpoint_new[key]):
+            checkpoint_new[key] = val
+
     fd = open("checkpoint.json.new", "w")
-    json.dump(checkpoint, fd)
+    json.dump(checkpoint_new, fd)
     fd.close()
     os.rename("checkpoint.json.new", "checkpoint.json")
 
