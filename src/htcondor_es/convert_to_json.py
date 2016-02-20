@@ -425,6 +425,8 @@ def convert_to_json(ad):
     for key in ad.keys():
         if key in ignore or key.startswith("HasBeen"):
             continue
+        if key == "DESIRED_SITES":
+            key = "DESIRED_Sites"
         try:
             value = ad.eval(key)
         except:
@@ -539,7 +541,7 @@ def convert_to_json(ad):
         result["InputData"] = "Unknown"
     elif result["Site"] in result["DESIRED_CMSDataLocations"]:
         result["InputData"] = "Onsite"
-    else:
+    elif (result["Site"] != "UNKNOWN") and (ad.get("JobStatus") != 1):
         result["InputData"] = "Offsite"
         if analysis:
             if result["Site"] not in result["DESIRED_Sites"]:
