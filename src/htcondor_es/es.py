@@ -64,10 +64,10 @@ def get_server_handle():
 
 
 _index_cache = set()
-def get_index(timestamp):
+def get_index(timestamp, template="cms"):
     _es_handle = get_server_handle()
 
-    idx = time.strftime("cms-%Y-%m-%d", datetime.datetime.utcfromtimestamp(timestamp).timetuple())
+    idx = time.strftime("%%s-%Y-%m-%d", datetime.datetime.utcfromtimestamp(timestamp).timetuple()) % template
     if idx in _index_cache:
         return idx
     idx_clt = elasticsearch.client.IndicesClient(_es_handle)
