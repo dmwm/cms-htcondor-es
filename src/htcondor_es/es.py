@@ -63,13 +63,16 @@ def get_server_handle():
     return _es_handle
 
 
-_index_cache = set()
-def get_index(timestamp):
+def fix_mapping(idx):
     _es_handle = get_server_handle()
+    idx_clt = elasticsearch.client.IndicesClient(_es_handle)
+    mappings = make_mappings()
+    custom_mappings = {"RecordTime": mappings["RecordTime"]}
+    print idx_clt.put_mapping(doc_type="job", index=idx, body=json.dumps({"properties": custom_mappings}), ignore=400)
 
-    idx = time.strftime("cms-%Y-%m-%d", datetime.datetime.utcfromtimestamp(timestamp).timetuple())
-    if idx in _index_cache:
-        return idx
+
+def make_mapping(idx):
+    _es_handle = get_server_handle()
     idx_clt = elasticsearch.client.IndicesClient(_es_handle)
     mappings = make_mappings()
     #print idx_clt.put_mapping(doc_type="job", index=idx, body=json.dumps({"properties": mappings}), ignore=400)
@@ -81,6 +84,16 @@ def get_index(timestamp):
     result = _es_handle.indices.create(index=idx, body=body, ignore=400)
     if result.get("status") != 400:
         print "Creation of index %s: %s" % (idx, str(result))
+
+
+_index_cache = set()
+def get_index(timestamp):
+    _es_handle = get_server_handle()
+
+    idx = time.strftime("cms-%Y-%m-%d", datetime.datetime.utcfromtimestamp(timestamp).timetuple())
+    if idx in _index_cache:
+        return idx
+    make_mapping(idx)
     _index_cache.add(idx)
     return idx
 

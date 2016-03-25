@@ -8,6 +8,7 @@ import random
 import classad
 import htcondor
 import datetime
+import collections
 import multiprocessing
 
 
@@ -24,6 +25,7 @@ except ImportError:
     else:
         raise
 
+now_ns = int(time.time()*int(1e9))
 
 def get_schedds():
     schedd_query = classad.ExprTree('!isUndefined(CMSGWMS_Type)')
@@ -74,7 +76,11 @@ def clean_old_jobs(starttime, name, es):
             print "Out of time for cleanup; exiting."
             break
 
+def create_key(json_ad):
+    return None
 
+g_global_jobs_running = collections.defaultdict(int)
+g_global_jobs_idle = collections.defaultdict(int)
 def process_schedd_queue(starttime, schedd_ad):
     my_start = time.time()
     print "Querying %s for jobs." % schedd_ad["Name"]
@@ -85,6 +91,12 @@ def process_schedd_queue(starttime, schedd_ad):
         return
     count = 0
     total_upload = 0
+
+    sites_jobs_running = collections.defaultdict(int)
+    sites_jobs_idle    = collections.defaultdict(int)
+    sites_jobs_coresrunning = collections.defaultdict(int)
+    sites_jobs_coresidle    = collections.defaultdict(int)
+
     try:
         es = htcondor_es.es.get_server_handle()
         query_iter = schedd.xquery()
@@ -93,6 +105,14 @@ def process_schedd_queue(starttime, schedd_ad):
             json_ad = htcondor_es.convert_to_json.convert_to_json(job_ad)
             if not json_ad:
                 continue
+            job_key = create_key(json_ad)
+            if job_key and ('Status' in job_ad):
+                if job_ad['Status'] == 2:
+                    sites_jobs_running[job_key] += 1
+                    sites_jobs_running[job_key] += job_ad.get('RequestCpus', 1)
+                elif job_ad['Status'] == 1:
+                    sites_jobs_idle[job_key]    += 1
+                    sites_jobs_idle[job_key]    += job_ad.get('RequestCpus', 1)
             idx = htcondor_es.es.get_index(job_ad["QDate"])
             ad_list = buffered_ads.setdefault(idx, [])
             ad_list.append((job_ad["GlobalJobId"], json_ad))

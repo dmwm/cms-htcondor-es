@@ -169,6 +169,8 @@ date_vals = set([ \
   "GLIDEIN_ToDie",
   "GLIDEIN_ToRetire",
   "DataCollectionDate",
+  "RecordTime",
+  "ChirpCMSSWLastUpdate",
 ])
 
 ignore = set([
@@ -369,6 +371,7 @@ bool_vals = set([
   "TransferringInput",
   "NiceUser",
   "ExitBySignal",
+  "CMSSWDone",
 ])
 
 status = { \
@@ -411,11 +414,12 @@ def convert_to_json(ad):
         return None
     result = {}
     result['DataCollection'] = ad.get("CompletionDate", 0)
-    result['DataCollectionDate'] = ad.get("CompletionDate", 0)
+    result['RecordTime'] = ad.get("CompletionDate", 0)
     if not result['DataCollection']:
         result['DataCollection'] = _launch_time
-    if not result['DataCollectionDate']:
-        result['DataCollectionDate'] = _launch_time
+    if not result['RecordTime']:
+        result['RecordTime'] = _launch_time
+    result['DataCollectionDate'] = result['RecordTime']
     result['ScheddName'] = ad.get("GlobalJobId", "UNKNOWN").split("#")[0]
     if analysis:
         result["Type"] = "analysis"
@@ -559,6 +563,49 @@ def convert_to_json(ad):
     result["QueueHrs"] = (ad.get("JobCurrentStartDate", time.time()) - ad["QDate"])/3600.
     result["Badput"] = max(result["CoreHr"] - result["CommittedCoreHr"], 0.0)
     result["CpuBadput"] = max(result["CoreHr"] - result["CpuTimeHr"], 0.0)
+
+    # Parse Chirp statistics from CMSSW_8_0_0 and later.
+    if 'ChirpCMSSWFiles' in result:
+        result['CompletedFiles'] = result['ChirpCMSSWFiles']
+    if result.get('ChirpCMSSWMaxFiles', -1) > 0:
+        result['MaxFiles'] = result['ChirpCMSSWMaxFiles']
+    if 'ChirpCMSSWDone' in result:
+        result['CMSSWDone'] = bool(result['ChirpCMSSWDone'])
+    if 'ChirpCMSSWElapsed' in result:
+        result['CMSSWWallHrs'] = result['ChirpCMSSWElapsed']/3600.
+    if 'ChirpCMSSWEvents' in result:
+        result['KEvents'] = result['ChirpCMSSWEvents']/1000.
+        result['MegaEvents'] = result['ChirpCMSSWEvents']/1e6
+    if 'ChirpCMSSWLastUpdate' in result:
+        # Report time since last update - this is likely stageout time for completed jobs
+        result['SinceLastCMSSWUpdateHrs'] = max(result['RecordTime'] - result['ChirpCMSSWLastUpdate'], 0)/3600.
+        if result['Status'] == 'Completed':
+            result['StageOutHrs'] = result['SinceLastCMSSWUpdateHrs']
+    if 'ChirpCMSSWLumis' in result:
+        result['CMSSWKLumis'] = result['ChirpCMSSWLumis']/1000.
+    if 'ChirpCMSSWReadBytes' in result:
+        result['InputGB'] = result['ChirpCMSSWReadBytes']/1e9
+    if 'ChirpCMSSWReadTimeMsecs' in result:
+        result['ReadTimeHrs'] = result['ChirpCMSSWReadTimeMsecs'] / 3600000.0
+        result['ReadTimeMins'] = result['ChirpCMSSWReadTimeMsecs'] / 60000.0
+    if 'ChirpCMSSWWriteBytes' in result:
+        result['OutputGB'] = result['ChirpCMSSWWriteBytes']/1e9
+    if 'ChirpCMSSWWriteTimeMsecs' in result:
+        result['WriteTimeHrs'] = result['ChirpCMSSWWriteTimeMsecs'] / 3600000.0
+        result['WriteTimeMins'] = result['ChirpCMSSWWriteTimeMsecs'] / 60000.0
+    if result.get('CMSSWDone') and (result.get('ChirpCMSSWElapsed', 0) > 0):
+        result['EventRate'] = result['ChirpCMSSWEvents'] / float(result['ChirpCMSSWElapsed'])
+    if ('ChirpCMSSWReadOps' in result) and ('ChirpCMSSWReadSegments' in result):
+        ops = result['ChirpCMSSWReadSegments'] + result['ChirpCMSSWReadOps']
+        if ops:
+            result['ReadOpSegmentPercent'] = result['ChirpCMSSWReadOps'] / float(ops)*100
+    if ('ChirpCMSSWReadOps' in result) and ('ChirpCMSSWReadVOps' in result):
+        ops = result['ChirpCMSSWReadOps'] + result['ChirpCMSSWReadVOps']
+        if ops:
+            result['ReadOpsPercent'] = result['ChirpCMSSWReadOps'] / float(ops)*100
+    if ('Chirp_WMCore_cmsRun_ExitCode' in result) and (result.get('ExitCode', 0) == 0):
+        result['ExitCode'] = result['Chirp_WMCore_cmsRun_ExitCode']
+
     return json.dumps(result)
 
 
