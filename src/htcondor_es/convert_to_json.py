@@ -408,7 +408,7 @@ _prep_re = re.compile("[A-Za-z0-9_]+_([A-Z]+-([A-Za-z0-9]+)-[0-9]+)")
 _rval_re = re.compile("[A-Za-z0-9]+_(RVCMSSW_[0-9]+_[0-9]+_[0-9]+)")
 _prep_prompt_re = re.compile("(PromptReco|Repack|Express)_[A-Za-z0-9]+_([A-Za-z0-9]+)")
 _split_re = re.compile("\s*,?\s*")
-def convert_to_json(ad):
+def convert_to_json(ad, cms=True):
     analysis = "CRAB_Id" in ad
     if ad.get("TaskType") == "ROOT":
         return None
@@ -421,11 +421,12 @@ def convert_to_json(ad):
         result['RecordTime'] = _launch_time
     result['DataCollectionDate'] = result['RecordTime']
     result['ScheddName'] = ad.get("GlobalJobId", "UNKNOWN").split("#")[0]
-    if analysis:
+    if cms and analysis:
         result["Type"] = "analysis"
-    else:
+    elif cms:
         result["Type"] = "production"
-    ad.setdefault("MATCH_EXP_JOB_GLIDEIN_CMSSite", ad.get("MATCH_EXP_JOBGLIDEIN_CMSSite", "Unknown"))
+    if cms:
+        ad.setdefault("MATCH_EXP_JOB_GLIDEIN_CMSSite", ad.get("MATCH_EXP_JOBGLIDEIN_CMSSite", "Unknown"))
     for key in ad.keys():
         if key in ignore or key.startswith("HasBeen"):
             continue
@@ -463,59 +464,60 @@ def convert_to_json(ad):
         if key.endswith("_RAW"):
             key = key[:-len("_RAW")]
         result[key] = value
-    ttype = ad.get("WMAgent_SubTaskName", "/UNKNOWN").rsplit("/", 1)[-1]
-    result["WMAgent_TaskType"] = ttype
-    if analysis:
-        ttype = "Analysis"
-    elif "CleanupUnmerged" in ttype:
-        ttype = "Cleanup"
-    elif "Merge" in ttype:
-        ttype = "Merge"
-    elif "LogCollect" in ttype:
-        ttype = "LogCollect"
-    elif ttype == "StepOneProc":
-        ttype = "DIGI-RECO"
-    elif "MiniAODv2" in ttype:
-        ttype = "MINIAOD"
-    elif ttype.endswith("_0"):
-        ttype = "DIGI"
-    elif ttype.endswith("_1"):
-        ttype = "RECO"
-    result["TaskType"] = ttype
-    camp = ad.get("WMAgent_RequestName", "UNKNOWN")
-    m = _camp_re.match(camp)
-    if analysis:
-        camp = "crab_" + ad.get("CRAB_UserHN", "UNKNOWN")
-    elif camp.startswith("PromptReco"):
-        camp = "PromptReco"
-    elif camp.startswith("Repack"):
-        camp = "Repack"
-    elif camp.startswith("Express"):
-        camp = "Express"
-    elif "RVCMSSW" in camp:
-        camp = "RelVal"
-    elif m:
-        camp = m.groups()[0]
-    result["Campaign"] = camp
-    prep = ad.get("WMAgent_RequestName", "UNKNOWN")
-    m = _prep_re.match(prep)
-    if analysis:
-        prep = ad.get("CRAB_Workflow", "UNKNOWN").split(":", 1)[-1]
-    elif m:
-        prep = m.groups()[0]
-    else:
-        m = _prep_prompt_re.match(prep)
-        if m:
-            prep = m.groups()[0] + "_" + m.groups()[1]
+    if cms:
+        ttype = ad.get("WMAgent_SubTaskName", "/UNKNOWN").rsplit("/", 1)[-1]
+        result["WMAgent_TaskType"] = ttype
+        if analysis:
+            ttype = "Analysis"
+        elif "CleanupUnmerged" in ttype:
+            ttype = "Cleanup"
+        elif "Merge" in ttype:
+            ttype = "Merge"
+        elif "LogCollect" in ttype:
+            ttype = "LogCollect"
+        elif ttype == "StepOneProc":
+            ttype = "DIGI-RECO"
+        elif "MiniAODv2" in ttype:
+            ttype = "MINIAOD"
+        elif ttype.endswith("_0"):
+            ttype = "DIGI"
+        elif ttype.endswith("_1"):
+            ttype = "RECO"
+        result["TaskType"] = ttype
+        camp = ad.get("WMAgent_RequestName", "UNKNOWN")
+        m = _camp_re.match(camp)
+        if analysis:
+            camp = "crab_" + ad.get("CRAB_UserHN", "UNKNOWN")
+        elif camp.startswith("PromptReco"):
+            camp = "PromptReco"
+        elif camp.startswith("Repack"):
+            camp = "Repack"
+        elif camp.startswith("Express"):
+            camp = "Express"
+        elif "RVCMSSW" in camp:
+            camp = "RelVal"
+        elif m:
+            camp = m.groups()[0]
+        result["Campaign"] = camp
+        prep = ad.get("WMAgent_RequestName", "UNKNOWN")
+        m = _prep_re.match(prep)
+        if analysis:
+            prep = ad.get("CRAB_Workflow", "UNKNOWN").split(":", 1)[-1]
+        elif m:
+            prep = m.groups()[0]
         else:
-            m = _rval_re.match(prep)
+            m = _prep_prompt_re.match(prep)
             if m:
-                prep = m.groups()[0]
+                prep = m.groups()[0] + "_" + m.groups()[1]
+            else:
+                m = _rval_re.match(prep)
+                if m:
+                    prep = m.groups()[0]
+        result["Workflow"] = prep
     now = time.time()
     if ad.get("JobStatus") == 2 and (ad.get("EnteredCurrentStatus", now+1) < now):
         ad["RemoteWallClockTime"] = int(now - ad["EnteredCurrentStatus"])
         ad["CommittedTime"] = ad["RemoteWallClockTime"]
-    result["Workflow"] = prep
     result["WallClockHr"] = ad.get("RemoteWallClockTime", 0)/3600.
     result["CoreHr"] = ad.get("RequestCpus", 1.0)*ad.get("RemoteWallClockTime", 0)/3600.
     result["CommittedCoreHr"] = ad.get("RequestCpus", 1.0)*ad.get("CommittedTime", 0)/3600.
@@ -528,32 +530,36 @@ def convert_to_json(ad):
     result["DesiredSiteCount"] = len(result["DESIRED_Sites"])
     result["DataLocationsCount"] = len(result["DataLocations"])
     result["Original_DESIRED_Sites"] = _split_re.split(ad.get("ExtDESIRED_Sites", "UNKNOWN"))
-    if analysis:
+    if cms and analysis:
         result["CMSGroups"] = _split_re.split(ad.get("CMSGroups", "UNKNOWN"))
         result["OutputFiles"] = len(ad.get("CRAB_AdditionalOutputFiles", [])) + len(ad.get("CRAB_TFileOutputFiles", [])) + len(ad.get("CRAB_EDMOutputFiles", [])) + ad.get("CRAB_SaveLogsFlag", 0)
     if "x509UserProxyFQAN" in ad:
         result["x509UserProxyFQAN"] = str(ad["x509UserProxyFQAN"]).split(",")
-    result["Site"] = ad.get("MATCH_EXP_JOB_GLIDEIN_CMSSite", "UNKNOWN")
-    info = result["Site"].split("_", 2)
-    if len(info) == 3:
-        result["Tier"] = info[0]
-        result["Country"] = info[1]
+    if cms:
+        result["Site"] = ad.get("MATCH_EXP_JOB_GLIDEIN_CMSSite", "UNKNOWN")
     else:
-        result["Tier"] = "Unknown"
-        result["Country"] = "Unknown"
-    if "Site" not in result or "DESIRED_Sites" not in result:
-        result["InputData"] = "Unknown"
-    elif result["Site"] in result["DESIRED_CMSDataLocations"]:
-        result["InputData"] = "Onsite"
-    elif (result["Site"] != "UNKNOWN") and (ad.get("JobStatus") != 1):
-        result["InputData"] = "Offsite"
-        if analysis:
-            if result["Site"] not in result["DESIRED_Sites"]:
-                result["OverflowType"] = "FrontendOverflow"
-            else:
-                result["OverflowType"] = "IgnoreLocality"
+        result["Site"] = ad.get("MATCH_EXP_JOBGLIDEIN_ResourceName", "UNKNOWN")
+    if cms:
+        info = result["Site"].split("_", 2)
+        if len(info) == 3:
+            result["Tier"] = info[0]
+            result["Country"] = info[1]
         else:
-            result["OverflowType"] = "Unified"
+            result["Tier"] = "Unknown"
+            result["Country"] = "Unknown"
+        if "Site" not in result or "DESIRED_Sites" not in result:
+            result["InputData"] = "Unknown"
+        elif result["Site"] in result["DESIRED_CMSDataLocations"]:
+            result["InputData"] = "Onsite"
+        elif (result["Site"] != "UNKNOWN") and (ad.get("JobStatus") != 1):
+            result["InputData"] = "Offsite"
+            if analysis:
+                if result["Site"] not in result["DESIRED_Sites"]:
+                    result["OverflowType"] = "FrontendOverflow"
+                else:
+                    result["OverflowType"] = "IgnoreLocality"
+            else:
+                result["OverflowType"] = "Unified"
     if result["WallClockHr"] == 0:
         result["CpuEff"] = 0
     else:
