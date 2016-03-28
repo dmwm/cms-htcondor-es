@@ -14,7 +14,7 @@ import collections
 import multiprocessing
 
 
-TIMEOUT_MINS = 9
+TIMEOUT_MINS = 11
 
 try:
     import htcondor_es.es
@@ -28,7 +28,7 @@ except ImportError:
         raise
 
 now = time.time()
-now_ns = int(time.time()*int(1e9))
+now_ns = int(time.time())*int(1e9)
 
 def get_schedds():
     schedd_query = classad.ExprTree('!isUndefined(CMSGWMS_Type)')
@@ -103,10 +103,25 @@ def create_job_keys(schedd_name, job_ad, json_ad):
        )
     keys = []
     if job_ad['JobStatus'] == 2:
-        keys.append("%s,site=%s" % (base_key, json_ad['Site']))
+        site_info = json_ad['Site'].split("_", 2)
+        if len(site_info) != 3:
+            tier = 'Unknown'
+            country = 'Unknown'
+        else:
+            tier = site_info[0]
+            country = site_info[1]
+        keys.append("%s,site=%s,tier=%s,country=%s" % (base_key, json_ad['Site'], tier, country))
     elif job_ad['JobStatus'] == 1:
         for site in json_ad['DESIRED_Sites']:
-            keys.append("%s,site=%s" % (base_key, site))
+            if site:
+                site_info = site.split("_", 2)
+                if len(site_info) != 3:
+                    tier = 'Unknown'
+                    country = 'Unknown'
+                else:
+                    tier = site_info[0]
+                    country = site_info[1]
+                keys.append("%s,site=%s,tier=%s,country=%s" % (base_key, site, tier, country))
     return base_key, keys
 
 
@@ -147,7 +162,7 @@ def report_site_jobs_influx(sites_jobs_running, sites_jobs_coresrunning, sites_j
                                                    sites_jobs_coresidle[key])
         text += '\n'
         count += 1
-        if count == 10:
+        if count == 20:
             influx.sendto(text, ('127.0.0.1', 8089))
             count = 0
             text = ''
@@ -171,7 +186,7 @@ def report_global_jobs_influx(global_jobs_running, global_jobs_coresrunning, glo
                                                    global_jobs_coresidle[key])
         text += '\n'
         count += 1
-        if count == 10:
+        if count == 20:
             influx.sendto(text, ('127.0.0.1', 8089))
             count = 0
             text = ''
@@ -234,7 +249,7 @@ def process_collector():
     influx = get_influx_socket()
     for key, values in info.items():
         value_info = ",".join(["%s=%s" % (i[0], i[1]) for i in values.items()])
-        text = 'slots,%s %s %d\n' % (key, value_info, now_ns)
+        text += 'slots,%s %s %d\n' % (key, value_info, now_ns)
         count += 1
         if count == 10:
             influx.sendto(text, ('127.0.0.1', 8089))
@@ -264,6 +279,7 @@ def process_schedd_queue(starttime, schedd_ad):
     global_jobs_idle = collections.defaultdict(int)
     global_jobs_coresidle = collections.defaultdict(int)
 
+    had_error = True
     try:
         es = htcondor_es.es.get_server_handle()
         query_iter = schedd.xquery()
@@ -299,6 +315,7 @@ def process_schedd_queue(starttime, schedd_ad):
             if time.time() - starttime > TIMEOUT_MINS*60:
                 print "Crawler has been running for more than %d minutes; exiting." % TIMEOUT_MINS
                 break
+        had_error=False
     except RuntimeError:
         print "Failed to query schedd for jobs:", schedd_ad["Name"]
     except Exception, e:
@@ -316,8 +333,9 @@ def process_schedd_queue(starttime, schedd_ad):
     clean_old_jobs(starttime, schedd_ad["Name"], es)
 
     try:
-        report_site_jobs_influx(sites_jobs_running, sites_jobs_coresrunning, sites_jobs_idle, sites_jobs_coresidle)
-        report_global_jobs_influx(global_jobs_running, global_jobs_coresrunning, global_jobs_idle, global_jobs_coresidle)
+        if not had_error:
+            report_site_jobs_influx(sites_jobs_running, sites_jobs_coresrunning, sites_jobs_idle, sites_jobs_coresidle)
+            report_global_jobs_influx(global_jobs_running, global_jobs_coresrunning, global_jobs_idle, global_jobs_coresidle)
     except Exception, e:
         print "Failure when uploading InfluxDB results:", str(e)
         traceback.print_exc()

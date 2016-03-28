@@ -408,10 +408,13 @@ _prep_re = re.compile("[A-Za-z0-9_]+_([A-Z]+-([A-Za-z0-9]+)-[0-9]+)")
 _rval_re = re.compile("[A-Za-z0-9]+_(RVCMSSW_[0-9]+_[0-9]+_[0-9]+)")
 _prep_prompt_re = re.compile("(PromptReco|Repack|Express)_[A-Za-z0-9]+_([A-Za-z0-9]+)")
 _split_re = re.compile("\s*,?\s*")
-def convert_to_json(ad, cms=True):
+def convert_to_json(ad, cms=True, return_dict=False):
     analysis = "CRAB_Id" in ad
     if ad.get("TaskType") == "ROOT":
-        return None
+        if return_dict:
+            return None, None
+        else:
+            return None
     result = {}
     result['DataCollection'] = ad.get("CompletionDate", 0)
     result['RecordTime'] = ad.get("CompletionDate", 0)
@@ -475,14 +478,20 @@ def convert_to_json(ad, cms=True):
             ttype = "Merge"
         elif "LogCollect" in ttype:
             ttype = "LogCollect"
-        elif ttype == "StepOneProc":
-            ttype = "DIGI-RECO"
-        elif "MiniAODv2" in ttype:
+        elif ("MiniAOD" in ad.get("WMAgent_RequestName", "UNKNOWN")) and (ttype == "StepOneProc"):
             ttype = "MINIAOD"
+        elif ttype == "StepOneProc":
+            ttype = "DIGIRECO"
+        elif "MiniAODv" in ttype:
+            ttype = "MINIAOD"
+        elif ("GS-" in ad.get("WMAgent_RequestName", "UNKNOWN")) and ttype.endswith("_0"):
+            ttype = "GENSIM"
         elif ttype.endswith("_0"):
             ttype = "DIGI"
         elif ttype.endswith("_1"):
             ttype = "RECO"
+        elif ttype == "MonteCarloFromGEN":
+            ttype = "GENSIM"
         result["TaskType"] = ttype
         camp = ad.get("WMAgent_RequestName", "UNKNOWN")
         m = _camp_re.match(camp)
@@ -519,7 +528,11 @@ def convert_to_json(ad, cms=True):
         ad["RemoteWallClockTime"] = int(now - ad["EnteredCurrentStatus"])
         ad["CommittedTime"] = ad["RemoteWallClockTime"]
     result["WallClockHr"] = ad.get("RemoteWallClockTime", 0)/3600.
-    result["CoreHr"] = ad.get("RequestCpus", 1.0)*ad.get("RemoteWallClockTime", 0)/3600.
+    try:
+        ad["RequestCpus"] = int(ad.get("RequestCpus", 1.0))
+    except:
+        ad["RequestCpus"] = 1.0
+    result["CoreHr"] = ad.get("RequestCpus", 1.0)*int(ad.get("RemoteWallClockTime", 0))/3600.
     result["CommittedCoreHr"] = ad.get("RequestCpus", 1.0)*ad.get("CommittedTime", 0)/3600.
     result["CommittedWallClockHr"] = ad.get("CommittedTime", 0)/3600.
     result["CpuTimeHr"] = (ad.get("RemoteSysCpu", 0)+ad.get("RemoteUserCpu", 0))/3600.
@@ -549,6 +562,8 @@ def convert_to_json(ad, cms=True):
             result["Country"] = "Unknown"
         if "Site" not in result or "DESIRED_Sites" not in result:
             result["InputData"] = "Unknown"
+        elif 'DESIRED_CMSDataLocations' not in result:  # CRAB2 case.
+            result['InputData'] = 'Onsite'
         elif result["Site"] in result["DESIRED_CMSDataLocations"]:
             result["InputData"] = "Onsite"
         elif (result["Site"] != "UNKNOWN") and (ad.get("JobStatus") != 1):
@@ -612,6 +627,9 @@ def convert_to_json(ad, cms=True):
     if ('Chirp_WMCore_cmsRun_ExitCode' in result) and (result.get('ExitCode', 0) == 0):
         result['ExitCode'] = result['Chirp_WMCore_cmsRun_ExitCode']
 
-    return json.dumps(result)
+    if return_dict:
+        return json.dumps(result), result
+    else:
+        return json.dumps(result)
 
 
