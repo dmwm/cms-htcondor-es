@@ -9,6 +9,7 @@ import socket
 import classad
 import htcondor
 import datetime
+import tempfile
 import traceback
 import collections
 import multiprocessing
@@ -401,10 +402,11 @@ def process_schedd(starttime, last_completion, schedd_ad):
     if (schedd_ad["Name"] not in checkpoint_new) or (checkpoint_new[schedd_ad["Name"]] < last_completion):
         checkpoint_new[schedd_ad["Name"]] = last_completion
 
-    fd = open("checkpoint.json.new", "w")
+    fd, tmpname = tempfile.mkstemp(dir=".", prefix="checkpoint.json.new")
+    fd = os.fdopen(fd, "w")
     json.dump(checkpoint_new, fd)
     fd.close()
-    os.rename("checkpoint.json.new", "checkpoint.json")
+    os.rename(tmpname, "checkpoint.json")
 
     # Now that we have the fresh history, process the queues themselves.
     process_schedd_queue(starttime, schedd_ad)
@@ -468,10 +470,11 @@ def main():
         if (key not in checkpoint_new) or (val > checkpoint_new[key]):
             checkpoint_new[key] = val
 
-    fd = open("checkpoint.json.new", "w")
+    fd, tmpname = tempfile.mkstemp(dir=".", prefix="checkpoint.json.new")
+    fd = os.fdopen(fd, "w")
     json.dump(checkpoint_new, fd)
     fd.close()
-    os.rename("checkpoint.json.new", "checkpoint.json")
+    os.rename(tmpname, "checkpoint.json")
 
     print "Total processing time: %.2f mins" % ((time.time()-starttime)/60.)
 
