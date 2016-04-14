@@ -16,11 +16,14 @@ if not os.path.exists('transfer_progress_cache'):
 
 transfer_statuses_url = "https://cmst2.web.cern.ch/cmst2/unified/transfer_statuses.json"
 
+incomplete_transfers_url = "https://cmst2.web.cern.ch/cmst2/unified/incomplete_transfers.json"
+
 request_url = "https://cmsweb.cern.ch/phedex/datasvc/json/prod/transferrequests"
 
 subscription_url = "https://cmsweb.cern.ch/phedex/datasvc/json/prod/subscriptions"
 
 statuses = json.load(urllib2.urlopen(transfer_statuses_url))
+incomplete_datasets = set(json.load(urllib2.urlopen(incomplete_transfers_url)).keys())
 
 subs = set()
 for key in statuses:
@@ -118,8 +121,14 @@ def not_tape(node):
 
 site_completion = {}
 for dataset in full_datasets.values():
+    if dataset['name'] not in incomplete_datasets:
+        continue
     #print dataset
     full_bytes = dataset['bytes']
+
+    test_site = 'T2_IT_Pisa'
+    subscribed_test_site = False
+
     # Block level subscription
     if 'block' in dataset:
         #pprint.pprint(dataset['block'])
@@ -137,8 +146,8 @@ for dataset in full_datasets.values():
                 node_info['done'] += subscription['node_bytes']
                 node_info['done_histo'][histo_bin] += subscription['node_bytes']
                 node_info['remains_histo'][histo_bin] += block_full_bytes - subscription['node_bytes']
-                #if subscription['node'] == 'T2_US_Nebraska':
-                #    print block['name'], subscription['node_bytes']/1e12, subscription
+                if subscription['node'] == test_site:
+                    subscribed_test_site = True
     # dataset level sub
     else:
         max_xfer = max([subscription['node_bytes'] for subscription in dataset['subscription'] if not_tape(subscription['node'])])
@@ -149,8 +158,11 @@ for dataset in full_datasets.values():
             node_info['done'] += subscription['node_bytes']
             node_info['done_histo'][histo_bin] += subscription['node_bytes']
             node_info['remains_histo'][histo_bin] += full_bytes - subscription['node_bytes']
-            #if subscription['node'] == 'T2_US_Nebraska':
-            #    print dataset['name'], subscription['node_bytes']/1e12
+            if subscription['node'] == test_site:
+                subscribed_test_site = True
+    if subscribed_test_site:
+        print test_site, dataset['name'], site_completion[test_site]['remains']/1e12, site_completion[test_site]['done']/1e12
+
 
 pprint.pprint(site_completion)
 json.dump(site_completion, open("transfer_progress_cache/current_subs", "w"))
