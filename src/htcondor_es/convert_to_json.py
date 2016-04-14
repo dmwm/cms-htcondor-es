@@ -88,7 +88,7 @@ string_vals = set([ \
 ])
 
 int_vals = set([ \
-  "CRAB_Id"
+  "CRAB_Id",
   "CRAB_Retry",
   "BytesRecvd",
   "BytesSent",
