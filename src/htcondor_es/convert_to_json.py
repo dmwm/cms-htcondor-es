@@ -528,8 +528,9 @@ def convert_to_json(ad, cms=True, return_dict=False):
         ad["RemoteWallClockTime"] = int(now - ad["EnteredCurrentStatus"])
         ad["CommittedTime"] = ad["RemoteWallClockTime"]
     result["WallClockHr"] = ad.get("RemoteWallClockTime", 0)/3600.
+    ad.setdefault('RequestCpus', 1)
     try:
-        ad["RequestCpus"] = int(ad.get("RequestCpus", 1.0))
+        ad["RequestCpus"] = int(ad.eval('RequestCpus'))
     except:
         ad["RequestCpus"] = 1.0
     result["CoreHr"] = ad.get("RequestCpus", 1.0)*int(ad.get("RemoteWallClockTime", 0))/3600.
@@ -586,6 +587,15 @@ def convert_to_json(ad, cms=True, return_dict=False):
     result["CpuBadput"] = max(result["CoreHr"] - result["CpuTimeHr"], 0.0)
 
     # Parse Chirp statistics from CMSSW_8_0_0 and later.
+    for key, val in result.items():
+        if key.startswith('ChirpCMSSW_'):
+            cmssw_key = 'ChirpCMSSW' + key.split('_', 2)[-1]
+            if cmssw_key not in result:
+                result[cmssw_key] = val
+            elif cmssw_key.endswith('LastUpdate') or cmssw_key.endswith('MaxEvents') or cmssw_key.endswith('MaxLumis') or cmssw_key.endswith('MaxFiles'):
+                result[cmssw_key] = max(result[cmssw_key], val)
+            else:
+                result[cmssw_key] += val
     if 'ChirpCMSSWFiles' in result:
         result['CompletedFiles'] = result['ChirpCMSSWFiles']
     if result.get('ChirpCMSSWMaxFiles', -1) > 0:

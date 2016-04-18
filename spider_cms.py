@@ -88,11 +88,14 @@ def create_job_keys(schedd_name, job_ad, json_ad):
     else:
         subtask = json_ad.get('WMAgent_TaskType', 'Unknown')
         task = json_ad.get('Campaign', 'Unknown')
+    job_ad.setdefault('RequestMemory', 2000)
+    job_ad.setdefault('RequestDisk', 2000000)
+    job_ad.setdefault('MaxWallTimeMins', 1440)
     base_key = 'schedd=%s,memory=%d,disk=%d,walltime=%d,desired_sites=%d,type=%s,task_type=%s,task=%s,subtask=%s,campaign=%s,workflow=%s,priority=%d' % \
        (schedd_name,
-        int(job_ad.get('RequestMemory', 2000)),
-        int(job_ad.get('RequestDisk', 2000000)),
-        int(job_ad.get('MaxWallTimeMins', 1440)),
+        int(job_ad.eval('RequestMemory')),
+        int(job_ad.eval('RequestDisk')),
+        int(job_ad.eval('MaxWallTimeMins')),
         int(json_ad.get('DesiredSiteCount', 0)),
         json_ad.get('Type', 'Unknown'),
         json_ad.get('TaskType', 'Unknown'),
