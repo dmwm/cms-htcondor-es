@@ -602,6 +602,7 @@ def convert_to_json(ad, cms=True, return_dict=False):
         result['MaxFiles'] = result['ChirpCMSSWMaxFiles']
     if 'ChirpCMSSWDone' in result:
         result['CMSSWDone'] = bool(result['ChirpCMSSWDone'])
+        result['ChirpCMSSWDone'] = int(result['ChirpCMSSWDone'])
     if 'ChirpCMSSWElapsed' in result:
         result['CMSSWWallHrs'] = result['ChirpCMSSWElapsed']/3600.
     if 'ChirpCMSSWEvents' in result:
