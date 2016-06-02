@@ -27,6 +27,8 @@ Generic attributes:
   updated, whichever came first.  Use this field for time-based queries.
 - `CoreHr`: The number of core-hours utilized by the job.  If the job lasted for
   24 hours and utilized 4 cores, the value of `CoreHr` will be 96.
+- `CpuTimeHr`: The amount of CPU time (sum of user and system) attributed to the job,
+  in hours.
 - `QueueHrs`: Number of hours the job spent in queue before last run.
 - `WallClockHr`: Number of hours the job spent running.  This is invariant of the
   number of cores; most users will prefer `CoreHr` instead.
