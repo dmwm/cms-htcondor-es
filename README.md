@@ -60,7 +60,7 @@ CMS-specific attributes:
 - `Type`: the kind of job run; `analysis` or `production`.
 - `TaskType`: A more detailed task type classification, based on the CMSSW config.
   Typically, `analysis`, `DIGI`, `RECO`, `DIGI-RECO`, `GEN-SIM`, or `Cleanup`.
-- `MegaEents`: The number of events processed by the job, in millions.
+- `MegaEvents`: The number of events processed by the job, in millions.
 - `KEvents`: The number of events processed by the job, in thousands.
 - `CMSSWKLumis`: The number of lumi sections processed by the job, in thousands.
 - `ChirpCMSSWMaxEvents`, `ChirpCMSSWMaxFiles`, `ChirpCMSSWMaxLumis`: the maximum
