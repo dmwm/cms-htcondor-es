@@ -9,6 +9,9 @@ import datetime
 import htcondor
 
 string_vals = set([ \
+  "CMSPrimaryPrimaryDataset",
+  "CMSPrimaryProcessedDataset",
+  "CMSPrimaryDataTier",
   "CRAB_JobType",
   "CRAB_JobSW",
   "CRAB_JobArch",
@@ -544,6 +547,16 @@ def convert_to_json(ad, cms=True, return_dict=False):
     result["DesiredSiteCount"] = len(result["DESIRED_Sites"])
     result["DataLocationsCount"] = len(result["DataLocations"])
     result["Original_DESIRED_Sites"] = _split_re.split(ad.get("ExtDESIRED_Sites", "UNKNOWN"))
+
+    if 'DESIRED_CMSDataset' in result:
+        info = str(result['DESIRED_CMSDataset']).split('/')
+        if len(info) < 4:
+            result['CMSPrimaryPrimaryDataset'] = 'UNKNOWN'
+        else:
+            result['CMSPrimaryPrimaryDataset'] = info[1]
+            result['CMSPrimaryProcessedDataset'] = info[2]
+            result['CMSPrimaryDataTier'] = info[-1]
+
     if cms and analysis:
         result["CMSGroups"] = _split_re.split(ad.get("CMSGroups", "UNKNOWN"))
         result["OutputFiles"] = len(ad.get("CRAB_AdditionalOutputFiles", [])) + len(ad.get("CRAB_TFileOutputFiles", [])) + len(ad.get("CRAB_EDMOutputFiles", [])) + ad.get("CRAB_SaveLogsFlag", 0)

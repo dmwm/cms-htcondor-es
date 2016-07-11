@@ -66,8 +66,10 @@ def get_server_handle():
 def fix_mapping(idx, template="cms"):
     _es_handle = get_server_handle()
     idx_clt = elasticsearch.client.IndicesClient(_es_handle)
-    mappings = make_mappings(template=template)
-    custom_mappings = {"RecordTime": mappings["RecordTime"]}
+    mappings = make_mappings()
+    custom_mappings = {"CMSPrimaryDataTier": mappings["CMSPrimaryDataTier"],
+                       "CMSPrimaryPrimaryDataset": mappings["CMSPrimaryPrimaryDataset"],
+                       "CMSPrimaryProcessedDataset": mappings["CMSPrimaryProcessedDataset"]}
     print idx_clt.put_mapping(doc_type="job", index=idx, body=json.dumps({"properties": custom_mappings}), ignore=400)
 
 

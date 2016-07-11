@@ -60,7 +60,7 @@ def clean_old_jobs(starttime, name, es):
     print "Old job query:", body
     while True:
         print "Querying for stale jobs from", name
-        results = es.search(index="_all", size=1000, body=body, _source=False)['hits']['hits']
+        results = es.search(index="cms-2016*", size=1000, body=body, _source=False)['hits']['hits']
         #print results
         if not results:
             print "No invalid results found for %s." % name
