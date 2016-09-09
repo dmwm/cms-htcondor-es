@@ -36,6 +36,13 @@ string_vals = set([ \
   "DESIRED_Sites",
   "ExtDESIRED_Sites",
   "GlobalJobId",
+  "GlideinClient",
+  "GlideinEntryName",
+  "GlideinFactory",
+  "GlideinFrontendName",
+  "GlideinName",
+  "GlobusRSL",
+  "GridJobId",
   "LastRemoteHost",
   "MATCH_EXP_JOB_GLIDECLIENT_Name",
   "MATCH_EXP_JOB_GLIDEIN_ClusterId",
@@ -69,6 +76,7 @@ string_vals = set([ \
   "InputData",
   "Original_DESIRED_Sites",
   "WMAgent_TaskType",
+  "NordugridRSL",
   "Campaign",
   "TaskType",
   "DataLocations",
@@ -104,6 +112,7 @@ int_vals = set([ \
   "DiskUsage_RAW",
   "ExecutableSize_RAW",
   "ExitStatus",
+  "GlobusStatus",
   "ImageSize_RAW",
   "JobPrio",
   "JobRunCount",
@@ -125,6 +134,7 @@ int_vals = set([ \
   "MaxWallTimeMins_RAW",
   "MemoryUsage",
   "MinHosts",
+  "NumGlobusSubmits"
   "NumJobMatches",
   "NumJobStarts",
   "NumRestarts",
@@ -167,8 +177,11 @@ date_vals = set([ \
   "LastVacateTime_RAW",
   "QDate",
   "ShadowBday",
+  "StageInFinish",
+  "StageInStart",
   "JobFinishedHookDone",
   "LastJobLeaseRenewal",
+  "LastRemoteStatusUpdate",
   "GLIDEIN_ToDie",
   "GLIDEIN_ToRetire",
   "DataCollectionDate",
@@ -177,6 +190,8 @@ date_vals = set([ \
 ])
 
 ignore = set([
+  "Arguments",
+  "CmdHash",
   "CRAB_UserDN",
   "CRAB_Destination",
   "CRAB_DBSURL",
@@ -219,6 +234,12 @@ ignore = set([
   "ExecutableSize",
   "HasBeenRouted",
   "HasPrioCorrection",
+  "GlideinCredentialIdentifier",
+  "GlideinLogNr",
+  "GlideinSecurityClass",
+  "GlideinSlotsLayout",
+  "GlideinWebBase",
+  "GlideinWorkDir",
   "ImageSize",
   "In",
   "Iwd",
@@ -248,6 +269,7 @@ ignore = set([
   "JobLeaseDuration",
   "JobNotification",
   "JOB_Site",
+  "Managed",
   "MATCH_EXP_JOBGLIDEIN_CMSSite",
   "MATCH_EXP_JOB_Site",
   "MATCH_GLIDECLIENT_Name",
@@ -367,9 +389,11 @@ no_analysis = set([
 ])
 
 bool_vals = set([
+  "CurrentStatusUnknown",
   "CRAB_Publish",
   "CRAB_SaveLogsFlag",
   "CRAB_TransferOutputs",
+  "GlobusResubmit",
   "TransferQueued",
   "TransferringInput",
   "NiceUser",
@@ -406,11 +430,15 @@ _launch_time = int(time.time())
 def get_data_collection_time():
     return _launch_time
 
+_cream_re = re.compile("CPUNumber = (\d+)")
+_nordugrid_re = re.compile("\(count=(\d+)\)")
 _camp_re = re.compile("[A-Za-z0-9_]+_[A-Z0-9]+-([A-Za-z0-9]+)-")
 _prep_re = re.compile("[A-Za-z0-9_]+_([A-Z]+-([A-Za-z0-9]+)-[0-9]+)")
 _rval_re = re.compile("[A-Za-z0-9]+_(RVCMSSW_[0-9]+_[0-9]+_[0-9]+)")
 _prep_prompt_re = re.compile("(PromptReco|Repack|Express)_[A-Za-z0-9]+_([A-Za-z0-9]+)")
 _split_re = re.compile("\s*,?\s*")
+_generic_site = re.compile("^[A-Za-z0-9]+_[A-Za-z0-9]+_(.*)_")
+_cms_site = re.compile("CMS[A-Za-z]*_(.*)_")
 def convert_to_json(ad, cms=True, return_dict=False):
     analysis = "CRAB_Id" in ad
     if ad.get("TaskType") == "ROOT":
@@ -531,6 +559,21 @@ def convert_to_json(ad, cms=True, return_dict=False):
         ad["RemoteWallClockTime"] = int(now - ad["EnteredCurrentStatus"])
         ad["CommittedTime"] = ad["RemoteWallClockTime"]
     result["WallClockHr"] = ad.get("RemoteWallClockTime", 0)/3600.
+    if 'RequestCpus' not in ad:
+        m = _cream_re.search(ad.get("CreamAttributes", ""))
+        m2 = _nordugrid_re.search(ad.get("NordugridRSL"))
+        if m:
+            try:
+                ad['RequestCpus'] = int(m.groups()[0])
+            except:
+                pass
+        elif m2:
+            try:
+                ad['RequestCpus'] = int(m2.groups()[0])
+            except:
+                pass
+        elif 'xcount' in ad:
+            ad['RequestCpus'] = ad['xcount']
     ad.setdefault('RequestCpus', 1)
     try:
         ad["RequestCpus"] = int(ad.eval('RequestCpus'))
@@ -562,8 +605,26 @@ def convert_to_json(ad, cms=True, return_dict=False):
         result["OutputFiles"] = len(ad.get("CRAB_AdditionalOutputFiles", [])) + len(ad.get("CRAB_TFileOutputFiles", [])) + len(ad.get("CRAB_EDMOutputFiles", [])) + ad.get("CRAB_SaveLogsFlag", 0)
     if "x509UserProxyFQAN" in ad:
         result["x509UserProxyFQAN"] = str(ad["x509UserProxyFQAN"]).split(",")
+    if "x509UserProxyVOName" in ad:
+        result["VO"] = str(ad["x509UserProxyVOName"])
     if cms:
         result["Site"] = ad.get("MATCH_EXP_JOB_GLIDEIN_CMSSite", "UNKNOWN")
+    elif ('GlideinEntryName' in ad) and ("MATCH_EXP_JOBGLIDEIN_ResourceName" not in ad):
+        m = _generic_site.match(ad['GlideinEntryName'])
+        m2 = _cms_site.match(ad['GlideinEntryName'])
+        if m2:
+            result['Site'] = m2.groups()[0]
+            info = result["Site"].split("_", 2)
+            if len(info) == 3:
+                result["Tier"] = info[0]
+                result["Country"] = info[1]
+            else:
+                result["Tier"] = "Unknown"
+                result["Country"] = "Unknown"
+        elif m:
+            result['Site'] = m.groups()[0]
+        else:
+            result['Site'] = 'UNKNOWN'
     else:
         result["Site"] = ad.get("MATCH_EXP_JOBGLIDEIN_ResourceName", "UNKNOWN")
     if cms:
