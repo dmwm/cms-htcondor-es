@@ -412,7 +412,9 @@ def process_schedd(starttime, last_completion, schedd_ad):
     os.rename(tmpname, "checkpoint.json")
 
     # Now that we have the fresh history, process the queues themselves.
-    process_schedd_queue(starttime, schedd_ad)
+    domain = socket.getfqdn().split(".", 1)[-1]
+    if domain != 'cern.ch':
+        process_schedd_queue(starttime, schedd_ad)
     return last_completion
 
 

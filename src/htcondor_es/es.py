@@ -8,6 +8,7 @@ import datetime
 import classad
 import datetime
 import htcondor
+import socket
 import elasticsearch
 import htcondor_es.convert_to_json
 
@@ -59,7 +60,26 @@ _es_handle = None
 def get_server_handle():
     global _es_handle
     if not _es_handle:
-        _es_handle = elasticsearch.Elasticsearch()
+        # TODO: config file.
+        domain = socket.getfqdn().split(".", 1)[-1]
+        if domain == 'cern.ch':
+            passwd = ''
+            username = ''
+            regex = re.compile("^([A-Za-z]+):\s(.*)")
+            for line in open("es.conf"):
+                m = regex.match(line)
+                if m:
+                    key, val = m.groups()
+                    if key == 'User':
+                        username = val
+                    elif key == 'Pass':
+                        passwd = val
+            _es_handle = elasticsearch.Elasticsearch([{"host": "es-cms.cern.ch", "http_auth":username+":"+passwd,"port":9203}],
+                verify_certs=True,
+                use_ssl=True,
+                ca_certs='/etc/pki/tls/certs/ca-bundle.trust.crt')
+        else:
+            _es_handle = elasticsearch.Elasticsearch()
     return _es_handle
 
 
@@ -103,8 +123,8 @@ def get_index(timestamp, template="cms"):
 def post_ads(es, idx, ads):
     body = ''
     for id, ad in ads:
-        body += json.dumps({"index": {"_index": idx, "_type": "job", "_id": id}}) + "\n"
+        body += json.dumps({"index": {"_id": id}}) + "\n"
         body += ad + "\n"
-    es.bulk(body=body)
+    es.bulk(body=body, doc_type="job", index=idx)
 
 
