@@ -666,7 +666,7 @@ def convert_to_json(ad, cms=True, return_dict=False):
             cmssw_key = 'ChirpCMSSW' + key.split('_', 2)[-1]
             if cmssw_key not in result:
                 result[cmssw_key] = val
-            elif cmssw_key.endswith('LastUpdate') or cmssw_key.endswith('MaxEvents') or cmssw_key.endswith('MaxLumis') or cmssw_key.endswith('MaxFiles'):
+            elif cmssw_key.endswith('LastUpdate') or cmssw_key.endswith('Events') or cmssw_key.endswith('MaxLumis') or cmssw_key.endswith('MaxFiles'):
                 result[cmssw_key] = max(result[cmssw_key], val)
             else:
                 result[cmssw_key] += val
