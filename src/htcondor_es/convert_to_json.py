@@ -436,6 +436,8 @@ _camp_re = re.compile("[A-Za-z0-9_]+_[A-Z0-9]+-([A-Za-z0-9]+)-")
 _prep_re = re.compile("[A-Za-z0-9_]+_([A-Z]+-([A-Za-z0-9]+)-[0-9]+)")
 _rval_re = re.compile("[A-Za-z0-9]+_(RVCMSSW_[0-9]+_[0-9]+_[0-9]+)")
 _prep_prompt_re = re.compile("(PromptReco|Repack|Express)_[A-Za-z0-9]+_([A-Za-z0-9]+)")
+# 2016 reRECO; of the form cerminar_Run2016B-v2-JetHT-23Sep2016_8020_160923_164036_4747
+_rereco_re = re.compile("[A-Za-z0-9_]+_Run20[A-Za-z0-9-_]+-([A-Za-z0-9]+)")
 _split_re = re.compile("\s*,?\s*")
 _generic_site = re.compile("^[A-Za-z0-9]+_[A-Za-z0-9]+_(.*)_")
 _cms_site = re.compile("CMS[A-Za-z]*_(.*)_")
@@ -538,6 +540,10 @@ def convert_to_json(ad, cms=True, return_dict=False):
             camp = "RelVal"
         elif m:
             camp = m.groups()[0]
+        else:
+            m = _rereco_re.match(camp)
+            if m and ('DataProcessing' in ad.get("WMAgent_SubTaskName", "")):
+                camp = m.groups()[0] + "Reprocessing"
         result["Campaign"] = camp
         prep = ad.get("WMAgent_RequestName", "UNKNOWN")
         m = _prep_re.match(prep)
