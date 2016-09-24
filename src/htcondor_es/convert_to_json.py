@@ -706,9 +706,13 @@ def convert_to_json(ad, cms=True, return_dict=False):
         result['WriteTimeHrs'] = result['ChirpCMSSWWriteTimeMsecs'] / 3600000.0
         result['WriteTimeMins'] = result['ChirpCMSSWWriteTimeMsecs'] / 60000.0
     if result.get('CMSSWDone') and (result.get('ChirpCMSSWElapsed', 0) > 0):
-        result['CMSSWEventRate'] = result['ChirpCMSSWEvents'] / float(result['ChirpCMSSWElapsed']*ad.get("RequestCpus", 1.0))
+        result['CMSSWEventRate'] = result.get('ChirpCMSSWEvents', 0) / float(result['ChirpCMSSWElapsed']*ad.get("RequestCpus", 1.0))
+        if result['CMSSWEventRate'] > 0:
+            result['CMSSWTimePerEvent'] = 1.0 / result['CMSSWEventRate']
     if result['CoreHr'] > 0:
-        result['EventRate'] = result['ChirpCMSSWEvents'] / float(result['CoreHr']*3600.)
+        result['EventRate'] = result.get('ChirpCMSSWEvents', 0) / float(result['CoreHr']*3600.)
+        if result['EventRate'] > 0:
+            result['TimePerEvent'] = 1.0 / result['EventRate']
     if ('ChirpCMSSWReadOps' in result) and ('ChirpCMSSWReadSegments' in result):
         ops = result['ChirpCMSSWReadSegments'] + result['ChirpCMSSWReadOps']
         if ops:
