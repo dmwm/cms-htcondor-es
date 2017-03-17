@@ -442,7 +442,7 @@ _split_re = re.compile("\s*,?\s*")
 _generic_site = re.compile("^[A-Za-z0-9]+_[A-Za-z0-9]+_(.*)_")
 _cms_site = re.compile("CMS[A-Za-z]*_(.*)_")
 def convert_to_json(ad, cms=True, return_dict=False):
-    analysis = "CRAB_Id" in ad
+    analysis = ("CRAB_Id" in ad) or (ad.get("AccountingGroup", "").startswith("analysis."))
     if ad.get("TaskType") == "ROOT":
         if return_dict:
             return None, None
@@ -502,30 +502,8 @@ def convert_to_json(ad, cms=True, return_dict=False):
         result[key] = value
     if cms:
         ttype = ad.get("WMAgent_SubTaskName", "/UNKNOWN").rsplit("/", 1)[-1]
-        result["WMAgent_TaskType"] = ttype
-        if analysis:
-            ttype = "Analysis"
-        elif "CleanupUnmerged" in ttype:
-            ttype = "Cleanup"
-        elif "Merge" in ttype:
-            ttype = "Merge"
-        elif "LogCollect" in ttype:
-            ttype = "LogCollect"
-        elif ("MiniAOD" in ad.get("WMAgent_RequestName", "UNKNOWN")) and (ttype == "StepOneProc"):
-            ttype = "MINIAOD"
-        elif ttype == "StepOneProc":
-            ttype = "DIGIRECO"
-        elif "MiniAODv" in ttype:
-            ttype = "MINIAOD"
-        elif ("GS-" in ad.get("WMAgent_RequestName", "UNKNOWN")) and ttype.endswith("_0"):
-            ttype = "GENSIM"
-        elif ttype.endswith("_0"):
-            ttype = "DIGI"
-        elif ttype.endswith("_1"):
-            ttype = "RECO"
-        elif ttype == "MonteCarloFromGEN":
-            ttype = "GENSIM"
-        result["TaskType"] = ttype
+
+        # Guess the campaign from the request name.
         camp = ad.get("WMAgent_RequestName", "UNKNOWN")
         m = _camp_re.match(camp)
         if analysis:
@@ -545,6 +523,38 @@ def convert_to_json(ad, cms=True, return_dict=False):
             if m and ('DataProcessing' in ad.get("WMAgent_SubTaskName", "")):
                 camp = m.groups()[0] + "Reprocessing"
         result["Campaign"] = camp
+
+        # Guess an alternate campaign name from the subtask
+        camp2_info = ttype.split("-")
+        if len(camp2_info) > 1:
+            camp2 = camp2_info[1]
+        else:
+            camp2 = ttype
+
+        result["WMAgent_TaskType"] = ttype
+        if analysis:
+            ttype = "Analysis"
+        elif "CleanupUnmerged" in ttype:
+            ttype = "Cleanup"
+        elif "Merge" in ttype:
+            ttype = "Merge"
+        elif "LogCollect" in ttype:
+            ttype = "LogCollect"
+        elif ("MiniAOD" in ad.get("WMAgent_RequestName", "UNKNOWN")) and (ttype == "StepOneProc"):
+            ttype = "MINIAOD"
+        elif ttype == "StepOneProc" and (("15DR" in camp2) or ("16DR" in camp2) or ("17DR" in camp2)):
+            ttype = "DIGIRECO"
+        elif "MiniAOD" in ttype:
+            ttype = "MINIAOD"
+        elif (("15GS" in camp2) or ("16GS" in camp2) or ("17GS" in camp2)) and ttype.endswith("_0"):
+            ttype = "GENSIM"
+        elif ttype.endswith("_0"):
+            ttype = "DIGI"
+        elif ttype.endswith("_1"):
+            ttype = "RECO"
+        elif ttype == "MonteCarloFromGEN":
+            ttype = "GENSIM"
+        result["TaskType"] = ttype
         prep = ad.get("WMAgent_RequestName", "UNKNOWN")
         m = _prep_re.match(prep)
         if analysis:
