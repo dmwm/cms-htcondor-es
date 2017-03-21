@@ -22,10 +22,10 @@ for row in curs.execute("select core_hours, events, read_bytes, dataset, crab_ta
     info['core_hours'] = core_hours + row[0]
     info['events'] = events + row[1]
     info['read_bytes'] = read_bytes + row[2]
-    monthly = info.setdefault("monthly", {201609:False, 201610:False, 201611:False, 201612:False, 201701:False})
+    monthly = info.setdefault("monthly", {201609:False, 201610:False, 201611:False, 201612:False, 201701:False, 201702:False})
     monthly[row[5]] = True
 
-months = [201609, 201610, 201611, 201612, 201701]
+months = [201609, 201610, 201611, 201612, 201701, 201702]
 eviction_bytes = 0
 evicted_datasets = 0
 fetch_bytes = 0

@@ -11,7 +11,7 @@ datasets = {}
 for row in curs.execute("select dataset, size_bytes, events from dataset_size"):
     datasets[row[0]] = {"size": row[1], "unique_events": row[2]}
 
-for row in curs.execute("select core_hours, events, read_bytes, dataset, crab_task from dataset_popularity"):
+for row in curs.execute("select core_hours, events, read_bytes, dataset, user from dataset_popularity"):
     if row[3].endswith("/USER"): continue
     if not row[3].endswith(tier): continue
     info = datasets[row[3]]
@@ -27,6 +27,7 @@ by_crab_tasks = {}
 for dataset, info in datasets.items():
     if 'crab_tasks' not in info: continue
     num_tasks = len(info['crab_tasks'])
+    #print info
     cinfo = by_crab_tasks.setdefault(num_tasks, {})
     tot_bytes = cinfo.setdefault('bytes', 0)
     cinfo['bytes'] = tot_bytes + info['size']
@@ -36,8 +37,6 @@ for dataset, info in datasets.items():
     cinfo['read_bytes'] = read_bytes + info['read_bytes']
     events = cinfo.setdefault('events', 0)
     cinfo['events'] = events + info['events']
-    unique_events = cinfo.setdefault('unique_events', 0)
-    cinfo['unique_events'] = unique_events + info['unique_events']
 
 print "Number of CRAB3 tasks:"
 total_hours = 0
@@ -52,8 +51,7 @@ total_hours += hours
 read_bytes = (sum(val['read_bytes'] for key, val in by_crab_tasks.items() if key > overflow_bin)/1e12)
 tot_bytes = sum(val['bytes'] for key, val in by_crab_tasks.items() if key >= overflow_bin)/1e12
 events = (sum(val['events'] for key, val in by_crab_tasks.items() if key > overflow_bin)/1e9)
-unique_events = (sum(val['unique_events'] for key, val in by_crab_tasks.items() if key > overflow_bin)/1e9)
-print "overflow %.2fTB" % tot_bytes, "%.1fB unique events" % unique_events, '%.2fM hours' % hours, '%.1fTB read' % read_bytes, '%.1fB events read' % events
+print "overflow %.2fTB" % tot_bytes, '%.2fM hours' % hours, '%.1fTB read' % read_bytes, '%.1fB events read' % events
 print "Total hours %.1fM" % total_hours
 overflow = dict([(key, val['bytes']) for key, val in by_crab_tasks.items() if key >= overflow_bin])
 #print overflow
