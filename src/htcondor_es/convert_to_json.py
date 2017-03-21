@@ -396,6 +396,7 @@ bool_vals = set([
   "GlobusResubmit",
   "TransferQueued",
   "TransferringInput",
+  "HasSingularity",
   "NiceUser",
   "ExitBySignal",
   "CMSSWDone",
@@ -733,6 +734,20 @@ def convert_to_json(ad, cms=True, return_dict=False):
             result['ReadOpsPercent'] = result['ChirpCMSSWReadOps'] / float(ops)*100
     if ('Chirp_WMCore_cmsRun_ExitCode' in result) and (result.get('ExitCode', 0) == 0):
         result['ExitCode'] = result['Chirp_WMCore_cmsRun_ExitCode']
+
+    # Parse new machine statistics.
+    if 'MachineAttrMJF_JOB_HS06_JOB0' in ad and (ad.get("MachineAttrMJF_JOB_HS06_JOB0") != "Unknown"):
+        try:
+            result['BenchmarkJobHS06'] = float(ad['MachineAttrMJF_JOB_HS06_JOB0'])/float(ad.get("RequestCpus", 1.0))
+        except:
+            pass
+    if 'MachineAttrDIRACBenchmark0' in ad:
+        result['BenchmarkJobDB12'] = float(ad['MachineAttrDIRACBenchmark0'])
+    result['HasSingularity'] = classad.ExprTree('MachineAttrHAS_SINGULARITY0 is true').eval(ad)
+    if 'ChirpCMSSWCPUModels' in ad:
+        result['CPUModel'] = str(ad['ChirpCMSSWCPUModels'])
+    elif 'MachineAttrCPUModel0' in ad:
+        result['CPUModel'] = str(ad['MachineAttrCPUModel0'])
 
     if return_dict:
         return json.dumps(result), result
