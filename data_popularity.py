@@ -122,7 +122,8 @@ def do_index(index):
 
 
 def main():
-    for month in [(2016, 9), (2016, 10), (2016, 11), (2016, 12), (2017, 01), (2017, 02)]:
+    #for month in [(2016, 9), (2016, 10), (2016, 11), (2016, 12), (2017, 01), (2017, 02)]:
+    for month in [(2017, 02)]:
         days = calendar.monthrange(month[0], month[1])[-1]
         for day in range(days):
             do_index("cms-%02d-%02d-%02d" % (month[0], month[1], day+1))

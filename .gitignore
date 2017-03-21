@@ -1,1 +1,4 @@
 es.conf
+src/htcondor_es/*.pyc
+popdb.sqlite*
+checkpoint*.json*

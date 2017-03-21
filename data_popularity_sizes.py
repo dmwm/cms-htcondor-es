@@ -28,7 +28,7 @@ def main():
     conn.isolation_level = None
     curs = conn.cursor()
 
-    pool = multiprocessing.Pool(3)
+    pool = multiprocessing.Pool(4)
 
     iterable = [(row[0],) for row in curs.execute("select distinct(dp.dataset) from dataset_popularity as dp left outer join dataset_size as ds on (dp.dataset = ds.dataset) WHERE ds.size_bytes is null AND NOT (dp.dataset LIKE '%/USER')")]
     print "There are %i datasets left to query." % len(iterable)
