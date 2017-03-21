@@ -736,12 +736,12 @@ def convert_to_json(ad, cms=True, return_dict=False):
         result['ExitCode'] = result['Chirp_WMCore_cmsRun_ExitCode']
 
     # Parse new machine statistics.
-    if 'MachineAttrMJF_JOB_HS06_JOB0' in ad and (ad.get("MachineAttrMJF_JOB_HS06_JOB0") != "Unknown"):
+    if 'MachineAttrMJF_JOB_HS06_JOB0' in ad and (ad.get("MachineAttrMJF_JOB_HS06_JOB0") != "Unknown") and classad.ExprTree('MachineAttrMJF_JOB_HS06_JOB0 isnt undefined').eval(ad):
         try:
             result['BenchmarkJobHS06'] = float(ad['MachineAttrMJF_JOB_HS06_JOB0'])/float(ad.get("RequestCpus", 1.0))
         except:
             pass
-    if 'MachineAttrDIRACBenchmark0' in ad:
+    if ('MachineAttrDIRACBenchmark0' in ad) and classad.ExprTree('MachineAttrDIRACBenchmark0 isnt undefined').eval(ad):
         result['BenchmarkJobDB12'] = float(ad['MachineAttrDIRACBenchmark0'])
     result['HasSingularity'] = classad.ExprTree('MachineAttrHAS_SINGULARITY0 is true').eval(ad)
     if 'ChirpCMSSWCPUModels' in ad:
