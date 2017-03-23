@@ -92,7 +92,7 @@ def task_type_logic(result):
         ttype = "GENSIM"
     elif ttype == 'Production' and (camp2 in ['RunIISpring15PrePremix']):
         ttype = "DIGI"
-    elif ttype == "StepOneProc" and (("15DR" in camp2) or ("16DR" in camp2) or ("17DR" in camp2) or (camp2 == "Summer12DR53X") or (camp2 == "TTI2023Upg14D") or (camp2 == "TTI2023Upg14D") or ("ReDigi" in camp2) or ("HINPbPbWinter16DR" == camp2) or ("RunIIHighPUTrainsDR" == camp2)):
+    elif ttype == "StepOneProc" and (("15DR" in camp2) or ("16DR" in camp2) or ("17DR" in camp2) or ("ReDigi" in camp2) or (camp2 in ["CosmicFall16PhaseIDR", "HINPbPbWinter16DR", "RunIIHighPUTrainsDR", "TTI2023Upg14D", "TTI2023Upg14D", "Summer12DR53X"])):
         ttype = "DIGIRECO"
     elif "MiniAOD" in ttype:
         ttype = "MINIAOD"
@@ -239,7 +239,7 @@ while True:
                         ((new_source['Campaign'] in ['RunIISummer15GS', 'RunIIWinter15pLHE']) and source['TaskType'] == 'DIGI' and new_source['TaskType'] == 'GENSIM') or \
                         (new_source['Campaign'] == 'RunIISummer15wmLHEGS' and source['TaskType'] == 'DIGI' and new_source['TaskType'] == 'GENSIM') or \
                         (new_source['Campaign'] == 'RunIIWinter15wmLHE' and source['TaskType'] == 'DIGI' and new_source['TaskType'] == 'LHE') or \
-                        ((new_source['Campaign'] in ['RunIIHighPUTrainsDR', 'PhaseIFall16DR', 'PhaseIIFall16DR82', 'HINPbPbWinter16DR']) and source['TaskType'] == 'StepOneProc' and new_source['TaskType'] == 'DIGIRECO') or \
+                        ((new_source['Campaign'] in ['CosmicFall16PhaseIDR', 'RunIIHighPUTrainsDR', 'PhaseIFall16DR', 'PhaseIIFall16DR82', 'HINPbPbWinter16DR']) and source['TaskType'] == 'StepOneProc' and new_source['TaskType'] == 'DIGIRECO') or \
                         ((new_source['Campaign'] in ['RunIISpring16DR80']) and source['TaskType'] == 'StepOneProc' and new_source['TaskType'] == 'DIGI') or \
                         ((new_source['Campaign'] in ['RunIISpring16DR80', 'PhaseIFall16DR', 'RunIISummer16DR80', 'pPb816Summer16DR']) and source['TaskType'] == 'StepTwoProc' and new_source['TaskType'] == 'RECO') or \
                         (new_source['Campaign'] == 'PhaseIFall16MiniAOD' and source['TaskType'] == 'DIGI' and new_source['TaskType'] == 'MINIAOD')
