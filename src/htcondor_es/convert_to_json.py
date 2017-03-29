@@ -9,6 +9,11 @@ import datetime
 import htcondor
 
 string_vals = set([ \
+  "Processor",
+  "ChirpCMSSWCPUModels",
+  "CPUModel",
+  "CPUModelName",
+  "ChirpCMSSWCPUModels",
   "CMSPrimaryPrimaryDataset",
   "CMSPrimaryProcessedDataset",
   "CMSPrimaryDataTier",
@@ -720,6 +725,10 @@ def convert_to_json(ad, cms=True, return_dict=False):
         result['CMSSWEventRate'] = result.get('ChirpCMSSWEvents', 0) / float(result['ChirpCMSSWElapsed']*ad.get("RequestCpus", 1.0))
         if result['CMSSWEventRate'] > 0:
             result['CMSSWTimePerEvent'] = 1.0 / result['CMSSWEventRate']
+    if result['CpuTimeHr'] > 0:
+        result['CpuEventRate'] = result.get('ChirpCMSSWEvents', 0) / float(result['CpuTimeHr']*3600.)
+        if result['CpuEventRate'] > 0:
+            result['CpuTimePerEvent'] = 1.0 / result['CpuEventRate']
     if result['CoreHr'] > 0:
         result['EventRate'] = result.get('ChirpCMSSWEvents', 0) / float(result['CoreHr']*3600.)
         if result['EventRate'] > 0:
@@ -738,16 +747,32 @@ def convert_to_json(ad, cms=True, return_dict=False):
     # Parse new machine statistics.
     if 'MachineAttrMJF_JOB_HS06_JOB0' in ad and (ad.get("MachineAttrMJF_JOB_HS06_JOB0") != "Unknown") and classad.ExprTree('MachineAttrMJF_JOB_HS06_JOB0 isnt undefined').eval(ad):
         try:
-            result['BenchmarkJobHS06'] = float(ad['MachineAttrMJF_JOB_HS06_JOB0'])/float(ad.get("RequestCpus", 1.0))
+            pass
+            #result['BenchmarkJobHS06'] = float(ad['MachineAttrMJF_JOB_HS06_JOB0'])/float(ad.get("RequestCpus", 1.0))
+            #if result.get('EventRate', 0) > 0:
+            #    result['HS06EventRate'] = result['BenchmarkJobHS06'] * result['EventRate']
+            #result['HS06CoreHr'] = result['CoreHr'] * result['BenchmarkJobHS06']
+            #result["HS06CommittedCoreHr"] = result['CommittedCoreHr'] * result['BenchmarkJobHS06']
+            #result['HS06CpuTimeHr'] = result['CpuTimeHr'] * result['BenchmarkJobHS06']
         except:
             pass
     if ('MachineAttrDIRACBenchmark0' in ad) and classad.ExprTree('MachineAttrDIRACBenchmark0 isnt undefined').eval(ad):
         result['BenchmarkJobDB12'] = float(ad['MachineAttrDIRACBenchmark0'])
+        if result.get('EventRate', 0) > 0:
+            result['DB12EventRate'] = result['BenchmarkJobDB12'] * result['EventRate']
+        result['DB12CoreHr'] = result['CoreHr'] * result['BenchmarkJobDB12']
+        result["DB12CommittedCoreHr"] = result['CommittedCoreHr'] * result['BenchmarkJobDB12']
+        result['DB12CpuTimeHr'] = result['CpuTimeHr'] * result['BenchmarkJobDB12']
+
     result['HasSingularity'] = classad.ExprTree('MachineAttrHAS_SINGULARITY0 is true').eval(ad)
-    if 'ChirpCMSSWCPUModels' in ad:
+    if 'ChirpCMSSWCPUModels' in ad and not isinstance(ad['ChirpCMSSWCPUModels'], classad.ExprTree):
         result['CPUModel'] = str(ad['ChirpCMSSWCPUModels'])
+        result['CPUModelName'] = str(ad['ChirpCMSSWCPUModels'])
+        result['Processor'] = str(ad['ChirpCMSSWCPUModels'])
     elif 'MachineAttrCPUModel0' in ad:
         result['CPUModel'] = str(ad['MachineAttrCPUModel0'])
+        result['CPUModelName'] = str(ad['MachineAttrCPUModel0'])
+        result['Processor'] = str(ad['MachineAttrCPUModel0'])
 
     if return_dict:
         return json.dumps(result), result
