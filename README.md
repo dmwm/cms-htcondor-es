@@ -25,10 +25,15 @@ most useful attributes, along with their meaning.
 Generic attributes:
 - `RecordTime`: When the job exited the queue or when the JSON document was last
   updated, whichever came first.  Use this field for time-based queries.
+- `BenchmarkJobDB12`: An estimate of the per-core performance of the machine the job last
+  ran on, based on the `DB12` benchmark.  Higher is better.
 - `CoreHr`: The number of core-hours utilized by the job.  If the job lasted for
-  24 hours and utilized 4 cores, the value of `CoreHr` will be 96.
+  24 hours and utilized 4 cores, the value of `CoreHr` will be 96.  This includes all
+  runs of the job, including any time spent on preempted instance.
 - `CpuTimeHr`: The amount of CPU time (sum of user and system) attributed to the job,
   in hours.
+- `CommittedCoreHr`: The core-hours only for the last run of the job (excluding preempted
+  attempts).
 - `QueueHrs`: Number of hours the job spent in queue before last run.
 - `WallClockHr`: Number of hours the job spent running.  This is invariant of the
   number of cores; most users will prefer `CoreHr` instead.
@@ -39,6 +44,7 @@ Generic attributes:
   unsuccessful job attempts.  If a job runs for 2 hours, is preempted, restarts,
   then completes successfully after 3 hours, the `CpuBadput` is 2.
 - `MemoryMB`: The amount of RAM used by the job.
+- `Processor`: The processor model (from `/proc/cpuinfo`) the job last ran on.
 - `RequestCpus`: Number of cores utilized by the job.
 - `RequestMemory`: Amount of memory requested by the job, in MB.
 - `ScheddName`: Name of HTCondor schedd where the job ran.
@@ -47,6 +53,8 @@ Generic attributes:
   at completed jobs.
 - `x509userproxysubject`: The DN of the grid certificate associated with the job; for
   CMS jobs, this is not the best attribute to use to identify a user (prefer `CRAB_UserHN`).
+- `DB12CommittedCoreHr`, `DB12CoreHr`, `DB12CpuTimeHr`: The job's `CommittedCoreHr`,
+  `CoreHr`, and `CpuTimeHr` values multiplied by the `BenchmarkJobDB12` score.
 
 CMS-specific attributes:
 - `Campaign`: The campaign this job belongs to; derived from the WMAgent workflow
@@ -97,6 +105,11 @@ CMS-specific attributes:
 - `Country`: Country where the job ran (for example, `CH`).
 - `Tier`: Tier where the job ran (for example, `T2`).
 - `CRAB_UserHN`: for analysis jobs, CMS username of user that submitted the task.
+- `EventRate`, `CpuEventRate`: The number of events per second (or per CPU second)
+  per core.
+- `TimePerEventR`, `CpuTimePerEvent`:  The inverse of `EventRate` and `CpuEventRate`,
+  respectively.
+- `HasSingularity`: Set to `true` if the job was run inside a Singularity container.
 
 In general, the data from CMSSW itself (number of events, data read and written)
 may be missing.  This information depends on a sufficiently recent version of
