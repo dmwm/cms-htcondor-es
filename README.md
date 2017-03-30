@@ -105,6 +105,7 @@ CMS-specific attributes:
 - `Country`: Country where the job ran (for example, `CH`).
 - `Tier`: Tier where the job ran (for example, `T2`).
 - `CRAB_UserHN`: for analysis jobs, CMS username of user that submitted the task.
+- `CRAB_Workflow`: for analysis jobs, CRAB task name.
 - `EventRate`, `CpuEventRate`: The number of events per second (or per CPU second)
   per core.
 - `TimePerEventR`, `CpuTimePerEvent`:  The inverse of `EventRate` and `CpuEventRate`,
