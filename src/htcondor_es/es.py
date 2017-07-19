@@ -7,6 +7,7 @@ import time
 import datetime
 import classad
 import datetime
+import logging
 import htcondor
 import socket
 import elasticsearch
@@ -33,7 +34,7 @@ def make_mappings():
         else:
             mappings[name] = {"type": "string", "analyzer": "analyzer_keyword"}
     for name in filter_name(htcondor_es.convert_to_json.date_vals):
-        mappings[name] = {"type": "date", "format": "epoch_second"}
+        mappings[name] = {"type": "date", "format": "epoch_millis"}
     for name in filter_name(htcondor_es.convert_to_json.bool_vals):
         mappings[name] = {"type": "boolean"}
     mappings["Args"]["index"] = "no"
@@ -57,12 +58,20 @@ def make_settings():
 
 
 _es_handle = None
-def get_server_handle():
+def get_server_handle(args=None):
     global _es_handle
     if not _es_handle:
-        # TODO: config file.
+        if not args:
+            logging.error("Call get_server_handle with args first to create ES interface instance")
+            return _es_handle
+        _es_handle = ElasticInterface(hostname=args.es_hostname, port=args.es_port)
+    return _es_handle
+
+class ElasticInterface(object):
+    """Interface to elasticsearch"""
+    def __init__(self, hostname="es-cms.cern.ch", port=9203):
         domain = socket.getfqdn().split(".", 1)[-1]
-        if domain == 'cern.ch':
+        if True: #domain == 'cern.ch':
             passwd = ''
             username = ''
             regex = re.compile("^([A-Za-z]+):\s(.*)")
@@ -74,49 +83,50 @@ def get_server_handle():
                         username = val
                     elif key == 'Pass':
                         passwd = val
-            _es_handle = elasticsearch.Elasticsearch([{"host": "es-cms.cern.ch", "http_auth":username+":"+passwd,"port":9203}],
-                verify_certs=True,
-                use_ssl=True,
-                ca_certs='/etc/pki/tls/certs/ca-bundle.trust.crt')
+            self.handle = elasticsearch.Elasticsearch([{"host": hostname, "port":port, 
+                                                        "http_auth":username+":"+passwd}],
+                                                        verify_certs=True,
+                                                        use_ssl=True,
+                                                        ca_certs='/etc/pki/tls/certs/ca-bundle.trust.crt')
         else:
-            _es_handle = elasticsearch.Elasticsearch()
-    return _es_handle
+            self.handle = elasticsearch.Elasticsearch()
 
 
-def fix_mapping(idx, template="cms"):
-    _es_handle = get_server_handle()
-    idx_clt = elasticsearch.client.IndicesClient(_es_handle)
-    mappings = make_mappings()
-    custom_mappings = {"CMSPrimaryDataTier": mappings["CMSPrimaryDataTier"],
-                       "CMSPrimaryPrimaryDataset": mappings["CMSPrimaryPrimaryDataset"],
-                       "CMSPrimaryProcessedDataset": mappings["CMSPrimaryProcessedDataset"]}
-    print idx_clt.put_mapping(doc_type="job", index=idx, body=json.dumps({"properties": custom_mappings}), ignore=400)
+    def fix_mapping(self, idx, template="cms"):
+        idx_clt = elasticsearch.client.IndicesClient(self.handle)
+        mappings = make_mappings()
+        custom_mappings = {"CMSPrimaryDataTier": mappings["CMSPrimaryDataTier"],
+                           "CMSPrimaryPrimaryDataset": mappings["CMSPrimaryPrimaryDataset"],
+                           "CMSPrimaryProcessedDataset": mappings["CMSPrimaryProcessedDataset"]}
+        logging.info(idx_clt.put_mapping(doc_type="job", index=idx, body=json.dumps({"properties": custom_mappings}), ignore=400))
 
-
-def make_mapping(idx, template="cms"):
-    _es_handle = get_server_handle()
-    idx_clt = elasticsearch.client.IndicesClient(_es_handle)
-    mappings = make_mappings()
-    #print idx_clt.put_mapping(doc_type="job", index=idx, body=json.dumps({"properties": mappings}), ignore=400)
-    settings = make_settings()
-    #print idx_clt.put_settings(index=idx, body=json.dumps(settings), ignore=400)
-    body = json.dumps({"mappings": {"job": {"properties": mappings} },
-                       "settings": {"index": settings},
-                      })
-    result = _es_handle.indices.create(index=idx, body=body, ignore=400)
-    if result.get("status") != 400:
-        print "Creation of index %s: %s" % (idx, str(result))
+    def make_mapping(self, idx, template="cms"):
+        idx_clt = elasticsearch.client.IndicesClient(self.handle)
+        mappings = make_mappings()
+        #print idx_clt.put_mapping(doc_type="job", index=idx, body=json.dumps({"properties": mappings}), ignore=400)
+        settings = make_settings()
+        #print idx_clt.put_settings(index=idx, body=json.dumps(settings), ignore=400)
+        body = json.dumps({"mappings": {"job": {"properties": mappings} },
+                           "settings": {"index": settings},
+                          })
+        result = self.handle.indices.create(index=idx, body=body, ignore=400)
+        if result.get("status") != 400:
+            logging.warning("Creation of index %s: %s" % (idx, str(result)))
 
 
 _index_cache = set()
-def get_index(timestamp, template="cms"):
-    _es_handle = get_server_handle()
-
+def get_index(timestamp, template="cms", update_es=True):
+    global _index_cache
     idx = time.strftime("%s-%%Y-%%m-%%d" % template, datetime.datetime.utcfromtimestamp(timestamp).timetuple())
-    if idx in _index_cache:
-        return idx
-    make_mapping(idx, template=template)
-    _index_cache.add(idx)
+
+    if update_es:
+        if idx in _index_cache:
+            return idx
+
+        _es_handle = get_server_handle()
+        _es_handle.make_mapping(idx, template=template)
+        _index_cache.add(idx)
+    
     return idx
 
 
