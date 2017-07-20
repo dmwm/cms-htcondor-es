@@ -5,6 +5,7 @@ import re
 import json
 import time
 import classad
+import logging
 import datetime
 import htcondor
 
@@ -455,12 +456,12 @@ def convert_to_json(ad, cms=True, return_dict=False):
         else:
             return None
     result = {}
-    result['DataCollection'] = ad.get("CompletionDate", 0)
-    result['RecordTime'] = ad.get("CompletionDate", 0)
+    result['DataCollection'] = ad.get("CompletionDate", 0)*1000
+    result['RecordTime'] = ad.get("CompletionDate", 0)*1000
     if not result['DataCollection']:
-        result['DataCollection'] = _launch_time
+        result['DataCollection'] = _launch_time*1000
     if not result['RecordTime']:
-        result['RecordTime'] = _launch_time
+        result['RecordTime'] = _launch_time*1000
     result['DataCollectionDate'] = result['RecordTime']
     result['ScheddName'] = ad.get("GlobalJobId", "UNKNOWN").split("#")[0]
     if cms and analysis:
@@ -492,13 +493,15 @@ def convert_to_json(ad, cms=True, return_dict=False):
                 if value == "Unknown":
                     value = None
                 else:
-                    print "Failed key:", key
-                    raise
+                    logging.error("Failed to convert key %s with value %s to int" % (key, repr(value)))
+                    value = str(value)
         elif key in string_vals:
             value = str(value)
         elif key in date_vals:
             if value == 0:
                 value = None
+            else:
+                value = int(value*1000)
         #elif key in date_vals:
         #    value = datetime.datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
         if key.startswith("MATCH_EXP_JOB_"):
@@ -706,7 +709,7 @@ def convert_to_json(ad, cms=True, return_dict=False):
         result['MegaEvents'] = result['ChirpCMSSWEvents']/1e6
     if 'ChirpCMSSWLastUpdate' in result:
         # Report time since last update - this is likely stageout time for completed jobs
-        result['SinceLastCMSSWUpdateHrs'] = max(result['RecordTime'] - result['ChirpCMSSWLastUpdate'], 0)/3600.
+        result['SinceLastCMSSWUpdateHrs'] = max(result['RecordTime'] - result['ChirpCMSSWLastUpdate'], 0)/3600000.
         if result['Status'] == 'Completed':
             result['StageOutHrs'] = result['SinceLastCMSSWUpdateHrs']
     if 'ChirpCMSSWLumis' in result:
