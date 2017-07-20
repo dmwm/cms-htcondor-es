@@ -38,10 +38,20 @@ now_ns = int(time.time())*int(1e9)
 
 def get_schedds(args):
     schedd_query = classad.ExprTree('!isUndefined(CMSGWMS_Type)')
-    coll = htcondor.Collector(args.collector_hostname)
-    schedd_ads = coll.query(htcondor.AdTypes.Schedd,
-                            schedd_query,
-                            projection=["MyAddress", "ScheddIpAddr", "Name"])
+    coll = htcondor.Collector("cmssrv221.fnal.gov:9620")
+    schedd_ads1 = coll.query(htcondor.AdTypes.Schedd,
+                             schedd_query,
+                             projection=["MyAddress", "ScheddIpAddr", "Name"])
+    coll2 = htcondor.Collector("cmsgwms-collector-tier0.cern.ch:9620")
+    schedd_ads2 = coll.query(htcondor.AdTypes.Schedd,
+                             schedd_query,
+                             projection=["MyAddress", "ScheddIpAddr", "Name"])
+    schedd_ads = {}
+    for ad in schedd_ads1 + schedd_ads2:
+         if 'Name' not in ad:
+             continue
+         schedd_ads[ad['Name']] = ad
+    schedd_ads = schedd_ads.values()
     random.shuffle(schedd_ads)
 
     return schedd_ads
@@ -210,7 +220,7 @@ def process_collector(args):
     logging.debug("Querying collector for data")
     if args.dry_run: return
     try:
-        coll = htcondor.Collector(args.collector_hostname)
+        coll = htcondor.Collector("cmssrv221.fnal.gov:9620")
         ads = coll.query(htcondor.AdTypes.Startd,
                          'DynamicSlot=!=true',
                          ['TotalSlotCpus', 'SlotType', 'Cpus', 'Memory',
@@ -598,9 +608,6 @@ if __name__ == "__main__":
                         dest="dry_run",
                         help=("Don't even read info, just pretend to. (Still "
                               "query the collector for the schedd's though.)"))
-    parser.add_argument("--collector_hostname", default='cmssrv221.fnal.gov',
-                        type=str, dest="collector_hostname",
-                        help="Hostname of the condor collector to be queried [default: %(default)s]")
     parser.add_argument("--es_hostname", default='es-cms5.cern.ch',
                         type=str, dest="es_hostname",
                         help="Hostname of the elasticsearch instance to be used [default: %(default)s]")
