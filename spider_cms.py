@@ -34,7 +34,15 @@ now_ns = int(time.time())*int(1e9)
 def get_schedds():
     schedd_query = classad.ExprTree('!isUndefined(CMSGWMS_Type)')
     coll = htcondor.Collector("cmssrv221.fnal.gov:9620")
-    schedd_ads = coll.query(htcondor.AdTypes.Schedd, schedd_query, projection=["MyAddress", "ScheddIpAddr", "Name"])
+    schedd_ads1 = coll.query(htcondor.AdTypes.Schedd, schedd_query, projection=["MyAddress", "ScheddIpAddr", "Name"])
+    coll2 = htcondor.Collector("cmsgwms-collector-tier0.cern.ch:9620")
+    schedd_ads2 = coll.query(htcondor.AdTypes.Schedd, schedd_query, projection=["MyAddress", "ScheddIpAddr", "Name"])
+    schedd_ads = {}
+    for ad in schedd_ads1 + schedd_ads2:
+         if 'Name' not in ad:
+             continue
+         schedd_ads[ad['Name']] = ad
+    schedd_ads = schedd_ads.values()
     random.shuffle(schedd_ads)
     return schedd_ads
 
