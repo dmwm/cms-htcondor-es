@@ -36,22 +36,20 @@ except ImportError:
 now = time.time()
 now_ns = int(time.time())*int(1e9)
 
-def get_schedds(args):
+def get_schedds():
     schedd_query = classad.ExprTree('!isUndefined(CMSGWMS_Type)')
-    coll = htcondor.Collector("cmssrv221.fnal.gov:9620")
-    schedd_ads1 = coll.query(htcondor.AdTypes.Schedd,
-                             schedd_query,
-                             projection=["MyAddress", "ScheddIpAddr", "Name"])
-    coll2 = htcondor.Collector("cmsgwms-collector-tier0.cern.ch:9620")
-    schedd_ads2 = coll.query(htcondor.AdTypes.Schedd,
-                             schedd_query,
-                             projection=["MyAddress", "ScheddIpAddr", "Name"])
-    schedd_ads = {}
-    for ad in schedd_ads1 + schedd_ads2:
-         if 'Name' not in ad:
-             continue
-         schedd_ads[ad['Name']] = ad
-    schedd_ads = schedd_ads.values()
+    collectors = ["cmssrv221.fnal.gov:9620",
+                  "cmsgwms-collector-tier0.cern.ch:9620",
+                  "cmssrv276.fnal.gov"]
+
+    schedd_ads = []
+    for host in collectors:
+        coll = htcondor.Collector(host)
+        schedd_ads += coll.query(htcondor.AdTypes.Schedd,
+                                 schedd_query,
+                                 projection=["MyAddress", "ScheddIpAddr", "Name"])
+
+    schedd_ads = [ad for ad in schedd_ads if 'Name' in ad]
     random.shuffle(schedd_ads)
 
     return schedd_ads
@@ -529,7 +527,7 @@ def main(args):
 
     # Get all the schedd ads
     pool = multiprocessing.Pool(processes=10)
-    future = pool.apply_async(get_schedds, (args,))
+    future = pool.apply_async(get_schedds)
     schedd_ads = future.get(TIMEOUT_MINS*60)
     logging.warning("There are %d schedds to query." % len(schedd_ads))
 
