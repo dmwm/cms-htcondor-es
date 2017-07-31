@@ -28,11 +28,11 @@ def make_mappings():
         mappings[name] = {"type": "long"}
     for name in filter_name(htcondor_es.convert_to_json.string_vals):
         if name in htcondor_es.convert_to_json.no_idx:
-            mappings[name] = {"type": "string", "index": "no"}
+            mappings[name] = {"type": "text", "index": "no"}
         elif name in htcondor_es.convert_to_json.no_analysis:
-            mappings[name] = {"type": "string", "index": "not_analyzed"}
+            mappings[name] = {"type": "text", "index": "not_analyzed"}
         else:
-            mappings[name] = {"type": "string", "analyzer": "analyzer_keyword"}
+            mappings[name] = {"type": "keyword"} #, "analyzer": "analyzer_keyword"}
     for name in filter_name(htcondor_es.convert_to_json.date_vals):
         mappings[name] = {"type": "date", "format": "epoch_millis"}
     for name in filter_name(htcondor_es.convert_to_json.bool_vals):
@@ -41,9 +41,9 @@ def make_mappings():
     mappings["Cmd"]["index"] = "no"
     mappings["StartdPrincipal"]["index"] = "no"
     mappings["StartdIpAddr"]["index"] = "no"
-    mappings["x509UserProxyFQAN"]["analyzer"] = "standard"
-    mappings["x509userproxysubject"]["analyzer"] = "standard"
-    #print mappings
+    # mappings["x509UserProxyFQAN"]["analyzer"] = "standard"
+    # mappings["x509userproxysubject"]["analyzer"] = "standard"
+
     return mappings
 
 
@@ -71,7 +71,7 @@ class ElasticInterface(object):
     """Interface to elasticsearch"""
     def __init__(self, hostname="es-cms.cern.ch", port=9203):
         domain = socket.getfqdn().split(".", 1)[-1]
-        if True: #domain == 'cern.ch':
+        if domain == 'cern.ch':
             passwd = ''
             username = ''
             regex = re.compile("^([A-Za-z]+):\s(.*)")
@@ -109,9 +109,15 @@ class ElasticInterface(object):
         body = json.dumps({"mappings": {"job": {"properties": mappings} },
                            "settings": {"index": settings},
                           })
+
+        with open('last_mappings.json', 'w') as jsonfile:
+            json.dump(json.loads(body), jsonfile, indent=2, sort_keys=True)
+
         result = self.handle.indices.create(index=idx, body=body, ignore=400)
         if result.get("status") != 400:
             logging.warning("Creation of index %s: %s" % (idx, str(result)))
+        elif 'already exists' not in result.get("error","").get("reason",""):
+            logging.error("Creation of index %s failed: %s" % (idx, str(result.get("error", ""))))
 
 
 _index_cache = set()
