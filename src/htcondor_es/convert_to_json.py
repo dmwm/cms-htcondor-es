@@ -176,6 +176,7 @@ date_vals = set([ \
   "EnteredCurrentStatus",
   "JobCurrentStartDate",
   "JobCurrentStartExecutingDate",
+  "JobCurrentStartTransferOutputDate",
   "JobLastStartDate",
   "JobStartDate",
   "LastMatchTime",
