@@ -28,11 +28,11 @@ def make_mappings():
         mappings[name] = {"type": "long"}
     for name in filter_name(htcondor_es.convert_to_json.string_vals):
         if name in htcondor_es.convert_to_json.no_idx:
-            mappings[name] = {"type": "string", "index": "no"}
+            mappings[name] = {"type": "text", "index": "no"}
         elif name in htcondor_es.convert_to_json.no_analysis:
-            mappings[name] = {"type": "string", "index": "not_analyzed"}
+            mappings[name] = {"type": "text", "index": "not_analyzed"}
         else:
-            mappings[name] = {"type": "string", "analyzer": "analyzer_keyword"}
+            mappings[name] = {"type": "keyword"} #, "analyzer": "analyzer_keyword"}
     for name in filter_name(htcondor_es.convert_to_json.date_vals):
         mappings[name] = {"type": "date", "format": "epoch_millis"}
     for name in filter_name(htcondor_es.convert_to_json.bool_vals):
@@ -41,9 +41,9 @@ def make_mappings():
     mappings["Cmd"]["index"] = "no"
     mappings["StartdPrincipal"]["index"] = "no"
     mappings["StartdIpAddr"]["index"] = "no"
-    mappings["x509UserProxyFQAN"]["analyzer"] = "standard"
-    mappings["x509userproxysubject"]["analyzer"] = "standard"
-    #print mappings
+    # mappings["x509UserProxyFQAN"]["analyzer"] = "standard"
+    # mappings["x509userproxysubject"]["analyzer"] = "standard"
+
     return mappings
 
 
