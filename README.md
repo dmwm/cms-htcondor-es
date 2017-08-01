@@ -25,6 +25,7 @@ most useful attributes, along with their meaning.
 Generic attributes:
 - `RecordTime`: When the job exited the queue or when the JSON document was last
   updated, whichever came first.  Use this field for time-based queries.
+- `GlobalJobId`: Use to uniquely identify individual jobs.
 - `BenchmarkJobDB12`: An estimate of the per-core performance of the machine the job last
   ran on, based on the `DB12` benchmark.  Higher is better.
 - `CoreHr`: The number of core-hours utilized by the job.  If the job lasted for
