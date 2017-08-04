@@ -292,7 +292,7 @@ def process_collector(args):
 
 def process_schedd_queue(starttime, schedd_ad, args):
     my_start = time.time()
-    logging.debug("Querying %s for jobs." % schedd_ad["Name"])
+    logging.info("Querying %s for jobs." % schedd_ad["Name"])
     if time.time() - starttime > TIMEOUT_MINS*60:
         logging.error("Crawler has been running for more than %d minutes; exiting." % TIMEOUT_MINS)
         return
@@ -490,8 +490,7 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
     os.rename(tmpname, "checkpoint.json")
 
     # Now that we have the fresh history, process the queues themselves.
-    domain = socket.getfqdn().split(".", 1)[-1]
-    if domain != 'cern.ch':
+    if args.process_queue:
         process_schedd_queue(starttime, schedd_ad, args)
     return last_completion
 
@@ -590,6 +589,9 @@ def main(args):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
+    parser.add_argument("--process_queue", action='store_true',
+                        dest="process_queue",
+                        help="Process also schedd queue (Running/Idle/Pending jobs)")
     parser.add_argument("--feed_influxdb", action='store_true',
                         dest="feed_influxdb",
                         help="Feed also to InfluxDB")
