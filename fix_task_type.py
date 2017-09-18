@@ -50,7 +50,8 @@ def task_type_logic(result):
        re.match('prozober_.+_HIP_Commissioning', workflow) or re.match('prozober_.+_JAN_Test', workflow) or \
        re.match('prozober_.+_Brunel_Commissioning', workflow) or re.match('prozober_.+_HPC_Test', workflow) or \
        re.match('amaltaro_.+_June_Validation', workflow) or re.match('amaltaro_.+_May_Validation', workflow) or \
-       re.match('amaltaro_.+_July_Validation', workflow):
+       re.match('amaltaro_.+_July_Validation', workflow) or \
+       re.match('amaltaro_.+_August_Validation', workflow):
         result['TaskType'] = 'Validation'
         result['Campaign'] = 'Validation'
         return result
@@ -193,7 +194,14 @@ while True:
                         (re.match('[A-Z2]{3,3}-PhaseIISNBSpring17DR-', new_source['Workflow'])) or \
                         (re.match('[A-Z2]{3,3}-PhaseIISpring17DR-', new_source['Workflow'])) or \
                         (re.match('[A-Z2]{3,3}-PhaseIISNBSpring17MiniAOD-', new_source['Workflow'])) or \
-                        (re.match('[A-Z2]{3,3}-PhaseIITDRSpring17MiniAOD-', new_source['Workflow'])) \
+                        (re.match('[A-Z2]{3,3}-PhaseIITDRSpring17MiniAOD-', new_source['Workflow'])) or \
+                        (re.match('[A-Z2]{3,3}-RunIISummer17DRStdmix-', new_source['Workflow'])) or \
+                        (re.match('[A-Z2]{3,3}-RunIISummer17MiniAOD-', new_source['Workflow'])) or \
+                        (re.match('[A-Z2]{3,3}-RunIIWinter15GenOnly-', new_source['Workflow'])) or \
+                        (re.match('[A-Z2]{3,3}-RunIISummer17DRPremix-', new_source['Workflow'])) or \
+                        (re.match('[A-Z2]{3,3}-RunIISummer17CosmicDR-', new_source['Workflow'])) or \
+                        (re.match('[A-Z2]{3,3}-PhaseIISummer17D-', new_source['Workflow'])) or \
+                        (re.match('[A-Z2]{3,3}-PhaseIITDRSpring17GS-', new_source['Workflow'])) \
                     )):
                     updates['Workflow'] = new_source['Workflow']
                     print "Workflow", source['Workflow'], "->", new_source['Workflow']
@@ -224,6 +232,7 @@ while True:
                         (source['Campaign'] == 'RunIISummer15GS' and new_source['Campaign'] == 'RunIISpring16DR80') or  \
                         (source['Campaign'] == 'RunIIWinter15wmLHE' and new_source['Campaign'] == 'RunIIFall15DR76') or  \
                         (source['Campaign'] == 'RunIIWinter15wmLHE' and new_source['Campaign'] == 'RunIIFall15MiniAODv2') or  \
+                        (source['Campaign'] == 'RunIIWinter15wmLHE' and new_source['Campaign'] == 'RunIIWinter15GenOnly') or  \
                         (source['Campaign'] == 'RunIISpring16FSPremix' and new_source['Campaign'] == 'RunIISpring16MiniAODv2') or  \
                         (source['Campaign'] == 'RunIISummer16FSPremix' and new_source['Campaign'] == 'RunIISummer16MiniAODv2') or  \
                         (source['Campaign'] == 'RunIISummer15wmLHEGS' and new_source['Campaign'] == 'RunIISummer16DR80Premix') or  \
@@ -242,10 +251,16 @@ while True:
                         (source['Campaign'] == 'RunIIWinter15pLHE' and new_source['Campaign'] == 'RunIISummer16MiniAODv2') or  \
                         (source['Campaign'] == 'CosmicFall16PhaseIGS' and new_source['Campaign'] == 'CosmicFall16PhaseIDR') or \
                         (source['Campaign'] == 'RunIISummer15GS' and (new_source['Campaign'] in ['RunIISummer16DR80Premix', 'RunIISpring16MiniAODv2'])) or \
-                        (source['Campaign'] == 'PhaseIITDRSpring17GS' and (new_source['Campaign'] in ['PhaseIITDRSpring17DR', 'PhaseIITDRSpring17MiniAOD'])) or \
+                        (source['Campaign'] == 'PhaseIITDRSpring17GS' and (new_source['Campaign'] in ['PhaseIISummer17D', 'PhaseIITDRSpring17DR', 'PhaseIITDRSpring17MiniAOD'])) or \
+                        (source['Campaign'] == 'PhaseIISummer17pLHE' and (new_source['Campaign'] in ['PhaseIITDRSpring17GS'])) or \
                         (source['Campaign'] == 'PhaseIITDRSpring17wmLHEGS' and (new_source['Campaign'] in ['PhaseIITDRSpring17DR', 'PhaseIITDRSpring17MiniAOD'])) or \
-                        (source['Campaign'] == 'PhaseIISNBSpring17wmLHEGS' and (new_source['Campaign'] in ['PhaseIISNBSpring17DR', 'PhaseIISNBSpring17MiniAOD', 'PhaseIITDRSpring17MiniAOD'])) or \
-                        (source['Campaign'] == 'PhaseIISNBSpring17GS' and (new_source['Campaign'] in ['PhaseIISNBSpring17DR', 'PhaseIISNBSpring17MiniAOD', 'PhaseIITDRSpring17MiniAOD'])) \
+                        (source['Campaign'] == 'RunIISummer17wmLHEGS' and (new_source['Campaign'] in ['RunIISummer17DRStdmix', 'RunIISummer17MiniAOD', 'RunIISummer17DRPremix'])) or \
+                        (source['Campaign'] == 'RunIISummer17CosmicGS' and (new_source['Campaign'] in ['RunIISummer17CosmicDR'])) or \
+                        (source['Campaign'] == 'RunIISummer17GS' and (new_source['Campaign'] in ['RunIISummer17DRPremix', 'RunIISummer17MiniAOD', 'RunIISummer17DRStdmix'])) or \
+                        (source['Campaign'] == 'RunIISummer17DRPremix' and (new_source['Campaign'] in ['RunIISummer17MiniAOD'])) or \
+                        ((source['Campaign'] in ['PhaseIISNBSpring17wmLHEGS', 'PhaseIITDRSpring17DR']) and (new_source['Campaign'] in ['PhaseIISNBSpring17DR', 'PhaseIISNBSpring17MiniAOD', 'PhaseIITDRSpring17MiniAOD'])) or \
+                        ((source['Campaign'] in ['PhaseIISNBSpring17GS', 'PhaseIISNBSpring17DR']) and (new_source['Campaign'] in ['PhaseIISNBSpring17DR', 'PhaseIISNBSpring17MiniAOD', 'PhaseIITDRSpring17MiniAOD'])) or \
+                        ((source['Campaign'] in ['pPb816Spring16wmLHEGS']) and (new_source['Campaign'] in ['pPb816Summer16DR'])) \
                     ):
                     updates['Campaign'] = new_source['Campaign']
                     print "Campaign", source['Campaign'], '->', new_source['Campaign']
@@ -264,7 +279,7 @@ while True:
                         ((new_source['Campaign'] in ['RunIIFall15DR76', 'PhaseIFall16DR']) and source['TaskType'] == 'GENSIM' and new_source['TaskType'] == 'DIGI') or \
                         (new_source['Campaign'] == 'TP2023HGCALDR' and source['TaskType'] == 'DIGIRECO' and new_source['TaskType'] == 'DIGI') or \
                         ((new_source['Campaign'] in ['RunIISpring16DR80', 'RunIISummer16DR80']) and source['TaskType'] == 'DIGIRECO' and new_source['TaskType'] == 'DIGI') or \
-                        ((new_source['Campaign'] in ['RunIISummer15GS', 'RunIIWinter15pLHE']) and source['TaskType'] == 'DIGI' and new_source['TaskType'] == 'GENSIM') or \
+                        ((new_source['Campaign'] in ['pPb816Spring16wmLHEGS', 'RunIISummer15GS', 'RunIIWinter15pLHE']) and source['TaskType'] == 'DIGI' and new_source['TaskType'] == 'GENSIM') or \
                         (new_source['Campaign'] == 'RunIISummer15wmLHEGS' and source['TaskType'] == 'DIGI' and new_source['TaskType'] == 'GENSIM') or \
                         (new_source['Campaign'] == 'RunIIWinter15wmLHE' and source['TaskType'] == 'DIGI' and new_source['TaskType'] == 'LHE') or \
                         ((new_source['Campaign'] in ['RunIISummer16DR80Premix', 'CosmicFall16PhaseIDR', 'RunIIHighPUTrainsDR', 'PhaseIFall16DR', 'PhaseIIFall16DR82', 'HINPbPbWinter16DR', 'pAWinter13DR53X']) and source['TaskType'] == 'StepOneProc' and new_source['TaskType'] == 'DIGIRECO') or \
