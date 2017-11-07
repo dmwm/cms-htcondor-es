@@ -34,7 +34,7 @@ def make_mappings():
         else:
             mappings[name] = {"type": "keyword"} #, "analyzer": "analyzer_keyword"}
     for name in filter_name(htcondor_es.convert_to_json.date_vals):
-        mappings[name] = {"type": "date", "format": "epoch_millis"}
+        mappings[name] = {"type": "date", "format": "epoch_second"}
     for name in filter_name(htcondor_es.convert_to_json.bool_vals):
         mappings[name] = {"type": "boolean"}
     mappings["Args"]["index"] = "no"
