@@ -341,7 +341,9 @@ def process_schedd_queue(starttime, schedd_ad, args):
                 elif job_ad['JobStatus'] == 1:
                     global_jobs_idle[global_key] += 1
                     global_jobs_coresidle[global_key] += job_ad.get('RequestCpus', 1)
-            idx = htcondor_es.es.get_index(job_ad["QDate"], update_es=(args.feed_es and not args.read_only))
+            idx = htcondor_es.es.get_index(job_ad["QDate"],
+                                           template=args.es_index_template,
+                                           update_es=(args.feed_es and not args.read_only))
             ad_list = buffered_ads.setdefault(idx, [])
             ad_list.append((job_ad["GlobalJobId"], json_ad, dict_ad))
             if len(ad_list) == 250:
@@ -425,7 +427,9 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
             if not json_ad:
                 continue
 
-            idx = htcondor_es.es.get_index(job_ad["QDate"], update_es=(args.feed_es and not args.read_only))
+            idx = htcondor_es.es.get_index(job_ad["QDate"],
+                                           template=args.es_index_template,
+                                           update_es=(args.feed_es and not args.read_only))
             ad_list = buffered_ads.setdefault(idx, [])
             ad_list.append((job_ad["GlobalJobId"], json_ad, dict_ad))
 
@@ -614,6 +618,9 @@ if __name__ == "__main__":
     parser.add_argument("--es_port", default=9203,
                         type=int, dest="es_port",
                         help="Port of the elasticsearch instance to be used [default: %(default)d]")
+    parser.add_argument("--es_index_template", default='cms',
+                        type=str, dest="es_index_template",
+                        help="Trunk of index pattern [default: %(default)s]")
     parser.add_argument("--log_dir", default='log/',
                         type=str, dest="log_dir",
                         help="Directory for logging information [default: %(default)s]")
