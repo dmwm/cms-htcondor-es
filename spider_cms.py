@@ -412,7 +412,7 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
     total_upload = 0
     if not args.read_only:
         if args.feed_es:
-            es = htcondor_es.es.get_server_handle(args) # es-cms5.cern.ch now
+            es = htcondor_es.es.get_server_handle(args) # es-cms.cern.ch now
         if args.feed_amq:
             amq = htcondor_es.amq.get_amq_interface()
     try:
@@ -612,7 +612,7 @@ if __name__ == "__main__":
                         dest="dry_run",
                         help=("Don't even read info, just pretend to. (Still "
                               "query the collector for the schedd's though.)"))
-    parser.add_argument("--es_hostname", default='es-cms5.cern.ch',
+    parser.add_argument("--es_hostname", default='es-cms.cern.ch',
                         type=str, dest="es_hostname",
                         help="Hostname of the elasticsearch instance to be used [default: %(default)s]")
     parser.add_argument("--es_port", default=9203,
