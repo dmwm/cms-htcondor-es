@@ -23,27 +23,46 @@ def filter_name(keys):
 
 
 def make_mappings():
-    mappings = {}
+    props = {}
     for name in filter_name(htcondor_es.convert_to_json.int_vals):
-        mappings[name] = {"type": "long"}
+        props[name] = {"type": "long"}
     for name in filter_name(htcondor_es.convert_to_json.string_vals):
         if name in htcondor_es.convert_to_json.no_idx:
-            mappings[name] = {"type": "text", "index": "no"}
+            props[name] = {"type": "text", "index": "no"}
         elif name in htcondor_es.convert_to_json.no_analysis:
-            mappings[name] = {"type": "text", "index": "not_analyzed"}
-        else:
-            mappings[name] = {"type": "keyword"} #, "analyzer": "analyzer_keyword"}
+            props[name] = {"type": "text", "index": "not_analyzed"}
+        # else:
+        #     props[name] = {"type": "keyword"} #, "analyzer": "analyzer_keyword"}
     for name in filter_name(htcondor_es.convert_to_json.date_vals):
-        mappings[name] = {"type": "date", "format": "epoch_second"}
+        props[name] = {"type": "date", "format": "epoch_second"}
     for name in filter_name(htcondor_es.convert_to_json.bool_vals):
-        mappings[name] = {"type": "boolean"}
-    mappings["Args"]["index"] = "no"
-    mappings["Cmd"]["index"] = "no"
-    mappings["StartdPrincipal"]["index"] = "no"
-    mappings["StartdIpAddr"]["index"] = "no"
-    # mappings["x509UserProxyFQAN"]["analyzer"] = "standard"
-    # mappings["x509userproxysubject"]["analyzer"] = "standard"
+        props[name] = {"type": "boolean"}
+    props["Args"]["index"] = "no"
+    props["Cmd"]["index"] = "no"
+    props["StartdPrincipal"]["index"] = "no"
+    props["StartdIpAddr"]["index"] = "no"
+    # props["x509UserProxyFQAN"]["analyzer"] = "standard"
+    # props["x509userproxysubject"]["analyzer"] = "standard"
 
+    dynamic_string_template = {
+        "strings_as_keywords" : {
+            "match_mapping_type" : "string",
+            "mapping" : {
+                "type" : "keyword",
+                "norms" : "false",
+                "ignore_above" : 256
+            }
+        }
+    }
+
+    mappings = {
+        "job": {
+            "dynamic_templates": [
+                dynamic_string_template
+            ],
+            "properties": props
+        }
+    }
     return mappings
 
 
@@ -95,9 +114,9 @@ class ElasticInterface(object):
     def fix_mapping(self, idx, template="cms"):
         idx_clt = elasticsearch.client.IndicesClient(self.handle)
         mappings = make_mappings()
-        custom_mappings = {"CMSPrimaryDataTier": mappings["CMSPrimaryDataTier"],
-                           "CMSPrimaryPrimaryDataset": mappings["CMSPrimaryPrimaryDataset"],
-                           "CMSPrimaryProcessedDataset": mappings["CMSPrimaryProcessedDataset"]}
+        custom_mappings = {"CMSPrimaryDataTier": mappings["job"]["properties"]["CMSPrimaryDataTier"],
+                           "CMSPrimaryPrimaryDataset": mappings["job"]["properties"]["CMSPrimaryPrimaryDataset"],
+                           "CMSPrimaryProcessedDataset": mappings["job"]["properties"]["CMSPrimaryProcessedDataset"]}
         logging.info(idx_clt.put_mapping(doc_type="job", index=idx, body=json.dumps({"properties": custom_mappings}), ignore=400))
 
     def make_mapping(self, idx, template="cms"):
@@ -106,7 +125,8 @@ class ElasticInterface(object):
         #print idx_clt.put_mapping(doc_type="job", index=idx, body=json.dumps({"properties": mappings}), ignore=400)
         settings = make_settings()
         #print idx_clt.put_settings(index=idx, body=json.dumps(settings), ignore=400)
-        body = json.dumps({"mappings": {"job": {"properties": mappings} },
+
+        body = json.dumps({"mappings": mappings,
                            "settings": {"index": settings},
                           })
 
