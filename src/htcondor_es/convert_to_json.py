@@ -391,7 +391,6 @@ no_analysis = set([
   "REQUIRED_OS",
   "ShouldTransferFiles",
   "WhenToTransferOutput",
-  "InputData",
   "DAGParentNodeNames",
 ])
 
