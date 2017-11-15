@@ -763,6 +763,8 @@ def convert_to_json(ad, cms=True, return_dict=False):
             result['HS06CoreHr'] = result['CoreHr'] * result['BenchmarkJobHS06']
             result["HS06CommittedCoreHr"] = result['CommittedCoreHr'] * result['BenchmarkJobHS06']
             result['HS06CpuTimeHr'] = result['CpuTimeHr'] * result['BenchmarkJobHS06']
+        except ValueError:
+            result.pop('MachineAttrMJF_JOB_HS06_JOB0', None)
         except:
             pass
     if ('MachineAttrDIRACBenchmark0' in ad) and classad.ExprTree('MachineAttrDIRACBenchmark0 isnt undefined').eval(ad):
