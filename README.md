@@ -13,6 +13,8 @@ are immediately useful in Kibana / ElasticSearch.  A significant portion
 of the logic is very specific to the CMS global pool - but ultimately could
 be reused for other HTCondor pools.
 
+The data can currently be accessed at [es-cms.cern.ch](https://es-cms.cern.ch/) and via CERN Monit at [monit-kibana.cern.ch](https://monit-kibana.cern.ch) (with index pattern `monit_prod_condor_raw_metric_v002*`). To be able to save visualizations on es-cms you need to access the rw version at [es-cms.cern.ch/kibana_rw](https://es-cms.cern.ch/kibana_rw) and be a member of the 'cms-comp-ops' CERN e-group.
+
 Important Attributes
 --------------------
 
