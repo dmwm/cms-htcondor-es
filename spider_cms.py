@@ -353,7 +353,8 @@ def process_schedd_queue(starttime, schedd_ad, args):
                                            update_es=(args.feed_es and not args.read_only))
             ad_list = buffered_ads.setdefault(idx, [])
             ad_list.append((job_ad["GlobalJobId"], json_ad, dict_ad))
-            if len(ad_list) == 250:
+
+            if len(ad_list) == args.bunching:
                 st = time.time()
                 if not args.read_only:
                     if args.feed_es:
@@ -440,7 +441,7 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
             ad_list = buffered_ads.setdefault(idx, [])
             ad_list.append((job_ad["GlobalJobId"], json_ad, dict_ad))
 
-            if len(ad_list) == 250:
+            if len(ad_list) == args.bunching:
                 st = time.time()
                 if not args.read_only:
                     if args.feed_es:
@@ -621,6 +622,11 @@ if __name__ == "__main__":
                         dest="dry_run",
                         help=("Don't even read info, just pretend to. (Still "
                               "query the collector for the schedd's though.)"))
+    parser.add_argument("--bunching", default=250,
+                        type=int, dest="bunching",
+                        help=("Send docs in bunches of this number "
+                              "[default: %(default)d]"))
+
     parser.add_argument("--es_hostname", default='es-cms.cern.ch',
                         type=str, dest="es_hostname",
                         help="Hostname of the elasticsearch instance to be used [default: %(default)s]")
