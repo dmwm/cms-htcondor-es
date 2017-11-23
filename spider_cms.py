@@ -298,7 +298,8 @@ def process_schedd_queue(starttime, schedd_ad, args):
     my_start = time.time()
     logging.info("Querying %s for jobs." % schedd_ad["Name"])
     if time.time() - starttime > TIMEOUT_MINS*60:
-        logging.error("Crawler has been running for more than %d minutes; exiting." % TIMEOUT_MINS)
+        logging.error("No time remaining to run queue crawler on %s; "
+                      "exiting." % schedd_ad['Name'] )
         return
     count = 0
     total_upload = 0
@@ -361,14 +362,21 @@ def process_schedd_queue(starttime, schedd_ad, args):
                         htcondor_es.es.post_ads(es.handle, idx, [(id_, json_ad) for id_, json_ad, _ in ad_list])
                     if args.feed_amq:
                         htcondor_es.amq.post_ads(amq, [(id_, dict_ad) for id_, _, dict_ad in ad_list])
+
                 logging.debug("...posting %d ads from %s (process_schedd_queue)" % (len(ad_list), schedd_ad["Name"]))
                 total_upload += time.time() - st
                 buffered_ads[idx] = []
             count += 1
+
             if time.time() - starttime > TIMEOUT_MINS*60:
-                logging.error("Crawler has been running for more than %d minutes; exiting." % TIMEOUT_MINS)
+                logging.error("Queue crawler on %s has been running for "
+                              "more than %d minutes; exiting." % (
+                                schedd_ad['Name'],
+                                TIMEOUT_MINS))
                 break
-        had_error=False
+
+        had_error = False
+
     except RuntimeError:
         logging.error("Failed to query schedd for jobs: %s" % schedd_ad["Name"])
     except Exception, e:
@@ -382,7 +390,7 @@ def process_schedd_queue(starttime, schedd_ad, args):
                 if args.feed_es:
                     htcondor_es.es.post_ads(es.handle, idx, [(id_, json_ad) for id_, json_ad, _ in ad_list])
                 if args.feed_amq:
-                    htcondor_es.amq.post_ads(amq,    [(id_, dict_ad) for id_, _, dict_ad in ad_list])
+                    htcondor_es.amq.post_ads(amq, [(id_, dict_ad) for id_, _, dict_ad in ad_list])
 
     buffered_ads.clear()
 
@@ -407,7 +415,8 @@ def process_schedd_queue(starttime, schedd_ad, args):
 def process_schedd(starttime, last_completion, schedd_ad, args):
     my_start = time.time()
     if time.time() - starttime > TIMEOUT_MINS*60:
-        logging.error("Crawler has been running for more than %d minutes; exiting." % TIMEOUT_MINS)
+        logging.error("No time remaining to process %s; exiting." % 
+                       schedd_ad['Name'] )
         return last_completion
 
     schedd = htcondor.Schedd(schedd_ad)
@@ -457,7 +466,7 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
             if job_completion > last_completion:
                 last_completion = job_completion
             if time.time() - starttime > TIMEOUT_MINS*60:
-                logging.error("Crawler has been running for more than %d minutes; exiting." % TIMEOUT_MINS)
+                logging.error("History crawler has been running for more than %d minutes; exiting." % TIMEOUT_MINS)
                 break
 
     except RuntimeError:
@@ -550,20 +559,28 @@ def main(args):
 
     for schedd_ad in schedd_ads:
         name = schedd_ad["Name"]
-        # if name != "vocms0313.cern.ch": continue ## DEBUG
-        last_completion = checkpoint.get(name, time.time()-12*3600) # only get 12h by default
-        # last_completion = checkpoint.get(name, 0) # get everything by default
-        if name.startswith("crab") and last_completion == 0:
+
+        # Check for last completion time
+        # If there was no previous completion, get last 12 h
+        last_completion = checkpoint.get(name, time.time()-12*3600)
+
+        # For CRAB, only ever get a maximum of 12 h
+        if name.startswith("crab") and last_completion < time.time()-12*3600:
             last_completion = time.time()-12*3600
 
-        future = pool.apply_async(process_schedd, (starttime, last_completion, schedd_ad, args))
+        future = pool.apply_async(process_schedd,
+                                     (starttime,
+                                      last_completion,
+                                      schedd_ad,
+                                      args) )
         
-        # process_schedd(starttime, last_completion, schedd_ad, args) ## DEBUG
+
         futures.append((name, future))
-        # break ## DEBUG
 
     pool.close()
 
+    # Check whether one of the processes timed out and reset their last
+    # completion checkpoint in case
     timed_out = False
     for name, future in futures:
         time_remaining = TIMEOUT_MINS*60+10 - (time.time() - starttime)
@@ -572,9 +589,10 @@ def main(args):
                 last_completion = future.get(time_remaining)
                 if name:
                     checkpoint[name] = last_completion
-                    # checkpoint[schedd_ad["name"]] = last_completion
+
             except multiprocessing.TimeoutError:
-                logging.warning("Schedd %s timed out; ignoring progress." % name)
+                logging.warning("Schedd %s timed out; ignoring progress." %
+                                 name)
         else:
             timed_out = True
             break
@@ -583,6 +601,7 @@ def main(args):
     pool.join()
 
 
+    # Update the last completion checkpoint file
     try:
         checkpoint_new = json.load(open("checkpoint.json"))
     except:
@@ -598,7 +617,8 @@ def main(args):
     fd.close()
     os.rename(tmpname, "checkpoint.json")
 
-    logging.warning("Total processing time: %.2f mins" % ((time.time()-starttime)/60.))
+    logging.warning("Total processing time: %.2f mins" % (
+                    (time.time()-starttime)/60.))
 
 
 if __name__ == "__main__":
@@ -635,7 +655,9 @@ if __name__ == "__main__":
                         help="Port of the elasticsearch instance to be used [default: %(default)d]")
     parser.add_argument("--es_index_template", default='cms',
                         type=str, dest="es_index_template",
-                        help="Trunk of index pattern [default: %(default)s]")
+                        help=("Trunk of index pattern. "
+                              "Needs to start with 'cms' "
+                              "[default: %(default)s]"))
     parser.add_argument("--log_dir", default='log/',
                         type=str, dest="log_dir",
                         help="Directory for logging information [default: %(default)s]")
