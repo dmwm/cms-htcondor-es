@@ -279,20 +279,19 @@ def process_collector(args):
         else:
             values['unclaimed_cores'] += ad.get('Cpus', 1)
 
-    if args.feed_influxdb:
-        text = ''
-        count = 0
-        influx = get_influx_socket()
-        for key, values in info.items():
-            value_info = ",".join(["%s=%s" % (i[0], i[1]) for i in values.items()])
-            text += 'slots,%s %s %d\n' % (key, value_info, now_ns)
-            count += 1
-            if count == 10:
-                influx.sendto(text, ('127.0.0.1', 8089))
-                count = 0
-                text = ''
-        if text:
+    text = ''
+    count = 0
+    influx = get_influx_socket()
+    for key, values in info.items():
+        value_info = ",".join(["%s=%s" % (i[0], i[1]) for i in values.items()])
+        text += 'slots,%s %s %d\n' % (key, value_info, now_ns)
+        count += 1
+        if count == 10:
             influx.sendto(text, ('127.0.0.1', 8089))
+            count = 0
+            text = ''
+    if text:
+        influx.sendto(text, ('127.0.0.1', 8089))
 
 
 def process_schedd_queue(starttime, schedd_ad, args):
@@ -331,21 +330,24 @@ def process_schedd_queue(starttime, schedd_ad, args):
             json_ad, dict_ad = htcondor_es.convert_to_json.convert_to_json(job_ad, return_dict=True)
             if not json_ad:
                 continue
-            global_key, job_keys = create_job_keys(schedd_ad['Name'], job_ad, dict_ad)
-            if job_keys and ('JobStatus' in job_ad):
-                for job_key in job_keys:
+
+            if args.feed_influxdb:
+                global_key, job_keys = create_job_keys(schedd_ad['Name'], job_ad, dict_ad)
+                if job_keys and ('JobStatus' in job_ad):
+                    for job_key in job_keys:
+                        if job_ad['JobStatus'] == 2:
+                            sites_jobs_running[job_key] += 1
+                            sites_jobs_coresrunning[job_key] += job_ad.get('RequestCpus', 1)
+                        elif job_ad['JobStatus'] == 1:
+                            sites_jobs_idle[job_key]    += 1
+                            sites_jobs_coresidle[job_key]    += job_ad.get('RequestCpus', 1)
                     if job_ad['JobStatus'] == 2:
-                        sites_jobs_running[job_key] += 1
-                        sites_jobs_coresrunning[job_key] += job_ad.get('RequestCpus', 1)
+                        global_jobs_running[global_key] += 1
+                        global_jobs_coresrunning[global_key] += job_ad.get('RequestCpus', 1)
                     elif job_ad['JobStatus'] == 1:
-                        sites_jobs_idle[job_key]    += 1
-                        sites_jobs_coresidle[job_key]    += job_ad.get('RequestCpus', 1)
-                if job_ad['JobStatus'] == 2:
-                    global_jobs_running[global_key] += 1
-                    global_jobs_coresrunning[global_key] += job_ad.get('RequestCpus', 1)
-                elif job_ad['JobStatus'] == 1:
-                    global_jobs_idle[global_key] += 1
-                    global_jobs_coresidle[global_key] += job_ad.get('RequestCpus', 1)
+                        global_jobs_idle[global_key] += 1
+                        global_jobs_coresidle[global_key] += job_ad.get('RequestCpus', 1)
+
             idx = htcondor_es.es.get_index(job_ad["QDate"],
                                            template=args.es_index_template,
                                            update_es=(args.feed_es and not args.read_only))
@@ -540,8 +542,10 @@ def main(args):
     logging.warning("There are %d schedds to query." % len(schedd_ads))
 
     futures = []
-    future = pool.apply_async(process_collector, (args,))
-    futures.append(('collector', future))
+
+    if args.feed_influxdb:
+        future = pool.apply_async(process_collector, (args,))
+        futures.append(('collector', future))
 
     for schedd_ad in schedd_ads:
         name = schedd_ad["Name"]
