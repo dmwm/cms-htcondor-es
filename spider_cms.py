@@ -42,14 +42,19 @@ def get_schedds():
                   "cmsgwms-collector-tier0.cern.ch:9620",
                   "cmssrv276.fnal.gov"]
 
-    schedd_ads = []
+    schedd_ads = {}
     for host in collectors:
         coll = htcondor.Collector(host)
-        schedd_ads += coll.query(htcondor.AdTypes.Schedd,
-                                 schedd_query,
-                                 projection=["MyAddress", "ScheddIpAddr", "Name"])
+        schedds = coll.query(htcondor.AdTypes.Schedd,
+                            schedd_query,
+                            projection=["MyAddress", "ScheddIpAddr", "Name"])
 
-    schedd_ads = [ad for ad in schedd_ads if 'Name' in ad]
+        for schedd in schedds:
+            try:
+                schedd_ads[schedd['Name']] = schedd
+            except KeyError: pass
+
+    schedd_ads = schedd_ads.values()
     random.shuffle(schedd_ads)
 
     return schedd_ads
