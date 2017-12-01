@@ -23,13 +23,17 @@ TIMEOUT_MINS = 11
 try:
     import htcondor_es.es
     import htcondor_es.amq
-    import htcondor_es.convert_to_json
+    from htcondor_es.convert_to_json import convert_to_json
+    from htcondor_es.convert_to_json import convert_dates_to_millisecs
+    from htcondor_es.convert_to_json import get_data_collection_time
 except ImportError:
     if os.path.exists("src/htcondor_es/__init__.py") and "src" not in sys.path:
         sys.path.append("src")
         import htcondor_es.es
         import htcondor_es.amq
-        import htcondor_es.convert_to_json
+        from htcondor_es.convert_to_json import convert_to_json
+        from htcondor_es.convert_to_json import convert_dates_to_millisecs
+        from htcondor_es.convert_to_json import get_data_collection_time
     else:
         raise
 
@@ -61,7 +65,7 @@ def get_schedds():
 
 
 def clean_old_jobs(starttime, name, es):
-    collection_date = htcondor_es.convert_to_json.get_data_collection_time()
+    collection_date = get_data_collection_time()
     idx = htcondor_es.es.get_index(time.time(), update_es=True)
     body = {"query": {
       "bool": {
@@ -328,7 +332,7 @@ def process_schedd_queue(starttime, schedd_ad, args):
             query_iter = []
         json_ad = '{}'
         for job_ad in query_iter:
-            json_ad, dict_ad = htcondor_es.convert_to_json.convert_to_json(job_ad, return_dict=True)
+            json_ad, dict_ad = convert_to_json(job_ad, return_dict=True)
             if not json_ad:
                 continue
 
@@ -361,7 +365,8 @@ def process_schedd_queue(starttime, schedd_ad, args):
                     if args.feed_es:
                         htcondor_es.es.post_ads(es.handle, idx, [(id_, json_ad) for id_, json_ad, _ in ad_list])
                     if args.feed_amq:
-                        htcondor_es.amq.post_ads(amq, [(id_, dict_ad) for id_, _, dict_ad in ad_list])
+                        data_for_amq = [(id_, convert_dates_to_millisecs(dict_ad)) for id_, _, dict_ad in ad_list]
+                        htcondor_es.amq.post_ads(amq, data_for_amq)
 
                 logging.debug("...posting %d ads from %s (process_schedd_queue)" % (len(ad_list), schedd_ad["Name"]))
                 total_upload += time.time() - st
@@ -390,7 +395,8 @@ def process_schedd_queue(starttime, schedd_ad, args):
                 if args.feed_es:
                     htcondor_es.es.post_ads(es.handle, idx, [(id_, json_ad) for id_, json_ad, _ in ad_list])
                 if args.feed_amq:
-                    htcondor_es.amq.post_ads(amq, [(id_, dict_ad) for id_, _, dict_ad in ad_list])
+                    data_for_amq = [(id_, convert_dates_to_millisecs(dict_ad)) for id_, _, dict_ad in ad_list]
+                    htcondor_es.amq.post_ads(amq, data_for_amq)
 
     buffered_ads.clear()
 
@@ -440,7 +446,8 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
         json_ad = '{}'
 
         for job_ad in history_iter:
-            json_ad, dict_ad = htcondor_es.convert_to_json.convert_to_json(job_ad, return_dict=True)
+            json_ad, dict_ad = convert_to_json(job_ad, return_dict=True)
+
             if not json_ad:
                 continue
 
@@ -456,7 +463,8 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
                     if args.feed_es:
                         htcondor_es.es.post_ads(es.handle, idx, [(id_, json_ad) for id_, json_ad, _ in ad_list])
                     if args.feed_amq:
-                        htcondor_es.amq.post_ads(amq, [(id_, dict_ad) for id_, _, dict_ad in ad_list])
+                        data_for_amq = [(id_, convert_dates_to_millisecs(dict_ad)) for id_, _, dict_ad in ad_list]
+                        htcondor_es.amq.post_ads(amq, data_for_amq)
                 logging.debug("...posting %d ads from %s (process_schedd)" % (len(ad_list), schedd_ad["Name"]))
                 total_upload += time.time() - st
                 buffered_ads[idx] = []
@@ -468,6 +476,7 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
             if time.time() - starttime > TIMEOUT_MINS*60:
                 logging.error("History crawler has been running for more than %d minutes; exiting." % TIMEOUT_MINS)
                 break
+
 
     except RuntimeError:
         logging.error("Failed to query schedd for history: %s" % schedd_ad["Name"])
@@ -482,7 +491,8 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
                 if args.feed_es:
                     htcondor_es.es.post_ads(es.handle, idx, [(id_, json_ad) for id_, json_ad, _ in ad_list])
                 if args.feed_amq:
-                    htcondor_es.amq.post_ads(amq, [(id_, dict_ad) for id_, _, dict_ad in ad_list])
+                    data_for_amq = [(id_, convert_dates_to_millisecs(dict_ad)) for id_, _, dict_ad in ad_list]
+                    htcondor_es.amq.post_ads(amq, data_for_amq)
 
 
     total_time = (time.time() - my_start) / 60.
