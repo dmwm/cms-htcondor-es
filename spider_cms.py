@@ -534,7 +534,7 @@ def main(args):
     starttime = time.time()
 
     # Get all the schedd ads
-    pool = multiprocessing.Pool(processes=10)
+    pool = multiprocessing.Pool(processes=5)
     future = pool.apply_async(get_schedds)
     schedd_ads = future.get(TIMEOUT_MINS*60)
     logging.warning("There are %d schedds to query." % len(schedd_ads))
