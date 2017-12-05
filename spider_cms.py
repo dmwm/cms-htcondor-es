@@ -332,7 +332,9 @@ def process_schedd_queue(starttime, schedd_ad, args):
             query_iter = []
         json_ad = '{}'
         for job_ad in query_iter:
-            json_ad, dict_ad = convert_to_json(job_ad, return_dict=True)
+            json_ad, dict_ad = convert_to_json(job_ad,
+                                    return_dict=True,
+                                    reduce_data=args.reduce_running_data)
             if not json_ad:
                 continue
 
@@ -681,6 +683,9 @@ if __name__ == "__main__":
                         dest="dry_run",
                         help=("Don't even read info, just pretend to. (Still "
                               "query the collector for the schedd's though.)"))
+    parser.add_argument("--reduce_running_data", action='store_true',
+                        dest="reduce_running_data",
+                        help="Drop all but some fields for running jobs.")
     parser.add_argument("--bunching", default=250,
                         type=int, dest="bunching",
                         help=("Send docs in bunches of this number "
