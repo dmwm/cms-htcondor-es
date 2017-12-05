@@ -402,7 +402,7 @@ def process_schedd_queue(starttime, schedd_ad, args):
 
     total_time = (time.time() - my_start)/60.
     total_upload = total_upload / 60.
-    logging.warning(("Schedd %s queue: response count: %d; "
+    logging.warning(("Schedd %-25s queue: response count: %5d; "
                      "query time %.2f min; "
                      "upload time %.2f min") % (
                            schedd_ad["Name"], count,
@@ -497,7 +497,7 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
 
     total_time = (time.time() - my_start) / 60.
     total_upload /= 60.
-    logging.warning(("Schedd %s history: response count: %d; last completion %s; "
+    logging.warning(("Schedd %-25s history: response count: %5d; last completion %s; "
                      "query time %.2f min; upload time %.2f min") % (
                       schedd_ad["Name"],
                       count,
