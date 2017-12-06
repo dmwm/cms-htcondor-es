@@ -37,6 +37,7 @@ def create_db(dbname = "popdb.sqlite"):
     create_if_not_exist(curs, "dataset_popularity", "CREATE TABLE dataset_popularity (dataset text, datatier text, primaryds text, processedds text, date text, month integer, crab_task text, user text, read_bytes integer, cpu_hours real, core_hours real, committed_hours real, file_opens integer, events integer, job_count integer, has_events integer, success integer)",
         "CREATE UNIQUE INDEX IF NOT EXISTS dataset_popularity_index ON dataset_popularity (dataset, month, crab_task, has_events, success)")
     create_if_not_exist(curs, "dataset_size", "CREATE TABLE dataset_size (dataset text, size_bytes integer, events integer)", None)
+    create_if_not_exist(curs, "disk_replicas", "CREATE TABLE disk_replicas (block text, site text, size_bytes integer)", "CREATE UNIQUE INDEX IF NOT EXISTS disk_replicas_index ON disk_replicas (block, site)")
     create_if_not_exist(curs, "index_progress", "CREATE TABLE index_progress (index_name text, completed integer)", None)
     return conn
 
@@ -190,7 +191,7 @@ def main():
     #for month in [(2016, 9), (2016, 10), (2016, 11), (2016, 12), (2017, 01), (2017, 02)]:
     #for month in [(2017, 02)]:
     conn = create_db()
-    for month in [(2016, 10), (2016, 11), (2016, 12), (2017, 1), (2017, 2), (2017, 3), (2017, 4), (2017, 5), (2017, 6), (2017, 7), (2017, 8), (2017, 9), (2017, 10)]:
+    for month in [(2016, 9), (2016, 10), (2016, 11), (2016, 12), (2017, 1), (2017, 2), (2017, 3), (2017, 4), (2017, 5), (2017, 6), (2017, 7), (2017, 8), (2017, 9), (2017, 10), (2017, 11)]:
         days = calendar.monthrange(month[0], month[1])[-1]
         needs_month_scan = False
         for day in range(days):
