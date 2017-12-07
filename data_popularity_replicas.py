@@ -2,12 +2,57 @@
 
 import os
 import json
+import ijson
+import collections
 import sqlite3
 import requests
 import multiprocessing
 
 blockreplicas_url = "https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas"
 nodes_url = "https://cmsweb.cern.ch/phedex/datasvc/json/prod/nodes"
+
+
+class ResponseFileAdaptor(object):
+    """
+    Given a requests Response object, provide a file-like adaptor.
+
+    Inspired by this solution:
+    https://stackoverflow.com/questions/12593576/adapt-an-iterator-to-behave-like-a-file-like-object-in-python
+    """
+
+    def __init__(self, response):
+        self._iter = response.iter_content(chunk_size=8192)
+        self._next_chunks = []
+        self._bytes_ready = 0
+
+    def _consume(self):
+        next_chunk = self._iter.next()
+        self._bytes_ready += len(next_chunk)
+        self._next_chunks.append(next_chunk)
+
+    def read(self, n):
+        if (self._next_chunks is None) or (n == 0):
+            return ''
+        try:
+            while self._bytes_ready < n:
+                self._consume()
+            result = ''.join(self._next_chunks[:-1])
+            bytes_remaining = n - len(result)
+            result += self._next_chunks[-1][:bytes_remaining]
+            remaining_chunk = self._next_chunks[-1][bytes_remaining:]
+            if remaining_chunk:
+                self._next_chunks = [remaining_chunk]
+                self._bytes_ready = len(remaining_chunk)
+            else:
+                self._next_chunks = []
+                self._bytes_ready = 0
+            assert(len(result) == n)
+            return result
+        except StopIteration:
+            result = ''.join(self._next_chunks)
+            self._next_chunks = None
+            assert(len(result) < n)
+            return result
 
 
 _g_session = None
@@ -32,14 +77,21 @@ def create_db(dbname = "popdb.sqlite"):
 def get_blockreplicas(node):
     print "Fetching block replicas for %s" % node
     session = get_session()
-    blocks_json = session.get(blockreplicas_url, params={"complete": "y", "node": node}).json()
+    response = session.get(blockreplicas_url, params={"complete": "y", "node": node})
+    response_fp = ResponseFileAdaptor(response)
+    replicas = collections.defaultdict(int)
+    block_counter = 0
+    for block in ijson.items(response_fp, 'phedex.block.item'):
+        block_counter += 1
+        name = str(block['name']).split('#')[0]
+        size = block['bytes']
+        replicas[name] += size
+    print "Total of %d block replicas in %d datasets returned for %s" % (block_counter, len(replicas), node)
     curs = create_db().cursor()
     curs.execute("BEGIN")
     curs.execute("DELETE FROM disk_replicas WHERE site=?", (node,))
-    for block in blocks_json['phedex']['block']:
-        name = str(block['name'])
-        size = block['bytes']
-        curs.execute("INSERT INTO disk_replicas (block, site, size_bytes) VALUES (?, ?, ?)", (name, node, size))
+    for name, size in replicas.items():
+        curs.execute("INSERT INTO disk_replicas (dataset, site, size_bytes) VALUES (?, ?, ?)", (name, node, size))
     curs.execute("COMMIT")
     print "Finished block replicas for %s" % node
 
@@ -54,15 +106,17 @@ def list_all_nodes():
 
 
 def main():
-    pool = multiprocessing.Pool(1)
+    nodes = list(list_all_nodes())
+    nodes.sort()
 
-    nodes = list_all_nodes()
-
-    dataset_replica_sizes = {}
-    counter = 0
-    node_counter = 0
-    list(pool.imap_unordered(get_blockreplicas, nodes))
-    pool.join()
+    if False:  # Left to help with easier debugging of get_blockreplicas
+        for node in nodes:
+            get_blockreplicas(node)
+    else:
+        pool = multiprocessing.Pool(5)
+        pool.imap_unordered(get_blockreplicas, nodes)
+        pool.close()
+        pool.join()
 
 if __name__ == '__main__':
     main()

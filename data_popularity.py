@@ -36,8 +36,8 @@ def create_db(dbname = "popdb.sqlite"):
     curs = conn.cursor()
     create_if_not_exist(curs, "dataset_popularity", "CREATE TABLE dataset_popularity (dataset text, datatier text, primaryds text, processedds text, date text, month integer, crab_task text, user text, read_bytes integer, cpu_hours real, core_hours real, committed_hours real, file_opens integer, events integer, job_count integer, has_events integer, success integer)",
         "CREATE UNIQUE INDEX IF NOT EXISTS dataset_popularity_index ON dataset_popularity (dataset, month, crab_task, has_events, success)")
-    create_if_not_exist(curs, "dataset_size", "CREATE TABLE dataset_size (dataset text, size_bytes integer, events integer)", None)
-    create_if_not_exist(curs, "disk_replicas", "CREATE TABLE disk_replicas (block text, site text, size_bytes integer)", "CREATE UNIQUE INDEX IF NOT EXISTS disk_replicas_index ON disk_replicas (block, site)")
+    create_if_not_exist(curs, "dataset_size", "CREATE TABLE dataset_size (dataset text, size_bytes integer, events integer, creation_date integer)", "CREATE UNIQUE INDEX IF NOT EXISTS dataset_size_index ON dataset_size (dataset)")
+    create_if_not_exist(curs, "disk_replicas", "CREATE TABLE disk_replicas (dataset text, site text, size_bytes integer)", "CREATE UNIQUE INDEX IF NOT EXISTS disk_replicas_index ON disk_replicas (dataset, site)")
     create_if_not_exist(curs, "index_progress", "CREATE TABLE index_progress (index_name text, completed integer)", None)
     return conn
 
@@ -163,6 +163,7 @@ def do_index(args, index, conn):
         except Exception, ex:
             #raise
             retry = True
+            print "Hit exception: ", str(ex), "Sleeping for 10s..."
             time.sleep(10)
 
     print "Modifications took %.1f minutes" % ((time.time()-now)/60.)
