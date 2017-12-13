@@ -18,6 +18,9 @@ string_vals = set([ \
   "CMSPrimaryPrimaryDataset",
   "CMSPrimaryProcessedDataset",
   "CMSPrimaryDataTier",
+  "CMSSWVersion",
+  "CMSSWMajorVersion",
+  "CMSSWReleaseSeries",
   "CRAB_JobType",
   "CRAB_JobSW",
   "CRAB_JobArch",
@@ -417,6 +420,9 @@ running_fields = set([
   "CMSPrimaryDataTier",
   "CMSSWKLumis",
   "CMSSWWallHrs",
+  "CMSSWVersion",
+  "CMSSWMajorVersion",
+  "CMSSWReleaseSeries",
   "CommittedCoreHr",
   "CoreHr",
   "Country",
@@ -499,6 +505,7 @@ _rereco_re = re.compile("[A-Za-z0-9_]+_Run20[A-Za-z0-9-_]+-([A-Za-z0-9]+)")
 _split_re = re.compile("\s*,?\s*")
 _generic_site = re.compile("^[A-Za-z0-9]+_[A-Za-z0-9]+_(.*)_")
 _cms_site = re.compile("CMS[A-Za-z]*_(.*)_")
+_cmssw_version = re.compile("CMSSW_((\d*)_(\d*)_.*)")
 def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     analysis = ("CRAB_Id" in ad) or (ad.get("AccountingGroup", "").startswith("analysis."))
     if ad.get("TaskType") == "ROOT":
@@ -797,6 +804,18 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
             result['ReadOpsPercent'] = result['ChirpCMSSWReadOps'] / float(ops)*100
     if ('Chirp_WMCore_cmsRun_ExitCode' in result) and (result.get('ExitCode', 0) == 0):
         result['ExitCode'] = result['Chirp_WMCore_cmsRun_ExitCode']
+
+    # Parse CRAB3 information on CMSSW version
+    result['CMSSWVersion'] = 'Unknown'
+    result['CMSSWMajorVersion'] = 'Unknown'
+    result['CMSSWReleaseSeries'] = 'Unknown'
+    if 'CRAB_JobSW' in result:
+        match = _cmssw_version.match(result['CRAB_JobSW'])
+        if match:
+            result['CMSSWVersion'] = match.group(1)
+            subv, ssubv = int(match.group(2)), int(match.group(3))
+            result['CMSSWMajorVersion'] = '%d_X_X' % (subv)
+            result['CMSSWReleaseSeries'] = '%d_%d_X' % (subv, ssubv)
 
     # Parse new machine statistics.
     if 'MachineAttrMJF_JOB_HS06_JOB0' in ad and (ad.get("MachineAttrMJF_JOB_HS06_JOB0") != "Unknown") and classad.ExprTree('MachineAttrMJF_JOB_HS06_JOB0 isnt undefined').eval(ad) and ('GLIDEIN_Cpus' in result):
