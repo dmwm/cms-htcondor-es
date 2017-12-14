@@ -23,13 +23,17 @@ TIMEOUT_MINS = 11
 try:
     import htcondor_es.es
     import htcondor_es.amq
-    import htcondor_es.convert_to_json
+    from htcondor_es.convert_to_json import convert_to_json
+    from htcondor_es.convert_to_json import convert_dates_to_millisecs
+    from htcondor_es.convert_to_json import get_data_collection_time
 except ImportError:
     if os.path.exists("src/htcondor_es/__init__.py") and "src" not in sys.path:
         sys.path.append("src")
         import htcondor_es.es
         import htcondor_es.amq
-        import htcondor_es.convert_to_json
+        from htcondor_es.convert_to_json import convert_to_json
+        from htcondor_es.convert_to_json import convert_dates_to_millisecs
+        from htcondor_es.convert_to_json import get_data_collection_time
     else:
         raise
 
@@ -61,7 +65,7 @@ def get_schedds():
 
 
 def clean_old_jobs(starttime, name, es):
-    collection_date = htcondor_es.convert_to_json.get_data_collection_time()
+    collection_date = get_data_collection_time()
     idx = htcondor_es.es.get_index(time.time(), update_es=True)
     body = {"query": {
       "bool": {
@@ -279,27 +283,27 @@ def process_collector(args):
         else:
             values['unclaimed_cores'] += ad.get('Cpus', 1)
 
-    if args.feed_influxdb:
-        text = ''
-        count = 0
-        influx = get_influx_socket()
-        for key, values in info.items():
-            value_info = ",".join(["%s=%s" % (i[0], i[1]) for i in values.items()])
-            text += 'slots,%s %s %d\n' % (key, value_info, now_ns)
-            count += 1
-            if count == 10:
-                influx.sendto(text, ('127.0.0.1', 8089))
-                count = 0
-                text = ''
-        if text:
+    text = ''
+    count = 0
+    influx = get_influx_socket()
+    for key, values in info.items():
+        value_info = ",".join(["%s=%s" % (i[0], i[1]) for i in values.items()])
+        text += 'slots,%s %s %d\n' % (key, value_info, now_ns)
+        count += 1
+        if count == 10:
             influx.sendto(text, ('127.0.0.1', 8089))
+            count = 0
+            text = ''
+    if text:
+        influx.sendto(text, ('127.0.0.1', 8089))
 
 
 def process_schedd_queue(starttime, schedd_ad, args):
     my_start = time.time()
     logging.info("Querying %s for jobs." % schedd_ad["Name"])
     if time.time() - starttime > TIMEOUT_MINS*60:
-        logging.error("Crawler has been running for more than %d minutes; exiting." % TIMEOUT_MINS)
+        logging.error("No time remaining to run queue crawler on %s; "
+                      "exiting." % schedd_ad['Name'] )
         return
     count = 0
     total_upload = 0
@@ -328,44 +332,56 @@ def process_schedd_queue(starttime, schedd_ad, args):
             query_iter = []
         json_ad = '{}'
         for job_ad in query_iter:
-            json_ad, dict_ad = htcondor_es.convert_to_json.convert_to_json(job_ad, return_dict=True)
+            json_ad, dict_ad = convert_to_json(job_ad, return_dict=True)
             if not json_ad:
                 continue
-            global_key, job_keys = create_job_keys(schedd_ad['Name'], job_ad, dict_ad)
-            if job_keys and ('JobStatus' in job_ad):
-                for job_key in job_keys:
+
+            if args.feed_influxdb:
+                global_key, job_keys = create_job_keys(schedd_ad['Name'], job_ad, dict_ad)
+                if job_keys and ('JobStatus' in job_ad):
+                    for job_key in job_keys:
+                        if job_ad['JobStatus'] == 2:
+                            sites_jobs_running[job_key] += 1
+                            sites_jobs_coresrunning[job_key] += job_ad.get('RequestCpus', 1)
+                        elif job_ad['JobStatus'] == 1:
+                            sites_jobs_idle[job_key]    += 1
+                            sites_jobs_coresidle[job_key]    += job_ad.get('RequestCpus', 1)
                     if job_ad['JobStatus'] == 2:
-                        sites_jobs_running[job_key] += 1
-                        sites_jobs_coresrunning[job_key] += job_ad.get('RequestCpus', 1)
+                        global_jobs_running[global_key] += 1
+                        global_jobs_coresrunning[global_key] += job_ad.get('RequestCpus', 1)
                     elif job_ad['JobStatus'] == 1:
-                        sites_jobs_idle[job_key]    += 1
-                        sites_jobs_coresidle[job_key]    += job_ad.get('RequestCpus', 1)
-                if job_ad['JobStatus'] == 2:
-                    global_jobs_running[global_key] += 1
-                    global_jobs_coresrunning[global_key] += job_ad.get('RequestCpus', 1)
-                elif job_ad['JobStatus'] == 1:
-                    global_jobs_idle[global_key] += 1
-                    global_jobs_coresidle[global_key] += job_ad.get('RequestCpus', 1)
+                        global_jobs_idle[global_key] += 1
+                        global_jobs_coresidle[global_key] += job_ad.get('RequestCpus', 1)
+
             idx = htcondor_es.es.get_index(job_ad["QDate"],
                                            template=args.es_index_template,
                                            update_es=(args.feed_es and not args.read_only))
             ad_list = buffered_ads.setdefault(idx, [])
             ad_list.append((job_ad["GlobalJobId"], json_ad, dict_ad))
-            if len(ad_list) == 250:
+
+            if len(ad_list) == args.bunching:
                 st = time.time()
                 if not args.read_only:
                     if args.feed_es:
                         htcondor_es.es.post_ads(es.handle, idx, [(id_, json_ad) for id_, json_ad, _ in ad_list])
                     if args.feed_amq:
-                        htcondor_es.amq.post_ads(amq, [(id_, dict_ad) for id_, _, dict_ad in ad_list])
+                        data_for_amq = [(id_, convert_dates_to_millisecs(dict_ad)) for id_, _, dict_ad in ad_list]
+                        htcondor_es.amq.post_ads(amq, data_for_amq)
+
                 logging.debug("...posting %d ads from %s (process_schedd_queue)" % (len(ad_list), schedd_ad["Name"]))
                 total_upload += time.time() - st
                 buffered_ads[idx] = []
             count += 1
+
             if time.time() - starttime > TIMEOUT_MINS*60:
-                logging.error("Crawler has been running for more than %d minutes; exiting." % TIMEOUT_MINS)
+                logging.error("Queue crawler on %s has been running for "
+                              "more than %d minutes; exiting." % (
+                                schedd_ad['Name'],
+                                TIMEOUT_MINS))
                 break
-        had_error=False
+
+        had_error = False
+
     except RuntimeError:
         logging.error("Failed to query schedd for jobs: %s" % schedd_ad["Name"])
     except Exception, e:
@@ -379,13 +395,14 @@ def process_schedd_queue(starttime, schedd_ad, args):
                 if args.feed_es:
                     htcondor_es.es.post_ads(es.handle, idx, [(id_, json_ad) for id_, json_ad, _ in ad_list])
                 if args.feed_amq:
-                    htcondor_es.amq.post_ads(amq,    [(id_, dict_ad) for id_, _, dict_ad in ad_list])
+                    data_for_amq = [(id_, convert_dates_to_millisecs(dict_ad)) for id_, _, dict_ad in ad_list]
+                    htcondor_es.amq.post_ads(amq, data_for_amq)
 
     buffered_ads.clear()
 
     total_time = (time.time() - my_start)/60.
     total_upload = total_upload / 60.
-    logging.warning(("Schedd %s queue: response count: %d; "
+    logging.warning(("Schedd %-25s queue: response count: %5d; "
                      "query time %.2f min; "
                      "upload time %.2f min") % (
                            schedd_ad["Name"], count,
@@ -404,7 +421,8 @@ def process_schedd_queue(starttime, schedd_ad, args):
 def process_schedd(starttime, last_completion, schedd_ad, args):
     my_start = time.time()
     if time.time() - starttime > TIMEOUT_MINS*60:
-        logging.error("Crawler has been running for more than %d minutes; exiting." % TIMEOUT_MINS)
+        logging.error("No time remaining to process %s; exiting." % 
+                       schedd_ad['Name'] )
         return last_completion
 
     schedd = htcondor.Schedd(schedd_ad)
@@ -428,7 +446,8 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
         json_ad = '{}'
 
         for job_ad in history_iter:
-            json_ad, dict_ad = htcondor_es.convert_to_json.convert_to_json(job_ad, return_dict=True)
+            json_ad, dict_ad = convert_to_json(job_ad, return_dict=True)
+
             if not json_ad:
                 continue
 
@@ -438,13 +457,14 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
             ad_list = buffered_ads.setdefault(idx, [])
             ad_list.append((job_ad["GlobalJobId"], json_ad, dict_ad))
 
-            if len(ad_list) == 250:
+            if len(ad_list) == args.bunching:
                 st = time.time()
                 if not args.read_only:
                     if args.feed_es:
                         htcondor_es.es.post_ads(es.handle, idx, [(id_, json_ad) for id_, json_ad, _ in ad_list])
                     if args.feed_amq:
-                        htcondor_es.amq.post_ads(amq, [(id_, dict_ad) for id_, _, dict_ad in ad_list])
+                        data_for_amq = [(id_, convert_dates_to_millisecs(dict_ad)) for id_, _, dict_ad in ad_list]
+                        htcondor_es.amq.post_ads(amq, data_for_amq)
                 logging.debug("...posting %d ads from %s (process_schedd)" % (len(ad_list), schedd_ad["Name"]))
                 total_upload += time.time() - st
                 buffered_ads[idx] = []
@@ -454,8 +474,9 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
             if job_completion > last_completion:
                 last_completion = job_completion
             if time.time() - starttime > TIMEOUT_MINS*60:
-                logging.error("Crawler has been running for more than %d minutes; exiting." % TIMEOUT_MINS)
+                logging.error("History crawler has been running for more than %d minutes; exiting." % TIMEOUT_MINS)
                 break
+
 
     except RuntimeError:
         logging.error("Failed to query schedd for history: %s" % schedd_ad["Name"])
@@ -470,12 +491,13 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
                 if args.feed_es:
                     htcondor_es.es.post_ads(es.handle, idx, [(id_, json_ad) for id_, json_ad, _ in ad_list])
                 if args.feed_amq:
-                    htcondor_es.amq.post_ads(amq, [(id_, dict_ad) for id_, _, dict_ad in ad_list])
+                    data_for_amq = [(id_, convert_dates_to_millisecs(dict_ad)) for id_, _, dict_ad in ad_list]
+                    htcondor_es.amq.post_ads(amq, data_for_amq)
 
 
     total_time = (time.time() - my_start) / 60.
     total_upload /= 60.
-    logging.warning(("Schedd %s history: response count: %d; last completion %s; "
+    logging.warning(("Schedd %-25s history: response count: %5d; last completion %s; "
                      "query time %.2f min; upload time %.2f min") % (
                       schedd_ad["Name"],
                       count,
@@ -540,25 +562,35 @@ def main(args):
     logging.warning("There are %d schedds to query." % len(schedd_ads))
 
     futures = []
-    future = pool.apply_async(process_collector, (args,))
-    futures.append(('collector', future))
+
+    if args.feed_influxdb:
+        future = pool.apply_async(process_collector, (args,))
+        futures.append(('collector', future))
 
     for schedd_ad in schedd_ads:
         name = schedd_ad["Name"]
-        # if name != "vocms0313.cern.ch": continue ## DEBUG
-        last_completion = checkpoint.get(name, time.time()-12*3600) # only get 12h by default
-        # last_completion = checkpoint.get(name, 0) # get everything by default
-        if name.startswith("crab") and last_completion == 0:
+
+        # Check for last completion time
+        # If there was no previous completion, get last 12 h
+        last_completion = checkpoint.get(name, time.time()-12*3600)
+
+        # For CRAB, only ever get a maximum of 12 h
+        if name.startswith("crab") and last_completion < time.time()-12*3600:
             last_completion = time.time()-12*3600
 
-        future = pool.apply_async(process_schedd, (starttime, last_completion, schedd_ad, args))
+        future = pool.apply_async(process_schedd,
+                                     (starttime,
+                                      last_completion,
+                                      schedd_ad,
+                                      args) )
         
-        # process_schedd(starttime, last_completion, schedd_ad, args) ## DEBUG
+
         futures.append((name, future))
-        # break ## DEBUG
 
     pool.close()
 
+    # Check whether one of the processes timed out and reset their last
+    # completion checkpoint in case
     timed_out = False
     for name, future in futures:
         time_remaining = TIMEOUT_MINS*60+10 - (time.time() - starttime)
@@ -567,9 +599,10 @@ def main(args):
                 last_completion = future.get(time_remaining)
                 if name:
                     checkpoint[name] = last_completion
-                    # checkpoint[schedd_ad["name"]] = last_completion
+
             except multiprocessing.TimeoutError:
-                logging.warning("Schedd %s timed out; ignoring progress." % name)
+                logging.warning("Schedd %s timed out; ignoring progress." %
+                                 name)
         else:
             timed_out = True
             break
@@ -578,6 +611,7 @@ def main(args):
     pool.join()
 
 
+    # Update the last completion checkpoint file
     try:
         checkpoint_new = json.load(open("checkpoint.json"))
     except:
@@ -593,7 +627,8 @@ def main(args):
     fd.close()
     os.rename(tmpname, "checkpoint.json")
 
-    logging.warning("Total processing time: %.2f mins" % ((time.time()-starttime)/60.))
+    logging.warning("Total processing time: %.2f mins" % (
+                    (time.time()-starttime)/60.))
 
 
 if __name__ == "__main__":
@@ -617,6 +652,11 @@ if __name__ == "__main__":
                         dest="dry_run",
                         help=("Don't even read info, just pretend to. (Still "
                               "query the collector for the schedd's though.)"))
+    parser.add_argument("--bunching", default=250,
+                        type=int, dest="bunching",
+                        help=("Send docs in bunches of this number "
+                              "[default: %(default)d]"))
+
     parser.add_argument("--es_hostname", default='es-cms.cern.ch',
                         type=str, dest="es_hostname",
                         help="Hostname of the elasticsearch instance to be used [default: %(default)s]")
@@ -625,7 +665,9 @@ if __name__ == "__main__":
                         help="Port of the elasticsearch instance to be used [default: %(default)d]")
     parser.add_argument("--es_index_template", default='cms',
                         type=str, dest="es_index_template",
-                        help="Trunk of index pattern [default: %(default)s]")
+                        help=("Trunk of index pattern. "
+                              "Needs to start with 'cms' "
+                              "[default: %(default)s]"))
     parser.add_argument("--log_dir", default='log/',
                         type=str, dest="log_dir",
                         help="Directory for logging information [default: %(default)s]")

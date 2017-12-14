@@ -493,7 +493,7 @@ def convert_to_json(ad, cms=True, return_dict=False):
                 if value == "Unknown":
                     value = None
                 else:
-                    logging.error("Failed to convert key %s with value %s to int" % (key, repr(value)))
+                    logging.warning("Failed to convert key %s with value %s to int" % (key, repr(value)))
                     value = str(value)
         elif key in string_vals:
             value = str(value)
@@ -797,3 +797,10 @@ def convert_to_json(ad, cms=True, return_dict=False):
         return json.dumps(result)
 
 
+def convert_dates_to_millisecs(record):
+    for date_field in date_vals:
+        try:
+            record[date_field] *= 1000
+        except (KeyError, TypeError): continue
+
+    return record
