@@ -332,7 +332,9 @@ def process_schedd_queue(starttime, schedd_ad, args):
             query_iter = []
         json_ad = '{}'
         for job_ad in query_iter:
-            json_ad, dict_ad = convert_to_json(job_ad, return_dict=True)
+            json_ad, dict_ad = convert_to_json(job_ad,
+                                    return_dict=True,
+                                    reduce_data=args.reduce_running_data)
             if not json_ad:
                 continue
 
@@ -520,9 +522,6 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
     fd.close()
     os.rename(tmpname, "checkpoint.json")
 
-    # Now that we have the fresh history, process the queues themselves.
-    if args.process_queue:
-        process_schedd_queue(starttime, schedd_ad, args)
     return last_completion
 
 
@@ -587,8 +586,6 @@ def main(args):
 
         futures.append((name, future))
 
-    pool.close()
-
     # Check whether one of the processes timed out and reset their last
     # completion checkpoint in case
     timed_out = False
@@ -608,7 +605,6 @@ def main(args):
             break
     if timed_out:
         pool.terminate()
-    pool.join()
 
 
     # Update the last completion checkpoint file
@@ -627,8 +623,43 @@ def main(args):
     fd.close()
     os.rename(tmpname, "checkpoint.json")
 
-    logging.warning("Total processing time: %.2f mins" % (
+    logging.warning("Total processing time for history: %.2f mins" % (
                     (time.time()-starttime)/60.))
+
+
+    # Now that we have the fresh history, process the queues themselves.
+    if not args.process_queue:
+        return 0
+
+    futures = []
+    for schedd_ad in schedd_ads:
+        future = pool.apply_async(process_schedd_queue,
+                                     (starttime, schedd_ad, args) )
+        futures.append((schedd_ad['Name'], future))
+
+    pool.close()
+
+    timed_out = False
+    for name, future in futures:
+        time_remaining = TIMEOUT_MINS*60+10 - (time.time() - starttime)
+        if time_remaining > 0:
+            try:
+                future.get(time_remaining)
+            except multiprocessing.TimeoutError:
+                logging.warning("Schedd %s timed out; ignoring progress." %
+                                 name)
+        else:
+            timed_out = True
+            break
+    if timed_out:
+        pool.terminate()
+
+    pool.join()
+
+    logging.warning("Total processing time for history and queue: %.2f mins"
+                      % ((time.time()-starttime)/60.))
+
+    return 0
 
 
 if __name__ == "__main__":
@@ -652,6 +683,9 @@ if __name__ == "__main__":
                         dest="dry_run",
                         help=("Don't even read info, just pretend to. (Still "
                               "query the collector for the schedd's though.)"))
+    parser.add_argument("--reduce_running_data", action='store_true',
+                        dest="reduce_running_data",
+                        help="Drop all but some fields for running jobs.")
     parser.add_argument("--bunching", default=250,
                         type=int, dest="bunching",
                         help=("Send docs in bunches of this number "
