@@ -408,6 +408,57 @@ bool_vals = set([
   "CMSSWDone",
 ])
 
+# Fields to be kept in docs concerning running jobs
+running_fields = set([
+  "BenchmarkJobDB12",
+  "Campaign",
+  "CMS_JobType",
+  "CMSGroups",
+  "CMSPrimaryDataTier",
+  "CMSSWKLumis",
+  "CMSSWWallHrs",
+  "CommittedCoreHr",
+  "CoreHr",
+  "Country",
+  "CpuBadput",
+  "CpuEff",
+  "CpuEventRate",
+  "CpuTimeHr",
+  "CpuTimePerEvent",
+  "CRAB_AsyncDest",
+  "CRAB_DataBlock",
+  "CRAB_UserHN",
+  "CRAB_Workflow",
+  # "DataLocations",
+  "DESIRED_CMSDataset",
+  # "DESIRED_Sites",
+  "EventRate",
+  "GlobalJobId",
+  "HasSingularity",
+  "InputData",
+  "InputGB",
+  "KEvents",
+  "MegaEvents",
+  "MemoryMB",
+  "OutputGB",
+  "QueueHrs",
+  "ReadTimeMins",
+  "RecordTime",
+  "RequestCpus",
+  "RequestMemory",
+  "ScheddName",
+  "Site",
+  "Status",
+  "TaskType",
+  "Tier",
+  "TimePerEvent",
+  "Type",
+  "WallClockHr",
+  "WMAgent_RequestName",
+  "WMAgent_SubTaskName",
+  "Workflow",
+])
+
 status = { \
   0: "Unexpanded",
   1: "Idle",
@@ -448,7 +499,7 @@ _rereco_re = re.compile("[A-Za-z0-9_]+_Run20[A-Za-z0-9-_]+-([A-Za-z0-9]+)")
 _split_re = re.compile("\s*,?\s*")
 _generic_site = re.compile("^[A-Za-z0-9]+_[A-Za-z0-9]+_(.*)_")
 _cms_site = re.compile("CMS[A-Za-z]*_(.*)_")
-def convert_to_json(ad, cms=True, return_dict=False):
+def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     analysis = ("CRAB_Id" in ad) or (ad.get("AccountingGroup", "").startswith("analysis."))
     if ad.get("TaskType") == "ROOT":
         if return_dict:
@@ -493,7 +544,7 @@ def convert_to_json(ad, cms=True, return_dict=False):
                 if value == "Unknown":
                     value = None
                 else:
-                    logging.error("Failed to convert key %s with value %s to int" % (key, repr(value)))
+                    logging.warning("Failed to convert key %s with value %s to int" % (key, repr(value)))
                     value = str(value)
         elif key in string_vals:
             value = str(value)
@@ -791,9 +842,28 @@ def convert_to_json(ad, cms=True, return_dict=False):
         result['CPUModelName'] = str(ad['MachineAttrCPUModel0'])
         result['Processor'] = str(ad['MachineAttrCPUModel0'])
 
+    if reduce_data:
+        result = drop_fields_for_running_jobs(result)
+
     if return_dict:
         return json.dumps(result), result
     else:
         return json.dumps(result)
 
 
+def convert_dates_to_millisecs(record):
+    for date_field in date_vals:
+        try:
+            record[date_field] *= 1000
+        except (KeyError, TypeError): continue
+
+    return record
+
+def drop_fields_for_running_jobs(record):
+    skimmed_record = {}
+    for field in running_fields:
+        try:
+            skimmed_record[field] = record[field]
+        except KeyError: continue
+
+    return skimmed_record
