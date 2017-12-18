@@ -192,7 +192,7 @@ def main():
     #for month in [(2016, 9), (2016, 10), (2016, 11), (2016, 12), (2017, 01), (2017, 02)]:
     #for month in [(2017, 02)]:
     conn = create_db()
-    for month in [(2016, 9), (2016, 10), (2016, 11), (2016, 12), (2017, 1), (2017, 2), (2017, 3), (2017, 4), (2017, 5), (2017, 6), (2017, 7), (2017, 8), (2017, 9), (2017, 10), (2017, 11)]:
+    for month in [(2016, 9), (2016, 10), (2016, 11), (2016, 12), (2017, 1), (2017, 2), (2017, 3), (2017, 4), (2017, 5), (2017, 6), (2017, 7), (2017, 8), (2017, 9), (2017, 10), (2017, 11), (2017, 12)]:
         days = calendar.monthrange(month[0], month[1])[-1]
         needs_month_scan = False
         for day in range(days):
@@ -206,8 +206,14 @@ def main():
             for day in range(days):
                 index = "cms-%02d-%02d-%02d" % (month[0], month[1], day+1)
                 reset_index(index, conn)
+        today = datetime.datetime.today()
+        two_days_ago = today - datetime.timedelta(2, 0)
         for day in range(days):
             index = "cms-%02d-%02d-%02d" % (month[0], month[1], day+1)
+            day_dt = datetime.datetime(month[0], month[1], day+1)
+            if day_dt >= two_days_ago:
+                print "Skipping scan of %s as the data is too new." % index
+                continue
             retval = check_index(index, conn)
             if needs_month_scan or retval != 0:
                 start_index(index, conn)
