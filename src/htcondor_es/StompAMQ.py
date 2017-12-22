@@ -114,7 +114,7 @@ class StompAMQ(object):
         if conn.is_connected():
             conn.disconnect()
 
-        self._logger.warning('Sent %d docs to %s', len(successfully_sent), repr(self._host_and_ports))
+        self._logger.info('Sent %d docs to %s', len(successfully_sent), repr(self._host_and_ports))
         return successfully_sent
 
     def _send_single(self, conn, notification):

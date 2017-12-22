@@ -1,3 +1,6 @@
+import time
+import logging
+import multiprocessing
 from htcondor_es.StompAMQ import StompAMQ
 StompAMQ._version = '0.1.2'
 
@@ -19,11 +22,12 @@ def get_amq_interface():
     return _amq_interface
 
 
-def post_ads(interface, ads):
+def post_ads(ads):
     if not len(ads):
         logging.warning("No new documents found")
         return
 
+    interface = get_amq_interface()
     list_data = []
     for id_, ad in ads:
         list_data.append(interface.make_notification(payload=ad,
@@ -31,5 +35,4 @@ def post_ads(interface, ads):
                                                      type_='htcondor_job_info'))
 
     sent_data = interface.send(list_data)
-    return sent_data
-
+    return (len(sent_data), len(ads))
