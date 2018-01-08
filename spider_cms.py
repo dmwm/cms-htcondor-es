@@ -40,6 +40,33 @@ except ImportError:
 now = time.time()
 now_ns = int(time.time())*int(1e9)
 
+def send_email_alert(recipients, subject, message):
+    if not recipients:
+        return
+    try:
+        import smtplib, getpass
+        from email.mime.text import MIMEText
+        msg = MIMEText(message)
+        msg['Subject'] = "%s - %sh: %s" % (socket.gethostname(),
+                                          time.strftime("%b %d, %H:%M"),
+                                          subject)
+
+        domain = socket.getfqdn()
+        if not 'cern.ch' in domain:
+            domain = '%s.unl.edu' % socket.gethostname()
+        msg['From'] = '%s@%s' % (getpass.getuser(), domain)
+        msg['To'] = recipients[0]
+
+        s = smtplib.SMTP('localhost')
+        s.sendmail(msg['From'], recipients, msg.as_string())
+        s.quit()
+
+    except ImportError:
+        logging.warning("Email notification failed: ImportError")
+    except Exception, e:
+        logging.warning("Email notification failed: %s" % str(e))
+
+
 def get_schedds():
     schedd_query = classad.ExprTree('!isUndefined(CMSGWMS_Type)')
     collectors = ["cmssrv221.fnal.gov:9620",
@@ -302,8 +329,12 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
     my_start = time.time()
     logging.info("Querying %s queue for jobs." % schedd_ad["Name"])
     if time.time() - starttime > TIMEOUT_MINS*60:
-        logging.error("No time remaining to run queue crawler on %s; "
-                      "exiting." % schedd_ad['Name'] )
+        message = ("No time remaining to run queue crawler on %s; "
+                   "exiting." % schedd_ad['Name'] )
+        logging.error(message)
+        send_email_alert(args.email_alerts,
+                         "spider_cms queue timeout warning",
+                         message)
         return
 
     count = 0
@@ -351,9 +382,13 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
             count += 1
 
             if time.time() - starttime > TIMEOUT_MINS*60:
-                logging.error("Queue crawler on %s has been running for "
-                              "more than %d minutes; exiting." % (
-                                schedd_ad['Name'], TIMEOUT_MINS))
+                message = ("Queue crawler on %s has been running for "
+                           "more than %d minutes; exiting" %
+                               (schedd_ad['Name'], TIMEOUT_MINS))
+                logging.error(message)
+                send_email_alert(args.email_alerts,
+                                 "spider_cms queue timeout warning",
+                                 message)
                 break
 
         had_error = False
@@ -362,7 +397,11 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
         logging.error("Failed to query schedd %s for jobs: %s" %
                       (schedd_ad["Name"], str(e)))
     except Exception, e:
-        logging.error("Failure when processing schedd query: %s" % str(e))
+        message = ("Failure when processing schedd queue query on %s: %s" % 
+                       (schedd_ad["Name"], str(e)))
+        logging.error(message)
+        send_email_alert(args.email_alerts, "spider_cms schedd queue query error",
+                         message)
         traceback.print_exc()
 
     queue.put(schedd_ad['Name'])
@@ -386,8 +425,12 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
 def process_schedd(starttime, last_completion, schedd_ad, args):
     my_start = time.time()
     if time.time() - starttime > TIMEOUT_MINS*60:
-        logging.error("No time remaining to process %s; exiting." % 
-                       schedd_ad['Name'] )
+        message = ("No time remaining to process %s history; exiting." % 
+                       schedd_ad['Name'])
+        logging.error(message)
+        send_email_alert(args.email_alerts,
+                         "spider_cms history timeout warning",
+                         message)
         return last_completion
 
     schedd = htcondor.Schedd(schedd_ad)
@@ -439,14 +482,24 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
             if job_completion > last_completion:
                 last_completion = job_completion
             if time.time() - starttime > TIMEOUT_MINS*60:
-                logging.error("History crawler has been running for more than %d minutes; exiting." % TIMEOUT_MINS)
+                message = ("History crawler on %s has been running for "
+                           "more than %d minutes; exiting." % (schedd_ad["Name"], TIMEOUT_MINS))
+                logging.error(message)
+                send_email_alert(args.email_alerts,
+                                 "spider_cms history timeout warning",
+                                 message)
                 break
 
 
     except RuntimeError:
-        logging.error("Failed to query schedd for history: %s" % schedd_ad["Name"])
+        logging.error("Failed to query schedd for job history: %s" % schedd_ad["Name"])
+
     except Exception, e:
-        logging.error("Failure when processing schedd: %s" % str(e))
+        message = ("Failure when processing schedd history query on %s: %s" % 
+                       (schedd_ad["Name"], str(e)))
+        logging.error(message)
+        send_email_alert(args.email_alerts, "spider_cms schedd history query error",
+                         message)
 
     # Post the remaining ads
     for idx, ad_list in buffered_ads.items():
@@ -618,8 +671,12 @@ def process_histories(schedd_ads, starttime, pool, args):
                     checkpoint[name] = last_completion
 
             except multiprocessing.TimeoutError:
-                logging.warning("Schedd %s timed out; ignoring progress." %
-                                 name)
+                message = "Schedd %s history timed out; ignoring progress." % name
+                logging.error(message)
+                send_email_alert(args.email_alerts,
+                                 "spider_cms history timeout warning",
+                                 message)
+
         else:
             timed_out = True
             break
@@ -713,8 +770,11 @@ def process_queues(schedd_ads, starttime, pool, args):
                 else:
                     total_queried += count
             except multiprocessing.TimeoutError:
-                logging.warning("Schedd %s timed out; ignoring progress." %
-                                 name)
+                message = "Schedd %s queue timed out; ignoring progress." % name
+                logging.error(message)
+                send_email_alert(args.email_alerts,
+                                 "spider_cms queue timeout warning",
+                                 message)
         else:
             timed_out = True
             break
@@ -805,6 +865,10 @@ if __name__ == "__main__":
     parser.add_argument("--log_level", default='WARNING',
                         type=str, dest="log_level",
                         help="Log level (CRITICAL/ERROR/WARNING/INFO/DEBUG) [default: %(default)s]")
+    parser.add_argument("--email_alerts", default=[], action='append',
+                        dest="email_alerts",
+                        help="Email addresses for alerts [default: none]")
+
     args = parser.parse_args()
     set_up_logging(args)
 
