@@ -822,25 +822,22 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
             result['CMSSWReleaseSeries'] = '%d_%d_X' % (subv, ssubv)
 
     # Parse new machine statistics.
-    if 'MachineAttrMJF_JOB_HS06_JOB0' in ad and (ad.get("MachineAttrMJF_JOB_HS06_JOB0") != "Unknown") and classad.ExprTree('MachineAttrMJF_JOB_HS06_JOB0 isnt undefined').eval(ad) and ('GLIDEIN_Cpus' in result):
-        try:
-            cpus = float(result['GLIDEIN_Cpus'])
-            result['BenchmarkJobHS06'] = float(ad['MachineAttrMJF_JOB_HS06_JOB0'])/cpus
-            if result.get('EventRate', 0) > 0:
-                result['HS06EventRate'] = result['EventRate'] / result['BenchmarkJobHS06']
-            if result.get('CpuEventRate', 0) > 0:
-                result['HS06CpuEventRate'] = result['CpuEventRate'] / result['BenchmarkJobHS06']
-            if result.get('CpuTimePerEvent', 0) > 0:
-                result['HS06CpuTimePerEvent'] = result['CpuTimePerEvent'] * result['BenchmarkJobHS06']
-            if result.get('TimePerEvent', 0) > 0:
-                result['HS06TimePerEvent'] = result['TimePerEvent'] * result['BenchmarkJobDB12']
-            result['HS06CoreHr'] = result['CoreHr'] * result['BenchmarkJobHS06']
-            result["HS06CommittedCoreHr"] = result['CommittedCoreHr'] * result['BenchmarkJobHS06']
-            result['HS06CpuTimeHr'] = result['CpuTimeHr'] * result['BenchmarkJobHS06']
-        except ValueError:
-            result.pop('MachineAttrMJF_JOB_HS06_JOB0', None)
-        except:
-            pass
+    try:
+        cpus = float(result['GLIDEIN_Cpus'])
+        result['BenchmarkJobHS06'] = float(ad['MachineAttrMJF_JOB_HS06_JOB0'])/cpus
+        if result.get('EventRate', 0) > 0:
+            result['HS06EventRate'] = result['EventRate'] / result['BenchmarkJobHS06']
+        if result.get('CpuEventRate', 0) > 0:
+            result['HS06CpuEventRate'] = result['CpuEventRate'] / result['BenchmarkJobHS06']
+        if result.get('CpuTimePerEvent', 0) > 0:
+            result['HS06CpuTimePerEvent'] = result['CpuTimePerEvent'] * result['BenchmarkJobHS06']
+        if result.get('TimePerEvent', 0) > 0:
+            result['HS06TimePerEvent'] = result['TimePerEvent'] * result['BenchmarkJobDB12']
+        result['HS06CoreHr'] = result['CoreHr'] * result['BenchmarkJobHS06']
+        result["HS06CommittedCoreHr"] = result['CommittedCoreHr'] * result['BenchmarkJobHS06']
+        result['HS06CpuTimeHr'] = result['CpuTimeHr'] * result['BenchmarkJobHS06']
+    except:
+        result.pop('MachineAttrMJF_JOB_HS06_JOB0', None)
     if ('MachineAttrDIRACBenchmark0' in ad) and classad.ExprTree('MachineAttrDIRACBenchmark0 isnt undefined').eval(ad):
         result['BenchmarkJobDB12'] = float(ad['MachineAttrDIRACBenchmark0'])
         if result.get('EventRate', 0) > 0:
