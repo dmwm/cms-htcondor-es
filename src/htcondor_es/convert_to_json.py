@@ -674,11 +674,12 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     result["DataLocationsCount"] = len(result["DataLocations"])
     result["Original_DESIRED_Sites"] = _split_re.split(ad.get("ExtDESIRED_Sites", "UNKNOWN"))
 
+    result['CMSPrimaryPrimaryDataset'] = 'Unknown'
+    result['CMSPrimaryProcessedDataset'] = 'Unknown'
+    result['CMSPrimaryDataTier'] = 'Unknown'
     if 'DESIRED_CMSDataset' in result:
         info = str(result['DESIRED_CMSDataset']).split('/')
-        if len(info) < 4:
-            result['CMSPrimaryPrimaryDataset'] = 'UNKNOWN'
-        else:
+        if len(info) > 3:
             result['CMSPrimaryPrimaryDataset'] = info[1]
             result['CMSPrimaryProcessedDataset'] = info[2]
             result['CMSPrimaryDataTier'] = info[-1]
