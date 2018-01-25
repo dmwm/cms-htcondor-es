@@ -599,6 +599,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
             camp2 = ttype
 
         result['CMS_JobType'] = str(ad.get('CMS_JobType', 'Analysis' if analysis else 'Unknown'))
+        result['CRAB_AsyncDest'] = str(ad.get('CRAB_AsyncDest', 'Unknown'))
 
         result["WMAgent_TaskType"] = ttype
         if analysis:
