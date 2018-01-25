@@ -598,6 +598,8 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         else:
             camp2 = ttype
 
+        result['CMS_JobType'] = str(ad.get('CMS_JobType', 'Analysis' if analysis else 'Unknown'))
+
         result["WMAgent_TaskType"] = ttype
         if analysis:
             ttype = "Analysis"
