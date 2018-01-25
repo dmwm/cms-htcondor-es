@@ -239,7 +239,6 @@ ignore = set([
   "EnvDelim",
   "Env",
   "ExecutableSize",
-  "HasBeenRouted",
   "HasPrioCorrection",
   "GlideinCredentialIdentifier",
   "GlideinLogNr",
@@ -406,6 +405,9 @@ bool_vals = set([
   "NiceUser",
   "ExitBySignal",
   "CMSSWDone",
+  "HasBeenRouted",
+  "HasBeenOverflowRouted",
+  "HasBeenTimingTuned",
 ])
 
 # Fields to be kept in docs concerning running jobs
@@ -522,7 +524,9 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     if cms:
         ad.setdefault("MATCH_EXP_JOB_GLIDEIN_CMSSite", ad.get("MATCH_EXP_JOBGLIDEIN_CMSSite", "Unknown"))
     for key in ad.keys():
-        if key in ignore or key.startswith("HasBeen"):
+        if key in ignore:
+            continue
+        if key.startswith("HasBeen") and not key in bool_vals:
             continue
         if key == "DESIRED_SITES":
             key = "DESIRED_Sites"
