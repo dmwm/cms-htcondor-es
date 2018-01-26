@@ -645,6 +645,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         ad["RemoteWallClockTime"] = int(now - ad["EnteredCurrentStatus"])
         ad["CommittedTime"] = ad["RemoteWallClockTime"]
     result["WallClockHr"] = ad.get("RemoteWallClockTime", 0)/3600.
+
     if 'RequestCpus' not in ad:
         m = _cream_re.search(ad.get("CreamAttributes", ""))
         m2 = _nordugrid_re.search(ad.get("NordugridRSL"))
@@ -665,6 +666,8 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         ad["RequestCpus"] = int(ad.eval('RequestCpus'))
     except:
         ad["RequestCpus"] = 1.0
+    result['RequestCpus'] = ad['RequestCpus']
+
     result["CoreHr"] = ad.get("RequestCpus", 1.0)*int(ad.get("RemoteWallClockTime", 0))/3600.
     result["CommittedCoreHr"] = ad.get("RequestCpus", 1.0)*ad.get("CommittedTime", 0)/3600.
     result["CommittedWallClockHr"] = ad.get("CommittedTime", 0)/3600.
