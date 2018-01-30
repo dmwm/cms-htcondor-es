@@ -463,6 +463,19 @@ running_fields = set([
   "WMAgent_RequestName",
   "WMAgent_SubTaskName",
   "Workflow",
+  "DESIRED_Sites",
+  "DESIRED_SITES_Diff",
+  "DESIRED_SITES_Orig",
+  "EstimatedWallTimeMins",
+  "LastRouted",
+  "LastTimingTuned",
+  "LPCRouted",
+  "MemoryUsage",
+  "PeriodicHoldReason",
+  "RouteType",
+  "HasBeenOverflowRouted",
+  "HasBeenRouted",
+  "HasBeenTimingTuned",
 ])
 
 status = { \
