@@ -18,6 +18,9 @@ string_vals = set([ \
   "CMSPrimaryPrimaryDataset",
   "CMSPrimaryProcessedDataset",
   "CMSPrimaryDataTier",
+  "CMSSWVersion",
+  "CMSSWMajorVersion",
+  "CMSSWReleaseSeries",
   "CRAB_JobType",
   "CRAB_JobSW",
   "CRAB_JobArch",
@@ -419,6 +422,9 @@ running_fields = set([
   "CMSPrimaryDataTier",
   "CMSSWKLumis",
   "CMSSWWallHrs",
+  "CMSSWVersion",
+  "CMSSWMajorVersion",
+  "CMSSWReleaseSeries",
   "CommittedCoreHr",
   "CoreHr",
   "Country",
@@ -459,6 +465,19 @@ running_fields = set([
   "WMAgent_RequestName",
   "WMAgent_SubTaskName",
   "Workflow",
+  "DESIRED_Sites",
+  "DESIRED_SITES_Diff",
+  "DESIRED_SITES_Orig",
+  "EstimatedWallTimeMins",
+  "LastRouted",
+  "LastTimingTuned",
+  "LPCRouted",
+  "MemoryUsage",
+  "PeriodicHoldReason",
+  "RouteType",
+  "HasBeenOverflowRouted",
+  "HasBeenRouted",
+  "HasBeenTimingTuned",
 ])
 
 status = { \
@@ -501,6 +520,7 @@ _rereco_re = re.compile("[A-Za-z0-9_]+_Run20[A-Za-z0-9-_]+-([A-Za-z0-9]+)")
 _split_re = re.compile("\s*,?\s*")
 _generic_site = re.compile("^[A-Za-z0-9]+_[A-Za-z0-9]+_(.*)_")
 _cms_site = re.compile("CMS[A-Za-z]*_(.*)_")
+_cmssw_version = re.compile("CMSSW_((\d*)_(\d*)_.*)")
 def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     analysis = ("CRAB_Id" in ad) or (ad.get("AccountingGroup", "").startswith("analysis."))
     if ad.get("TaskType") == "ROOT":
@@ -592,6 +612,9 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         else:
             camp2 = ttype
 
+        result['CMS_JobType'] = str(ad.get('CMS_JobType', 'Analysis' if analysis else 'Unknown'))
+        result['CRAB_AsyncDest'] = str(ad.get('CRAB_AsyncDest', 'Unknown'))
+
         result["WMAgent_TaskType"] = ttype
         if analysis:
             ttype = "Analysis"
@@ -636,6 +659,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         ad["RemoteWallClockTime"] = int(now - ad["EnteredCurrentStatus"])
         ad["CommittedTime"] = ad["RemoteWallClockTime"]
     result["WallClockHr"] = ad.get("RemoteWallClockTime", 0)/3600.
+
     if 'RequestCpus' not in ad:
         m = _cream_re.search(ad.get("CreamAttributes", ""))
         m2 = _nordugrid_re.search(ad.get("NordugridRSL"))
@@ -656,6 +680,8 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         ad["RequestCpus"] = int(ad.eval('RequestCpus'))
     except:
         ad["RequestCpus"] = 1.0
+    result['RequestCpus'] = ad['RequestCpus']
+
     result["CoreHr"] = ad.get("RequestCpus", 1.0)*int(ad.get("RemoteWallClockTime", 0))/3600.
     result["CommittedCoreHr"] = ad.get("RequestCpus", 1.0)*ad.get("CommittedTime", 0)/3600.
     result["CommittedWallClockHr"] = ad.get("CommittedTime", 0)/3600.
@@ -668,11 +694,12 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     result["DataLocationsCount"] = len(result["DataLocations"])
     result["Original_DESIRED_Sites"] = _split_re.split(ad.get("ExtDESIRED_Sites", "UNKNOWN"))
 
+    result['CMSPrimaryPrimaryDataset'] = 'Unknown'
+    result['CMSPrimaryProcessedDataset'] = 'Unknown'
+    result['CMSPrimaryDataTier'] = 'Unknown'
     if 'DESIRED_CMSDataset' in result:
         info = str(result['DESIRED_CMSDataset']).split('/')
-        if len(info) < 4:
-            result['CMSPrimaryPrimaryDataset'] = 'UNKNOWN'
-        else:
+        if len(info) > 3:
             result['CMSPrimaryPrimaryDataset'] = info[1]
             result['CMSPrimaryProcessedDataset'] = info[2]
             result['CMSPrimaryDataTier'] = info[-1]
@@ -799,26 +826,35 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     if ('Chirp_WMCore_cmsRun_ExitCode' in result) and (result.get('ExitCode', 0) == 0):
         result['ExitCode'] = result['Chirp_WMCore_cmsRun_ExitCode']
 
+    # Parse CRAB3 information on CMSSW version
+    result['CMSSWVersion'] = 'Unknown'
+    result['CMSSWMajorVersion'] = 'Unknown'
+    result['CMSSWReleaseSeries'] = 'Unknown'
+    if 'CRAB_JobSW' in result:
+        match = _cmssw_version.match(result['CRAB_JobSW'])
+        if match:
+            result['CMSSWVersion'] = match.group(1)
+            subv, ssubv = int(match.group(2)), int(match.group(3))
+            result['CMSSWMajorVersion'] = '%d_X_X' % (subv)
+            result['CMSSWReleaseSeries'] = '%d_%d_X' % (subv, ssubv)
+
     # Parse new machine statistics.
-    if 'MachineAttrMJF_JOB_HS06_JOB0' in ad and (ad.get("MachineAttrMJF_JOB_HS06_JOB0") != "Unknown") and classad.ExprTree('MachineAttrMJF_JOB_HS06_JOB0 isnt undefined').eval(ad) and ('GLIDEIN_Cpus' in result):
-        try:
-            cpus = float(result['GLIDEIN_Cpus'])
-            result['BenchmarkJobHS06'] = float(ad['MachineAttrMJF_JOB_HS06_JOB0'])/cpus
-            if result.get('EventRate', 0) > 0:
-                result['HS06EventRate'] = result['EventRate'] / result['BenchmarkJobHS06']
-            if result.get('CpuEventRate', 0) > 0:
-                result['HS06CpuEventRate'] = result['CpuEventRate'] / result['BenchmarkJobHS06']
-            if result.get('CpuTimePerEvent', 0) > 0:
-                result['HS06CpuTimePerEvent'] = result['CpuTimePerEvent'] * result['BenchmarkJobHS06']
-            if result.get('TimePerEvent', 0) > 0:
-                result['HS06TimePerEvent'] = result['TimePerEvent'] * result['BenchmarkJobDB12']
-            result['HS06CoreHr'] = result['CoreHr'] * result['BenchmarkJobHS06']
-            result["HS06CommittedCoreHr"] = result['CommittedCoreHr'] * result['BenchmarkJobHS06']
-            result['HS06CpuTimeHr'] = result['CpuTimeHr'] * result['BenchmarkJobHS06']
-        except ValueError:
-            result.pop('MachineAttrMJF_JOB_HS06_JOB0', None)
-        except:
-            pass
+    try:
+        cpus = float(result['GLIDEIN_Cpus'])
+        result['BenchmarkJobHS06'] = float(ad['MachineAttrMJF_JOB_HS06_JOB0'])/cpus
+        if result.get('EventRate', 0) > 0:
+            result['HS06EventRate'] = result['EventRate'] / result['BenchmarkJobHS06']
+        if result.get('CpuEventRate', 0) > 0:
+            result['HS06CpuEventRate'] = result['CpuEventRate'] / result['BenchmarkJobHS06']
+        if result.get('CpuTimePerEvent', 0) > 0:
+            result['HS06CpuTimePerEvent'] = result['CpuTimePerEvent'] * result['BenchmarkJobHS06']
+        if result.get('TimePerEvent', 0) > 0:
+            result['HS06TimePerEvent'] = result['TimePerEvent'] * result['BenchmarkJobDB12']
+        result['HS06CoreHr'] = result['CoreHr'] * result['BenchmarkJobHS06']
+        result["HS06CommittedCoreHr"] = result['CommittedCoreHr'] * result['BenchmarkJobHS06']
+        result['HS06CpuTimeHr'] = result['CpuTimeHr'] * result['BenchmarkJobHS06']
+    except:
+        result.pop('MachineAttrMJF_JOB_HS06_JOB0', None)
     if ('MachineAttrDIRACBenchmark0' in ad) and classad.ExprTree('MachineAttrDIRACBenchmark0 isnt undefined').eval(ad):
         result['BenchmarkJobDB12'] = float(ad['MachineAttrDIRACBenchmark0'])
         if result.get('EventRate', 0) > 0:
