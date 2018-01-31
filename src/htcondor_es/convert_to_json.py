@@ -504,10 +504,7 @@ _cms_site = re.compile("CMS[A-Za-z]*_(.*)_")
 def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     analysis = ("CRAB_Id" in ad) or (ad.get("AccountingGroup", "").startswith("analysis."))
     if ad.get("TaskType") == "ROOT":
-        if return_dict:
-            return None, None
-        else:
-            return None
+        return None
     result = {}
     result['DataCollection'] = ad.get("CompletionDate", 0)
     result['RecordTime'] = ad.get("CompletionDate", 0)
@@ -850,10 +847,9 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         result = drop_fields_for_running_jobs(result)
 
     if return_dict:
-        return json.dumps(result), result
+        return result
     else:
         return json.dumps(result)
-
 
 def convert_dates_to_millisecs(record):
     for date_field in date_vals:
