@@ -351,11 +351,24 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
 
     schedd = htcondor.Schedd(schedd_ad)
     had_error = True
+    sent_warnings = False
     try:
         query_iter = schedd.xquery() if not args.dry_run else []
         for job_ad in query_iter:
-            dict_ad = convert_to_json(job_ad, return_dict=True,
-                                      reduce_data=args.reduce_running_data)
+            dict_ad = None
+            try:
+                dict_ad = convert_to_json(job_ad, return_dict=True,
+                                          reduce_data=args.reduce_running_data)
+            except Exception as e:
+                message = ("Failure when converting document on %s queue: %s" %
+                                (schedd_ad["Name"], str(e)))
+                logging.warning(message)
+                if not sent_warnings:
+                    send_email_alert(args.email_alerts,
+                                     "spider_cms queue document conversion error",
+                                     message)
+                    sent_warnings = True
+
             if not dict_ad:
                 continue
 
@@ -441,6 +454,7 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
     buffered_ads = {}
     count = 0
     total_upload = 0
+    sent_warnings = False
     if not args.read_only:
         if args.feed_es:
             es = htcondor_es.es.get_server_handle(args) # es-cms.cern.ch now
@@ -453,7 +467,18 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
             history_iter = []
 
         for job_ad in history_iter:
-            dict_ad = convert_to_json(job_ad, return_dict=True)
+            dict_ad = None
+            try:
+                dict_ad = convert_to_json(job_ad, return_dict=True)
+            except Exception as e:
+                message = ("Failure when converting document on %s history: %s" %
+                                (schedd_ad["Name"], str(e)))
+                logging.warning(message)
+                if not sent_warnings:
+                    send_email_alert(args.email_alerts,
+                                     "spider_cms history document conversion error",
+                                     message)
+                    sent_warnings = True
 
             if not dict_ad:
                 continue
