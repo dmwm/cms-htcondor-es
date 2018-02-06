@@ -509,6 +509,13 @@ _launch_time = int(time.time())
 def get_data_collection_time():
     return _launch_time
 
+def make_list_from_string_field(ad, key, split_re="\s*,?\s*", default=None):
+    default = default or ['UNKNOWN']
+    try:
+        return re.split(split_re, ad[key])
+    except (TypeError, KeyError):
+        return default
+
 _cream_re = re.compile("CPUNumber = (\d+)")
 _nordugrid_re = re.compile("\(count=(\d+)\)")
 _camp_re = re.compile("[A-Za-z0-9_]+_[A-Z0-9]+-([A-Za-z0-9]+)-")
@@ -517,7 +524,6 @@ _rval_re = re.compile("[A-Za-z0-9]+_(RVCMSSW_[0-9]+_[0-9]+_[0-9]+)")
 _prep_prompt_re = re.compile("(PromptReco|Repack|Express)_[A-Za-z0-9]+_([A-Za-z0-9]+)")
 # 2016 reRECO; of the form cerminar_Run2016B-v2-JetHT-23Sep2016_8020_160923_164036_4747
 _rereco_re = re.compile("[A-Za-z0-9_]+_Run20[A-Za-z0-9-_]+-([A-Za-z0-9]+)")
-_split_re = re.compile("\s*,?\s*")
 _generic_site = re.compile("^[A-Za-z0-9]+_[A-Za-z0-9]+_(.*)_")
 _cms_site = re.compile("CMS[A-Za-z]*_(.*)_")
 _cmssw_version = re.compile("CMSSW_((\d*)_(\d*)_.*)")
@@ -688,11 +694,11 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     result["CpuTimeHr"] = (ad.get("RemoteSysCpu", 0)+ad.get("RemoteUserCpu", 0))/3600.
     result["DiskUsageGB"] = ad.get("DiskUsage_RAW", 0)/1000000.
     result["MemoryMB"] = ad.get("ResidentSetSize_RAW", 0)/1024.
-    result["DataLocations"] = _split_re.split(str(ad.get("DESIRED_CMSDataLocations", "UNKNOWN")))
-    result["DESIRED_Sites"] = _split_re.split(ad.get("DESIRED_Sites", "UNKNOWN"))
+    result["DataLocations"] = make_list_from_string_field(ad, "DESIRED_CMSDataLocations")
+    result["DESIRED_Sites"] = make_list_from_string_field(ad, "DESIRED_Sites")
+    result["Original_DESIRED_Sites"] = make_list_from_string_field(ad, "ExtDESIRED_Sites")
     result["DesiredSiteCount"] = len(result["DESIRED_Sites"])
     result["DataLocationsCount"] = len(result["DataLocations"])
-    result["Original_DESIRED_Sites"] = _split_re.split(ad.get("ExtDESIRED_Sites", "UNKNOWN"))
 
     result['CMSPrimaryPrimaryDataset'] = 'Unknown'
     result['CMSPrimaryProcessedDataset'] = 'Unknown'
@@ -705,7 +711,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
             result['CMSPrimaryDataTier'] = info[-1]
 
     if cms and analysis:
-        result["CMSGroups"] = _split_re.split(ad.get("CMSGroups", "UNKNOWN"))
+        result["CMSGroups"] = make_list_from_string_field(ad, "CMSGroups")
         result["OutputFiles"] = len(ad.get("CRAB_AdditionalOutputFiles", [])) + len(ad.get("CRAB_TFileOutputFiles", [])) + len(ad.get("CRAB_EDMOutputFiles", [])) + ad.get("CRAB_SaveLogsFlag", 0)
     if "x509UserProxyFQAN" in ad:
         result["x509UserProxyFQAN"] = str(ad["x509UserProxyFQAN"]).split(",")
