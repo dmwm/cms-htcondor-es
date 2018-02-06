@@ -688,7 +688,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     result["CpuTimeHr"] = (ad.get("RemoteSysCpu", 0)+ad.get("RemoteUserCpu", 0))/3600.
     result["DiskUsageGB"] = ad.get("DiskUsage_RAW", 0)/1000000.
     result["MemoryMB"] = ad.get("ResidentSetSize_RAW", 0)/1024.
-    result["DataLocations"] = _split_re.split(ad.get("DESIRED_CMSDataLocations", "UNKNOWN"))
+    result["DataLocations"] = _split_re.split(str(ad.get("DESIRED_CMSDataLocations", "UNKNOWN")))
     result["DESIRED_Sites"] = _split_re.split(ad.get("DESIRED_Sites", "UNKNOWN"))
     result["DesiredSiteCount"] = len(result["DESIRED_Sites"])
     result["DataLocationsCount"] = len(result["DataLocations"])
@@ -741,7 +741,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
             result["Country"] = "Unknown"
         if "Site" not in result or "DESIRED_Sites" not in result:
             result["InputData"] = "Unknown"
-        elif 'DESIRED_CMSDataLocations' not in result:  # CRAB2 case.
+        elif ('DESIRED_CMSDataLocations' not in result) or (result['DESIRED_CMSDataLocations'] is None):  # CRAB2 case.
             result['InputData'] = 'Onsite'
         elif result["Site"] in result["DESIRED_CMSDataLocations"]:
             result["InputData"] = "Onsite"

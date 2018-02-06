@@ -497,7 +497,7 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
     except Exception, e:
         message = ("Failure when processing schedd history query on %s: %s" % 
                        (schedd_ad["Name"], str(e)))
-        logging.error(message)
+        logging.exception(message)
         send_email_alert(args.email_alerts, "spider_cms schedd history query error",
                          message)
 
