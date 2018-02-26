@@ -2,3 +2,8 @@ es.conf
 src/htcondor_es/*.pyc
 popdb.sqlite*
 checkpoint*.json*
+last_mappings.json
+log/
+tmp/
+username
+password

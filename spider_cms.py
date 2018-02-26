@@ -839,7 +839,7 @@ def main(args):
     schedd_ads = get_schedds()
     logging.warning("&&& There are %d schedds to query." % len(schedd_ads))
 
-    pool = multiprocessing.Pool(processes=10)
+    pool = multiprocessing.Pool(processes=5)
 
     process_histories(schedd_ads=schedd_ads,
                       starttime=starttime,
