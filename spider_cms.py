@@ -768,7 +768,7 @@ def process_queues(schedd_ads, starttime, pool, args):
         if args.read_only:
             break
 
-        if time_remaining(starttime) < 0:
+        if time_remaining(starttime) < -10:
             logging.warning("Listener did not shut down properly; terminating.")
             listener.terminate()
             break
