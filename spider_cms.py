@@ -785,7 +785,7 @@ def process_queues(schedd_ads, starttime, pool, args):
                                   callback=_callback_amq)
             futures.append(("UPLOADER_AMQ", future))
 
-        if args.feed_es:
+        if args.feed_es_for_queues:
             es_bunch = [(id_, json.dumps(dict_ad)) for id_,dict_ad in bunch]
             ## FIXME: Why are we determining the index from one ad?
             es_handle = htcondor_es.es.get_server_handle(args)
@@ -873,6 +873,9 @@ if __name__ == "__main__":
     parser.add_argument("--feed_es", action='store_true',
                         dest="feed_es",
                         help="Feed to Elasticsearch")
+    parser.add_argument("--feed_es_for_queues", action='store_true',
+                        dest="feed_es_for_queues",
+                        help="Feed queue data also to Elasticsearch")
     parser.add_argument("--feed_amq", action='store_true',
                         dest="feed_amq",
                         help="Feed to CERN AMQ")
