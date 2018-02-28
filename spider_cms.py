@@ -763,7 +763,7 @@ def process_queues(schedd_ads, starttime, pool, args):
         sent, received = result
         logging.info("Uploaded %d/%d docs to StompAMQ" % (sent, received))
 
-    upload_pool = multiprocessing.Pool(processes=4)
+    upload_pool = multiprocessing.Pool(processes=8)
 
     total_processed = 0
     while True:
@@ -844,7 +844,7 @@ def main(args):
     schedd_ads = get_schedds()
     logging.warning("&&& There are %d schedds to query." % len(schedd_ads))
 
-    pool = multiprocessing.Pool(processes=5)
+    pool = multiprocessing.Pool(processes=8)
 
     process_histories(schedd_ads=schedd_ads,
                       starttime=starttime,
