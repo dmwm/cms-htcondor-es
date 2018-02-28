@@ -760,8 +760,8 @@ def process_queues(schedd_ads, starttime, pool, args):
         futures.append((schedd_ad['Name'], future))
 
     def _callback_amq(result):
-        sent, received = result
-        logging.info("Uploaded %d/%d docs to StompAMQ" % (sent, received))
+        sent, received, elapsed = result
+        logging.info("Uploaded %d/%d docs to StompAMQ in %d seconds" % (sent, received, elapsed))
 
     total_processed = 0
     while True:
@@ -801,6 +801,7 @@ def process_queues(schedd_ads, starttime, pool, args):
 
     timed_out = False
     total_sent = 0
+    total_upload_time = 0
     total_queried = 0
     for name, future in futures:
         if time_remaining(starttime) > -10:
@@ -808,6 +809,7 @@ def process_queues(schedd_ads, starttime, pool, args):
                 count = future.get(time_remaining(starttime)+10)
                 if name == "UPLOADER_AMQ":
                     total_sent += count[0]
+                    total_upload_time += count[2]
                 elif name == "UPLOADER_ES":
                     total_sent += count
                 else:
@@ -828,8 +830,8 @@ def process_queues(schedd_ads, starttime, pool, args):
     if not total_queried == total_processed:
         logging.warning("Number of queried docs not equal to number of processed docs.")    
 
-    logging.warning("Processing time for queues: %.2f mins, %d/%d docs sent"
-                      % ((time.time()-my_start)/60., total_sent, total_queried))
+    logging.warning("Processing time for queues: %.2f mins, %d/%d docs sent in %.2f min of total upload time"
+                      % ((time.time()-my_start)/60., total_sent, total_queried, total_upload_time/60.))
 
 
 def main(args):
