@@ -35,5 +35,7 @@ def post_ads(ads):
                                                      type_='htcondor_job_info',
                                                      timestamp=ad['RecordTime']))
 
+    starttime = time.time()
     sent_data = interface.send(list_data)
-    return (len(sent_data), len(ads))
+    elapsed = time.time() - starttime
+    return (len(sent_data), len(ads), elapsed)
