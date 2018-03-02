@@ -5,6 +5,7 @@ import sys
 import json
 import time
 import random
+import signal
 import socket
 import classad
 import logging
@@ -19,6 +20,8 @@ from argparse import ArgumentParser
 from logging.handlers import RotatingFileHandler
 
 TIMEOUT_MINS = 11
+
+signal.alarm(TIMEOUT_MINS*60 + 60)
 
 try:
     import htcondor_es.es
@@ -620,11 +623,12 @@ class ListenAndBunch(multiprocessing.Process):
     """
     def __init__(self, input_queue, output_queue,
                  n_expected,
-                 bunch_size=1000,
+                 bunch_size=5000,
                  report_every=50000):
         super(ListenAndBunch, self).__init__()
         self.input_queue = input_queue
         self.output_queue = output_queue
+        logging.warning("Bunching records for AMQP in sizes of %d" % bunch_size)
         self.bunch_size = bunch_size
         self.report_every = report_every
         self.n_expected = n_expected
@@ -637,6 +641,7 @@ class ListenAndBunch(multiprocessing.Process):
         self.start()
 
     def run(self):
+        since_last_report = 0
         while True:
             next_batch = self.input_queue.get()
 
@@ -659,10 +664,12 @@ class ListenAndBunch(multiprocessing.Process):
                 continue
 
             self.count_in += len(next_batch)
+            since_last_report += len(next_batch)
             self.buffer.extend(next_batch)
 
-            if self.count_in%self.report_every == 0:
+            if since_last_report > self.report_every:
                 logging.debug("Processed %d docs" % self.count_in)
+                since_last_report = 0
 
             # If buffer is full, send the docs and clear the buffer
             if len(self.buffer) >= self.bunch_size:
@@ -761,13 +768,15 @@ def process_queues(schedd_ads, starttime, pool, args):
         return
 
     mp_manager = multiprocessing.Manager()
-    input_queue = mp_manager.Queue()
-    output_queue = mp_manager.Queue()
+    input_queue = mp_manager.Queue(maxsize=10)
+    output_queue = mp_manager.Queue(maxsize=2)
     listener = ListenAndBunch(input_queue=input_queue,
                               output_queue=output_queue,
                               n_expected=len(schedd_ads),
-                              bunch_size=10000)
+                              bunch_size=5000)
     futures = []
+
+    upload_pool = multiprocessing.Pool(processes=3)
 
     for schedd_ad in schedd_ads:
         future = pool.apply_async(process_schedd_queue,
@@ -795,9 +804,9 @@ def process_queues(schedd_ads, starttime, pool, args):
 
         if args.feed_amq and not args.read_only:
             amq_bunch = [(id_, convert_dates_to_millisecs(dict_ad)) for id_,dict_ad in bunch]
-            future = pool.apply_async(htcondor_es.amq.post_ads,
-                                  args=(amq_bunch,),
-                                  callback=_callback_amq)
+            future = upload_pool.apply_async(htcondor_es.amq.post_ads,
+                                             args=(amq_bunch,),
+                                             callback=_callback_amq)
             futures.append(("UPLOADER_AMQ", future))
 
         if args.feed_es_for_queues and not args.read_only:
@@ -808,9 +817,24 @@ def process_queues(schedd_ads, starttime, pool, args):
                                            template=args.es_index_template,
                                            update_es=(args.feed_es and not args.read_only))
 
-            future = pool.apply_async(htcondor_es.es.post_ads_nohandle,
-                                      args=(idx, es_bunch, args))
+            future = upload_pool.apply_async(htcondor_es.es.post_ads_nohandle,
+                                             args=(idx, es_bunch, args))
             futures.append(("UPLOADER_ES", future))
+
+        max_in_progress = 3
+        count = len(futures)
+        while count > max_in_progress:
+           if time_remaining(starttime) < 0:
+               break
+           for future in futures:
+               if future[1].ready():
+                   count -= 1
+           if count > max_in_progress:
+               break
+           for future in futures:
+               future.wait(time_remaining(starttime) + 10)
+               break
+           count = len(futures)
 
     listener.join()
 
@@ -841,12 +865,16 @@ def process_queues(schedd_ads, starttime, pool, args):
 
     if timed_out:
         pool.terminate()
+        upload_pool.terminate()
 
     if not total_queried == total_processed:
         logging.warning("Number of queried docs not equal to number of processed docs.")    
 
     logging.warning("Processing time for queues: %.2f mins, %d/%d docs sent in %.2f min of total upload time"
                       % ((time.time()-my_start)/60., total_sent, total_queried, total_upload_time/60.))
+
+    upload_pool.close()
+    upload_pool.join()
 
 
 def main(args):
@@ -918,7 +946,7 @@ if __name__ == "__main__":
                         type=int, dest="bunching",
                         help=("Send docs in bunches of this number "
                               "[default: %(default)d]"))
-    parser.add_argument("--query_queue_batch_size", default=5,
+    parser.add_argument("--query_queue_batch_size", default=50,
                         type=int, dest="query_queue_batch_size",
                         help=("Send docs to listener in batches of this number "
                               "[default: %(default)d]"))
