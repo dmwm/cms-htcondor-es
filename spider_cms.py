@@ -74,7 +74,7 @@ def send_email_alert(recipients, subject, message):
         logging.warning("Email notification failed: %s" % str(e))
 
 
-def get_schedds():
+def get_schedds(args=None):
     schedd_query = classad.ExprTree('!isUndefined(CMSGWMS_Type)')
     collectors = ["cmssrv221.fnal.gov:9620",
                   "cmsgwms-collector-tier0.cern.ch:9620",
@@ -94,6 +94,9 @@ def get_schedds():
 
     schedd_ads = schedd_ads.values()
     random.shuffle(schedd_ads)
+
+    if args and args.schedd_filter:
+        return [s for s in schedd_ads if s['Name'] in args.schedd_filter.split(',')]
 
     return schedd_ads
 
@@ -400,7 +403,7 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
             batch.append((job_ad["GlobalJobId"], dict_ad))
             count += 1
 
-            if not args.read_only and len(batch) == args.query_queue_batch_size:
+            if not args.dry_run and len(batch) == args.query_queue_batch_size:
                 queue.put(batch)
                 batch = []
 
@@ -777,7 +780,7 @@ def process_queues(schedd_ads, starttime, pool, args):
 
     total_processed = 0
     while True:
-        if args.read_only:
+        if args.dry_run or len(schedd_ads) == 0:
             break
 
         if time_remaining(starttime) < -10:
@@ -790,14 +793,14 @@ def process_queues(schedd_ads, starttime, pool, args):
             total_processed = int(output_queue.get())
             break
 
-        if args.feed_amq:
+        if args.feed_amq and not args.read_only:
             amq_bunch = [(id_, convert_dates_to_millisecs(dict_ad)) for id_,dict_ad in bunch]
             future = pool.apply_async(htcondor_es.amq.post_ads,
                                   args=(amq_bunch,),
                                   callback=_callback_amq)
             futures.append(("UPLOADER_AMQ", future))
 
-        if args.feed_es_for_queues:
+        if args.feed_es_for_queues and not args.read_only:
             es_bunch = [(id_, json.dumps(dict_ad)) for id_,dict_ad in bunch]
             ## FIXME: Why are we determining the index from one ad?
             es_handle = htcondor_es.es.get_server_handle(args)
@@ -893,6 +896,14 @@ if __name__ == "__main__":
     parser.add_argument("--feed_amq", action='store_true',
                         dest="feed_amq",
                         help="Feed to CERN AMQ")
+
+    parser.add_argument("--schedd_filter", default='',
+                        type=str, dest="schedd_filter",
+                        help=("Comma separated list of schedd names to process "
+                              "[default is to process all]"))
+    parser.add_argument("--skip_history", action='store_true',
+                        dest="skip_history",
+                        help="Skip processing the history. (Only do queues.)")
     parser.add_argument("--read_only", action='store_true',
                         dest="read_only",
                         help="Only read the info, don't submit it.")
