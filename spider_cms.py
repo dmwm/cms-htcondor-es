@@ -778,6 +778,8 @@ def process_queues(schedd_ads, starttime, pool, args):
         sent, received, elapsed = result
         logging.info("Uploaded %d/%d docs to StompAMQ in %d seconds" % (sent, received, elapsed))
 
+    upload_pool = multiprocessing.Pool(processes=8)
+
     total_processed = 0
     while True:
         if args.dry_run or len(schedd_ads) == 0:
@@ -795,9 +797,9 @@ def process_queues(schedd_ads, starttime, pool, args):
 
         if args.feed_amq and not args.read_only:
             amq_bunch = [(id_, convert_dates_to_millisecs(dict_ad)) for id_,dict_ad in bunch]
-            future = pool.apply_async(htcondor_es.amq.post_ads,
-                                  args=(amq_bunch,),
-                                  callback=_callback_amq)
+            future = upload_pool.apply_async(htcondor_es.amq.post_ads,
+                                             args=(amq_bunch,),
+                                             callback=_callback_amq)
             futures.append(("UPLOADER_AMQ", future))
 
         if args.feed_es_for_queues and not args.read_only:
@@ -808,8 +810,8 @@ def process_queues(schedd_ads, starttime, pool, args):
                                            template=args.es_index_template,
                                            update_es=(args.feed_es and not args.read_only))
 
-            future = pool.apply_async(htcondor_es.es.post_ads_nohandle,
-                                      args=(idx, es_bunch, args))
+            future = upload_pool.apply_async(htcondor_es.es.post_ads_nohandle,
+                                             args=(idx, es_bunch, args))
             futures.append(("UPLOADER_ES", future))
 
     listener.join()
@@ -841,6 +843,7 @@ def process_queues(schedd_ads, starttime, pool, args):
 
     if timed_out:
         pool.terminate()
+        upload_pool.terminate()
 
     if not total_queried == total_processed:
         logging.warning("Number of queried docs not equal to number of processed docs.")    
@@ -848,6 +851,8 @@ def process_queues(schedd_ads, starttime, pool, args):
     logging.warning("Processing time for queues: %.2f mins, %d/%d docs sent in %.2f min of total upload time"
                       % ((time.time()-my_start)/60., total_sent, total_queried, total_upload_time/60.))
 
+    upload_pool.close()
+    upload_pool.join()
 
 def main(args):
     starttime = time.time()
@@ -856,7 +861,7 @@ def main(args):
     schedd_ads = get_schedds()
     logging.warning("&&& There are %d schedds to query." % len(schedd_ads))
 
-    pool = multiprocessing.Pool(processes=5)
+    pool = multiprocessing.Pool(processes=8)
 
     process_histories(schedd_ads=schedd_ads,
                       starttime=starttime,
