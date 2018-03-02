@@ -359,6 +359,7 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
     schedd = htcondor.Schedd(schedd_ad)
     had_error = True
     sent_warnings = False
+    batch = []
     try:
         query_iter = schedd.xquery() if not args.dry_run else []
         for job_ad in query_iter:
@@ -396,10 +397,12 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
                         global_jobs_idle[global_key] += 1
                         global_jobs_coresidle[global_key] += job_ad.get('RequestCpus', 1)
 
-            if not args.read_only:
-                queue.put((job_ad["GlobalJobId"], dict_ad))
-
+            batch.append((job_ad["GlobalJobId"], dict_ad))
             count += 1
+
+            if not args.read_only and len(batch) == args.query_queue_batch_size:
+                queue.put(batch)
+                batch = []
 
             if time_remaining(starttime) < 0:
                 message = ("Queue crawler on %s has been running for "
@@ -410,6 +413,11 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
                                  "spider_cms queue timeout warning",
                                  message)
                 break
+
+        if batch:  # send remaining docs
+            queue.put(batch)
+            batch = []
+
 
         had_error = False
 
@@ -627,10 +635,10 @@ class ListenAndBunch(multiprocessing.Process):
 
     def run(self):
         while True:
-            next_doc = self.input_queue.get()
+            next_batch = self.input_queue.get()
 
-            if isinstance(next_doc, basestring):
-                schedd_name = str(next_doc)
+            if isinstance(next_batch, basestring):
+                schedd_name = str(next_batch)
                 try:
                     # We were already processing this sender,
                     # this is the signal that it's done sending.
@@ -647,16 +655,16 @@ class ListenAndBunch(multiprocessing.Process):
                     return
                 continue
 
-            self.count_in += 1
-            self.buffer.append(next_doc)
+            self.count_in += len(next_batch)
+            self.buffer.extend(next_batch)
 
             if self.count_in%self.report_every == 0:
                 logging.debug("Processed %d docs" % self.count_in)
 
             # If buffer is full, send the docs and clear the buffer
-            if len(self.buffer) == self.bunch_size:
-                self.output_queue.put(self.buffer)
-                self.buffer = []
+            if len(self.buffer) >= self.bunch_size:
+                self.output_queue.put(self.buffer[:self.bunch_size])
+                self.buffer = self.buffer[self.bunch_size:]
 
     def close(self):
         """Clear the buffer, send a poison pill and the total number of docs"""
@@ -898,6 +906,10 @@ if __name__ == "__main__":
     parser.add_argument("--bunching", default=250,
                         type=int, dest="bunching",
                         help=("Send docs in bunches of this number "
+                              "[default: %(default)d]"))
+    parser.add_argument("--query_queue_batch_size", default=5,
+                        type=int, dest="query_queue_batch_size",
+                        help=("Send docs to listener in batches of this number "
                               "[default: %(default)d]"))
 
     parser.add_argument("--es_hostname", default='es-cms.cern.ch',
