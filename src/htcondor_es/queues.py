@@ -5,6 +5,7 @@ Process the jobs in queue for given set of schedds.
 import json
 import time
 import logging
+import resource
 import traceback
 import multiprocessing
 
@@ -111,7 +112,9 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
                          message)
         return
 
+    count_since_last_report = 0
     count = 0
+    cpu_usage = resource.getrusage(resource.RUSAGE_SELF).ru_utime
     queue.put(schedd_ad['Name'], timeout=time_remaining(starttime))
 
     schedd = htcondor.Schedd(schedd_ad)
@@ -139,20 +142,29 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
 
             batch.append((job_ad["GlobalJobId"], dict_ad))
             count += 1
+            count_since_last_report += 1
 
             if not args.dry_run and len(batch) == args.query_queue_batch_size:
+                if time_remaining(starttime) < 0:
+                    message = ("Queue crawler on %s has been running for "
+                               "more than %d minutes; exiting" %
+                               (schedd_ad['Name'], TIMEOUT_MINS))
+                    logging.error(message)
+                    send_email_alert(args.email_alerts,
+                                     "spider_cms queue timeout warning",
+                                     message)
+                    break
                 queue.put(batch, timeout=time_remaining(starttime))
                 batch = []
-
-            if time_remaining(starttime) < 0:
-                message = ("Queue crawler on %s has been running for "
-                           "more than %d minutes; exiting" %
-                           (schedd_ad['Name'], TIMEOUT_MINS))
-                logging.error(message)
-                send_email_alert(args.email_alerts,
-                                 "spider_cms queue timeout warning",
-                                 message)
-                break
+                if count_since_last_report >= 1000:
+                    cpu_usage_now = resource.getrusage(resource.RUSAGE_SELF).ru_utime
+                    cpu_usage = cpu_usage_now - cpu_usage
+                    processing_rate = count_since_last_report / cpu_usage
+                    cpu_usage = cpu_usage_now
+                    logging.info("Processor for %s has processed %d jobs "
+                                 "(%.1f jobs per CPU-second)",
+                                 schedd_ad['Name'], count, processing_rate)
+                    count_since_last_report = 0
 
         if batch:  # send remaining docs
             queue.put(batch, timeout=time_remaining(starttime))
