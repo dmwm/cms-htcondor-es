@@ -4,6 +4,7 @@ import os
 import sys
 import json
 import time
+import errno
 import random
 import signal
 import socket
@@ -333,8 +334,11 @@ def set_up_logging(args):
         logging.getLogger("htcondor_es.StompAMQ").setLevel(log_level + 10)
         logging.getLogger("stomp.py").setLevel(log_level + 10)
 
-    if not os.path.isdir(args.log_dir):
-        os.system('mkdir -p %s' % args.log_dir)
+    try:
+        os.makedirs(args.log_dir)
+    except OSError as oe:
+        if oe.errno != errno.EEXIST:
+            raise
 
     log_file = os.path.join(args.log_dir, 'spider_cms.log')
     filehandler = RotatingFileHandler(log_file, maxBytes=100000)
