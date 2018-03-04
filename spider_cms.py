@@ -609,8 +609,11 @@ def set_up_logging(args):
     filehandler = RotatingFileHandler(log_file, maxBytes=100000)
     filehandler.setFormatter(
         logging.Formatter('%(asctime)s : %(name)s:%(levelname)s - %(message)s'))
-
     logger.addHandler(filehandler)
+
+    if os.isatty(sys.stdout.fileno()):
+        streamhandler = logging.StreamHandler(stream=sys.stdout)
+        logger.addHandler(streamhandler)
 
 
 class ListenAndBunch(multiprocessing.Process):
