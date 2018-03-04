@@ -20,62 +20,24 @@ import multiprocessing
 from argparse import ArgumentParser
 from logging.handlers import RotatingFileHandler
 
-TIMEOUT_MINS = 11
-
-signal.alarm(TIMEOUT_MINS*60 + 60)
-
 try:
-    import htcondor_es.es
-    import htcondor_es.amq
-    from htcondor_es.convert_to_json import convert_to_json
-    from htcondor_es.convert_to_json import convert_dates_to_millisecs
-    from htcondor_es.convert_to_json import get_data_collection_time
+    import htcondor_es
 except ImportError:
     if os.path.exists("src/htcondor_es/__init__.py") and "src" not in sys.path:
         sys.path.append("src")
-        import htcondor_es.es
-        import htcondor_es.amq
-        from htcondor_es.convert_to_json import convert_to_json
-        from htcondor_es.convert_to_json import convert_dates_to_millisecs
-        from htcondor_es.convert_to_json import get_data_collection_time
-    else:
-        raise
+
+import htcondor_es.es
+import htcondor_es.amq
+from htcondor_es.utils import send_email_alert, time_remaining, set_up_logging, TIMEOUT_MINS
+from htcondor_es.convert_to_json import convert_to_json
+from htcondor_es.convert_to_json import convert_dates_to_millisecs
+from htcondor_es.convert_to_json import get_data_collection_time
+
 
 now = time.time()
 now_ns = int(time.time())*int(1e9)
 
-def time_remaining(starttime, timeout=TIMEOUT_MINS*60):
-    """
-    Return the remaining time (in seconds) until starttime + timeout
-    """
-    elapsed = time.time() - starttime
-    return timeout - elapsed
-
-def send_email_alert(recipients, subject, message):
-    if not recipients:
-        return
-    try:
-        import smtplib, getpass
-        from email.mime.text import MIMEText
-        msg = MIMEText(message)
-        msg['Subject'] = "%s - %sh: %s" % (socket.gethostname(),
-                                          time.strftime("%b %d, %H:%M"),
-                                          subject)
-
-        domain = socket.getfqdn()
-        if not 'cern.ch' in domain:
-            domain = '%s.unl.edu' % socket.gethostname()
-        msg['From'] = '%s@%s' % (getpass.getuser(), domain)
-        msg['To'] = recipients[0]
-
-        s = smtplib.SMTP('localhost')
-        s.sendmail(msg['From'], recipients, msg.as_string())
-        s.quit()
-
-    except ImportError:
-        logging.warning("Email notification failed: ImportError")
-    except Exception, e:
-        logging.warning("Email notification failed: %s" % str(e))
+signal.alarm(TIMEOUT_MINS*60 + 60)
 
 
 def get_schedds(args=None):
@@ -319,36 +281,6 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
     os.rename(tmpname, "checkpoint.json")
 
     return last_completion
-
-
-def set_up_logging(args):
-    """Configure root logger with rotating file handler"""
-    logger = logging.getLogger()
-
-    log_level = getattr(logging, args.log_level.upper(), None)
-    if not isinstance(log_level, int):
-        raise ValueError('Invalid log level: %s' % log_level)
-    logger.setLevel(log_level)
-
-    if log_level <= logging.INFO:
-        logging.getLogger("htcondor_es.StompAMQ").setLevel(log_level + 10)
-        logging.getLogger("stomp.py").setLevel(log_level + 10)
-
-    try:
-        os.makedirs(args.log_dir)
-    except OSError as oe:
-        if oe.errno != errno.EEXIST:
-            raise
-
-    log_file = os.path.join(args.log_dir, 'spider_cms.log')
-    filehandler = RotatingFileHandler(log_file, maxBytes=100000)
-    filehandler.setFormatter(
-        logging.Formatter('%(asctime)s : %(name)s:%(levelname)s - %(message)s'))
-    logger.addHandler(filehandler)
-
-    if os.isatty(sys.stdout.fileno()):
-        streamhandler = logging.StreamHandler(stream=sys.stdout)
-        logger.addHandler(streamhandler)
 
 
 class ListenAndBunch(multiprocessing.Process):
