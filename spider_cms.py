@@ -104,240 +104,6 @@ def get_schedds(args=None):
     return schedd_ads
 
 
-def clean_old_jobs(starttime, name, es):
-    collection_date = get_data_collection_time()
-    idx = htcondor_es.es.get_index(time.time(), update_es=True)
-    body = {"query": {
-      "bool": {
-        "must" : [
-                  {"term": {"Status": "running"}},
-                  {"match": {"ScheddName": name.split(".")[0]}},
-                  {"range": {"DataCollection": {"lt": collection_date-1200}}},
-                 ],
-        #"should": [
-        #           {"bool": {"must_not": {"exists": {"field": "ScheddName"}}}},
-        #           {"bool": {"must_not": {"exists": {"field": "DataCompletion"}}}},
-        #          ],
-        #"minimum_should_match": 2,
-      }
-    }}
-    body = json.dumps(body)
-    print "Old job query:", body
-    while True:
-        print "Querying for stale jobs from", name
-        results = es.search(index="cms-2016*", size=1000, body=body, _source=False)['hits']['hits']
-        #print results
-        if not results:
-            print "No invalid results found for %s." % name
-            break
-        print "Invalidating %d old results from %s" % (len(results), name)
-        bulk = ''
-        for result in results:
-            bulk += json.dumps({"update": {"_id": result["_id"], "_type": "job", "_index": result["_index"]}}) + "\n"
-            bulk += '{"doc": {"Status": "unknown"}}\n'
-
-        try:
-            es.bulk(body=bulk)
-        except Exception, e:
-            print "Failure when updating stale documents:", str(e)
-            raise
-        if time_remaining(starttime) < 0:
-            print "Out of time for cleanup; exiting."
-            break
-
-
-def create_job_keys(schedd_name, job_ad, json_ad):
-    if 'CRAB_Id' in job_ad:  # Analysis job
-        subtask = 'Analysis'
-        task = job_ad.get("CRAB_Workflow", "UNKNOWN").split(":", 1)[-1]
-    else:
-        subtask = json_ad.get('WMAgent_TaskType', 'Unknown')
-        task = json_ad.get('Campaign', 'Unknown')
-    job_ad.setdefault('RequestMemory', 2000)
-    job_ad.setdefault('RequestDisk', 2000000)
-    job_ad.setdefault('MaxWallTimeMins', 1440)
-    base_key = 'schedd=%s,memory=%d,disk=%d,walltime=%d,desired_sites=%d,type=%s,task_type=%s,task=%s,subtask=%s,campaign=%s,workflow=%s,priority=%d' % \
-       (schedd_name,
-        int(job_ad.eval('RequestMemory')),
-        int(job_ad.eval('RequestDisk')),
-        int(job_ad.eval('MaxWallTimeMins')),
-        int(json_ad.get('DesiredSiteCount', 0)),
-        json_ad.get('Type', 'Unknown'),
-        json_ad.get('TaskType', 'Unknown'),
-        task,
-        subtask,
-        json_ad.get('Campaign', 'Unknown'),
-        json_ad.get('Workflow', 'Unknown'),
-        int(job_ad.get('JobPrio', 0))
-       )
-    keys = []
-    if job_ad['JobStatus'] == 2:
-        site_info = json_ad['Site'].split("_", 2)
-        if len(site_info) != 3:
-            tier = 'Unknown'
-            country = 'Unknown'
-        else:
-            tier = site_info[0]
-            country = site_info[1]
-        keys.append("%s,site=%s,tier=%s,country=%s" % (base_key, json_ad['Site'], tier, country))
-    elif job_ad['JobStatus'] == 1:
-        for site in json_ad['DESIRED_Sites']:
-            if site:
-                site_info = site.split("_", 2)
-                if len(site_info) != 3:
-                    tier = 'Unknown'
-                    country = 'Unknown'
-                else:
-                    tier = site_info[0]
-                    country = site_info[1]
-                keys.append("%s,site=%s,tier=%s,country=%s" % (base_key, site, tier, country))
-    return base_key, keys
-
-
-def job_info_to_text(measurement, key, running, coresrunning, idle, coresidle):
-    return "%s,%s running=%d,cores_running=%d,idle=%d,cores_idle=%d %d" % \
-       (measurement,
-        key,
-        running,
-        coresrunning,
-        idle,
-        coresidle,
-        now_ns
-       )
-
-
-g_influx_socket = None
-def get_influx_socket():
-    global g_influx_socket
-    if g_influx_socket:
-        return g_influx_socket
-    g_influx_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    return g_influx_socket
-
-
-def report_site_jobs_influx(sites_jobs_running, sites_jobs_coresrunning, sites_jobs_idle, sites_jobs_coresidle):
-    count = 0
-    text = ''
-    all_keys = set()
-    all_keys.update(sites_jobs_running.keys())
-    all_keys.update(sites_jobs_coresrunning.keys())
-    all_keys.update(sites_jobs_idle.keys())
-    all_keys.update(sites_jobs_coresidle.keys())
-    influx = get_influx_socket()
-    for key in all_keys:
-        text += job_info_to_text('site_jobs', key, sites_jobs_running[key],
-                                                   sites_jobs_coresrunning[key],
-                                                   sites_jobs_idle[key],
-                                                   sites_jobs_coresidle[key])
-        text += '\n'
-        count += 1
-        if count == 20:
-            influx.sendto(text, ('127.0.0.1', 8089))
-            count = 0
-            text = ''
-    if text:
-        influx.sendto(text, ('127.0.0.1', 8089))
-
-
-def report_global_jobs_influx(global_jobs_running, global_jobs_coresrunning, global_jobs_idle, global_jobs_coresidle):
-    count = 0
-    text = ''
-    all_keys = set()
-    all_keys.update(global_jobs_running.keys())
-    all_keys.update(global_jobs_coresrunning.keys())
-    all_keys.update(global_jobs_idle.keys())
-    all_keys.update(global_jobs_coresidle.keys())
-    influx = get_influx_socket()
-    for key in all_keys:
-        text += job_info_to_text('global_jobs', key, global_jobs_running[key],
-                                                   global_jobs_coresrunning[key],
-                                                   global_jobs_idle[key],
-                                                   global_jobs_coresidle[key])
-        text += '\n'
-        count += 1
-        if count == 20:
-            influx.sendto(text, ('127.0.0.1', 8089))
-            count = 0
-            text = ''
-    if text:
-        influx.sendto(text, ('127.0.0.1', 8089))
-
-
-def process_collector(args):
-    logging.debug("Querying collector for data")
-    if args.dry_run: return
-    try:
-        coll = htcondor.Collector("cmssrv221.fnal.gov:9620")
-        ads = coll.query(htcondor.AdTypes.Startd,
-                         'DynamicSlot=!=true',
-                         ['TotalSlotCpus', 'SlotType', 'Cpus', 'Memory',
-                          'State', 'GLIDEIN_ToRetire', 'GLIDEIN_CMSSite',
-                          'GLIDEIN_Site', 'GLIDEIN_Entry_Name', 'GLIDEIN_Factory'])
-    except RuntimeError, e:
-        logging.debug("Failed to query collector: %s" % str(e))
-        return
-    info = {}
-
-    for ad in ads:
-        slots = int(ad.get('TotalSlotCpus', ad.get('Cpus', 1)))
-        if ad.get('SlotType', 'Unknown') == 'Partitionable':
-            payloads = slots - int(ad.get('Cpus', 0))
-        elif ad.get('State') == 'Claimed':
-            payloads = ad.get('Cpus', 1)
-        else:
-            payloads = 0
-        site_info = ad.get('GLIDEIN_CMSSite', 'Unknown').split("_", 2)
-        if len(site_info) != 3:
-            tier = 'Unknown'
-            country = 'Unknown'
-        else:
-            tier = site_info[0]
-            country = site_info[1]
-
-        key = ("tier=%s,country=%s,cms_site=%s,site=%s,slot_type=%s,"
-               "cpus=%d,payloads=%d,memory=%d,entry_point=%s,factory=%s") % (
-            tier,
-            country,
-            ad.get('GLIDEIN_CMSSite', 'Unknown'),
-            ad.get('GLIDEIN_Site', 'Unknown'),
-            ad.get('SlotType', 'Unknown'),
-            slots,
-            payloads,
-            int(ad.get('Memory', 2500)),
-            ad.get('GLIDEIN_Entry_Name', 'Unknown'),
-            ad.get('GLIDEIN_Factory', 'Unknown'),
-           )
-
-        values = info.setdefault(key, collections.defaultdict(float))
-        values['count'] += 1
-        if ad.get('SlotType', 'Unknown') == 'Partitionable':
-            values['claimed_cores'] += slots - int(ad.get('Cpus', 0))
-            if now > ad.get('GLIDEIN_ToRetire', 0):
-                values['retiring_cores'] += int(ad.get('Cpus', 0))
-            else:
-                values['unclaimed_cores'] += int(ad.get('Cpus', 0))
-        elif ad.get('State') == 'Claimed':
-            values['claimed_cores'] += ad.get('Cpus', 1)
-        elif now > ad.get('GLIDEIN_ToRetire', 0):
-            values['retiring_cores'] += ad.get('Cpus', 1)
-        else:
-            values['unclaimed_cores'] += ad.get('Cpus', 1)
-
-    text = ''
-    count = 0
-    influx = get_influx_socket()
-    for key, values in info.items():
-        value_info = ",".join(["%s=%s" % (i[0], i[1]) for i in values.items()])
-        text += 'slots,%s %s %d\n' % (key, value_info, now_ns)
-        count += 1
-        if count == 10:
-            influx.sendto(text, ('127.0.0.1', 8089))
-            count = 0
-            text = ''
-    if text:
-        influx.sendto(text, ('127.0.0.1', 8089))
-
-
 def process_schedd_queue(starttime, schedd_ad, queue, args):
     my_start = time.time()
     logging.info("Querying %s queue for jobs." % schedd_ad["Name"])
@@ -352,15 +118,6 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
 
     count = 0
     queue.put(schedd_ad['Name'], timeout=time_remaining(starttime))
-
-    sites_jobs_running       = collections.defaultdict(int)
-    sites_jobs_idle          = collections.defaultdict(int)
-    sites_jobs_coresrunning  = collections.defaultdict(int)
-    sites_jobs_coresidle     = collections.defaultdict(int)
-    global_jobs_running      = collections.defaultdict(int)
-    global_jobs_coresrunning = collections.defaultdict(int)
-    global_jobs_idle         = collections.defaultdict(int)
-    global_jobs_coresidle    = collections.defaultdict(int)
 
     schedd = htcondor.Schedd(schedd_ad)
     had_error = True
@@ -385,23 +142,6 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
 
             if not dict_ad:
                 continue
-
-            if args.feed_influxdb:
-                global_key, job_keys = create_job_keys(schedd_ad['Name'], job_ad, dict_ad)
-                if job_keys and ('JobStatus' in job_ad):
-                    for job_key in job_keys:
-                        if job_ad['JobStatus'] == 2:
-                            sites_jobs_running[job_key] += 1
-                            sites_jobs_coresrunning[job_key] += job_ad.get('RequestCpus', 1)
-                        elif job_ad['JobStatus'] == 1:
-                            sites_jobs_idle[job_key]    += 1
-                            sites_jobs_coresidle[job_key]    += job_ad.get('RequestCpus', 1)
-                    if job_ad['JobStatus'] == 2:
-                        global_jobs_running[global_key] += 1
-                        global_jobs_coresrunning[global_key] += job_ad.get('RequestCpus', 1)
-                    elif job_ad['JobStatus'] == 1:
-                        global_jobs_idle[global_key] += 1
-                        global_jobs_coresidle[global_key] += job_ad.get('RequestCpus', 1)
 
             batch.append((job_ad["GlobalJobId"], dict_ad))
             count += 1
@@ -443,15 +183,6 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
     logging.warning(("Schedd %-25s queue: response count: %5d; "
                      "query time %.2f min; ") % (
                            schedd_ad["Name"], count, total_time))
-    # clean_old_jobs(starttime, schedd_ad["Name"], es) # FIXME
-
-    try:
-        if not had_error and args.feed_influxdb:
-            report_site_jobs_influx(sites_jobs_running, sites_jobs_coresrunning, sites_jobs_idle, sites_jobs_coresidle)
-            report_global_jobs_influx(global_jobs_running, global_jobs_coresrunning, global_jobs_idle, global_jobs_coresidle)
-    except Exception, e:
-        logging.error("Failure when uploading InfluxDB results: %s" % str(e))
-        traceback.print_exc()
 
     return count
 
@@ -700,10 +431,6 @@ def process_histories(schedd_ads, starttime, pool, args):
 
     futures = []
 
-    if args.feed_influxdb:
-        future = pool.apply_async(process_collector, (args,))
-        futures.append(('collector', future))
-
     for schedd_ad in schedd_ads:
         name = schedd_ad["Name"]
 
@@ -918,9 +645,6 @@ if __name__ == "__main__":
     parser.add_argument("--process_queue", action='store_true',
                         dest="process_queue",
                         help="Process also schedd queue (Running/Idle/Pending jobs)")
-    parser.add_argument("--feed_influxdb", action='store_true',
-                        dest="feed_influxdb",
-                        help="Feed also to InfluxDB")
     parser.add_argument("--feed_es", action='store_true',
                         dest="feed_es",
                         help="Feed to Elasticsearch")
