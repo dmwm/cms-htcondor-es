@@ -12,7 +12,7 @@ import socket
 import logging
 import smtplib
 import email.mime.text
-
+import logging.handlers
 
 TIMEOUT_MINS = 11
 
