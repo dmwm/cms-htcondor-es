@@ -546,47 +546,9 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         result["Type"] = "production"
     if cms:
         ad.setdefault("MATCH_EXP_JOB_GLIDEIN_CMSSite", ad.get("MATCH_EXP_JOBGLIDEIN_CMSSite", "Unknown"))
-    for key in ad.keys():
-        if key in ignore:
-            continue
-        if key.startswith("HasBeen") and not key in bool_vals:
-            continue
-        if key == "DESIRED_SITES":
-            key = "DESIRED_Sites"
-        try:
-            value = ad.eval(key)
-        except:
-            continue
-        if isinstance(value, classad.Value):
-            if value == classad.Value.Error:
-                continue
-            else:
-                value = None
-        elif key in bool_vals:
-            value = bool(value)
-        elif key in int_vals:
-            try:
-                value = int(value)
-            except ValueError:
-                if value == "Unknown":
-                    value = None
-                else:
-                    logging.warning("Failed to convert key %s with value %s to int" % (key, repr(value)))
-                    value = str(value)
-        elif key in string_vals:
-            value = str(value)
-        elif key in date_vals:
-            if value == 0:
-                value = None
-            else:
-                value = int(value)
-        #elif key in date_vals:
-        #    value = datetime.datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
-        if key.startswith("MATCH_EXP_JOB_"):
-            key = key[len("MATCH_EXP_JOB_"):]
-        if key.endswith("_RAW"):
-            key = key[:-len("_RAW")]
-        result[key] = value
+
+    bulk_convert_ad_data(ad, result)
+
     if cms:
         ttype = ad.get("WMAgent_SubTaskName", "/UNKNOWN").rsplit("/", 1)[-1]
 
@@ -770,67 +732,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     result["Badput"] = max(result["CoreHr"] - result["CommittedCoreHr"], 0.0)
     result["CpuBadput"] = max(result["CoreHr"] - result["CpuTimeHr"], 0.0)
 
-    # Parse Chirp statistics from CMSSW_8_0_0 and later.
-    for key, val in result.items():
-        if key.startswith('ChirpCMSSW_'):
-            cmssw_key = 'ChirpCMSSW' + key.split('_', 2)[-1]
-            if cmssw_key not in result:
-                result[cmssw_key] = val
-            elif cmssw_key.endswith('LastUpdate') or cmssw_key.endswith('Events') or cmssw_key.endswith('MaxLumis') or cmssw_key.endswith('MaxFiles'):
-                result[cmssw_key] = max(result[cmssw_key], val)
-            else:
-                result[cmssw_key] += val
-    if 'ChirpCMSSWFiles' in result:
-        result['CompletedFiles'] = result['ChirpCMSSWFiles']
-    if result.get('ChirpCMSSWMaxFiles', -1) > 0:
-        result['MaxFiles'] = result['ChirpCMSSWMaxFiles']
-    if 'ChirpCMSSWDone' in result:
-        result['CMSSWDone'] = bool(result['ChirpCMSSWDone'])
-        result['ChirpCMSSWDone'] = int(result['ChirpCMSSWDone'])
-    if 'ChirpCMSSWElapsed' in result:
-        result['CMSSWWallHrs'] = result['ChirpCMSSWElapsed']/3600.
-    if 'ChirpCMSSWEvents' in result:
-        result['KEvents'] = result['ChirpCMSSWEvents']/1000.
-        result['MegaEvents'] = result['ChirpCMSSWEvents']/1e6
-    if 'ChirpCMSSWLastUpdate' in result:
-        # Report time since last update - this is likely stageout time for completed jobs
-        result['SinceLastCMSSWUpdateHrs'] = max(result['RecordTime'] - result['ChirpCMSSWLastUpdate'], 0)/3600.
-        if result['Status'] == 'Completed':
-            result['StageOutHrs'] = result['SinceLastCMSSWUpdateHrs']
-    if 'ChirpCMSSWLumis' in result:
-        result['CMSSWKLumis'] = result['ChirpCMSSWLumis']/1000.
-    if 'ChirpCMSSWReadBytes' in result:
-        result['InputGB'] = result['ChirpCMSSWReadBytes']/1e9
-    if 'ChirpCMSSWReadTimeMsecs' in result:
-        result['ReadTimeHrs'] = result['ChirpCMSSWReadTimeMsecs'] / 3600000.0
-        result['ReadTimeMins'] = result['ChirpCMSSWReadTimeMsecs'] / 60000.0
-    if 'ChirpCMSSWWriteBytes' in result:
-        result['OutputGB'] = result['ChirpCMSSWWriteBytes']/1e9
-    if 'ChirpCMSSWWriteTimeMsecs' in result:
-        result['WriteTimeHrs'] = result['ChirpCMSSWWriteTimeMsecs'] / 3600000.0
-        result['WriteTimeMins'] = result['ChirpCMSSWWriteTimeMsecs'] / 60000.0
-    if result.get('CMSSWDone') and (result.get('ChirpCMSSWElapsed', 0) > 0):
-        result['CMSSWEventRate'] = result.get('ChirpCMSSWEvents', 0) / float(result['ChirpCMSSWElapsed']*ad.get("RequestCpus", 1.0))
-        if result['CMSSWEventRate'] > 0:
-            result['CMSSWTimePerEvent'] = 1.0 / result['CMSSWEventRate']
-    if result['CpuTimeHr'] > 0:
-        result['CpuEventRate'] = result.get('ChirpCMSSWEvents', 0) / float(result['CpuTimeHr']*3600.)
-        if result['CpuEventRate'] > 0:
-            result['CpuTimePerEvent'] = 1.0 / result['CpuEventRate']
-    if result['CoreHr'] > 0:
-        result['EventRate'] = result.get('ChirpCMSSWEvents', 0) / float(result['CoreHr']*3600.)
-        if result['EventRate'] > 0:
-            result['TimePerEvent'] = 1.0 / result['EventRate']
-    if ('ChirpCMSSWReadOps' in result) and ('ChirpCMSSWReadSegments' in result):
-        ops = result['ChirpCMSSWReadSegments'] + result['ChirpCMSSWReadOps']
-        if ops:
-            result['ReadOpSegmentPercent'] = result['ChirpCMSSWReadOps'] / float(ops)*100
-    if ('ChirpCMSSWReadOps' in result) and ('ChirpCMSSWReadVOps' in result):
-        ops = result['ChirpCMSSWReadOps'] + result['ChirpCMSSWReadVOps']
-        if ops:
-            result['ReadOpsPercent'] = result['ChirpCMSSWReadOps'] / float(ops)*100
-    if ('Chirp_WMCore_cmsRun_ExitCode' in result) and (result.get('ExitCode', 0) == 0):
-        result['ExitCode'] = result['Chirp_WMCore_cmsRun_ExitCode']
+    handle_chirp_info(ad, result)
 
     # Parse CRAB3 information on CMSSW version
     result['CMSSWVersion'] = 'Unknown'
@@ -892,6 +794,119 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         return result
     else:
         return json.dumps(result)
+
+
+def handle_chirp_info(ad, result):
+    """
+    Process any data present from the Chirp ads.
+
+    Chirp statistics should be available in CMSSW_8_0_0 and later.
+    """
+    for key, val in result.items():
+        if key.startswith('ChirpCMSSW_'):
+            cmssw_key = 'ChirpCMSSW' + key.split('_', 2)[-1]
+            if cmssw_key not in result:
+                result[cmssw_key] = val
+            elif cmssw_key.endswith('LastUpdate') or cmssw_key.endswith('Events') or cmssw_key.endswith('MaxLumis') or cmssw_key.endswith('MaxFiles'):
+                result[cmssw_key] = max(result[cmssw_key], val)
+            else:
+                result[cmssw_key] += val
+    if 'ChirpCMSSWFiles' in result:
+        result['CompletedFiles'] = result['ChirpCMSSWFiles']
+    if result.get('ChirpCMSSWMaxFiles', -1) > 0:
+        result['MaxFiles'] = result['ChirpCMSSWMaxFiles']
+    if 'ChirpCMSSWDone' in result:
+        result['CMSSWDone'] = bool(result['ChirpCMSSWDone'])
+        result['ChirpCMSSWDone'] = int(result['ChirpCMSSWDone'])
+    if 'ChirpCMSSWElapsed' in result:
+        result['CMSSWWallHrs'] = result['ChirpCMSSWElapsed']/3600.
+    if 'ChirpCMSSWEvents' in result:
+        result['KEvents'] = result['ChirpCMSSWEvents']/1000.
+        result['MegaEvents'] = result['ChirpCMSSWEvents']/1e6
+    if 'ChirpCMSSWLastUpdate' in result:
+        # Report time since last update - this is likely stageout time for completed jobs
+        result['SinceLastCMSSWUpdateHrs'] = max(result['RecordTime'] - result['ChirpCMSSWLastUpdate'], 0)/3600.
+        if result['Status'] == 'Completed':
+            result['StageOutHrs'] = result['SinceLastCMSSWUpdateHrs']
+    if 'ChirpCMSSWLumis' in result:
+        result['CMSSWKLumis'] = result['ChirpCMSSWLumis']/1000.
+    if 'ChirpCMSSWReadBytes' in result:
+        result['InputGB'] = result['ChirpCMSSWReadBytes']/1e9
+    if 'ChirpCMSSWReadTimeMsecs' in result:
+        result['ReadTimeHrs'] = result['ChirpCMSSWReadTimeMsecs'] / 3600000.0
+        result['ReadTimeMins'] = result['ChirpCMSSWReadTimeMsecs'] / 60000.0
+    if 'ChirpCMSSWWriteBytes' in result:
+        result['OutputGB'] = result['ChirpCMSSWWriteBytes']/1e9
+    if 'ChirpCMSSWWriteTimeMsecs' in result:
+        result['WriteTimeHrs'] = result['ChirpCMSSWWriteTimeMsecs'] / 3600000.0
+        result['WriteTimeMins'] = result['ChirpCMSSWWriteTimeMsecs'] / 60000.0
+    if result.get('CMSSWDone') and (result.get('ChirpCMSSWElapsed', 0) > 0):
+        result['CMSSWEventRate'] = result.get('ChirpCMSSWEvents', 0) / float(result['ChirpCMSSWElapsed']*ad.get("RequestCpus", 1.0))
+        if result['CMSSWEventRate'] > 0:
+            result['CMSSWTimePerEvent'] = 1.0 / result['CMSSWEventRate']
+    if result['CoreHr'] > 0:
+        result['EventRate'] = result.get('ChirpCMSSWEvents', 0) / float(result['CoreHr']*3600.)
+        if result['EventRate'] > 0:
+            result['TimePerEvent'] = 1.0 / result['EventRate']
+    if ('ChirpCMSSWReadOps' in result) and ('ChirpCMSSWReadSegments' in result):
+        ops = result['ChirpCMSSWReadSegments'] + result['ChirpCMSSWReadOps']
+        if ops:
+            result['ReadOpSegmentPercent'] = result['ChirpCMSSWReadOps'] / float(ops)*100
+    if ('ChirpCMSSWReadOps' in result) and ('ChirpCMSSWReadVOps' in result):
+        ops = result['ChirpCMSSWReadOps'] + result['ChirpCMSSWReadVOps']
+        if ops:
+            result['ReadOpsPercent'] = result['ChirpCMSSWReadOps'] / float(ops)*100
+    if ('Chirp_WMCore_cmsRun_ExitCode' in result) and (result.get('ExitCode', 0) == 0):
+        result['ExitCode'] = result['Chirp_WMCore_cmsRun_ExitCode']
+
+_CONVERT_COUNT = 0
+_CONVERT_CPU = 0
+def bulk_convert_ad_data(ad, result):
+    """
+    Given a ClassAd, bulk convert to a python dictionary.
+    """
+    for key in ad.keys():
+        if key in ignore:
+            continue
+        if key.startswith("HasBeen") and not key in bool_vals:
+            continue
+        if key == "DESIRED_SITES":
+            key = "DESIRED_Sites"
+        try:
+            value = ad.eval(key)
+        except:
+            continue
+        if isinstance(value, classad.Value):
+            if value == classad.Value.Error:
+                continue
+            else:
+                value = None
+        elif key in bool_vals:
+            value = bool(value)
+        elif key in int_vals:
+            try:
+                value = int(value)
+            except ValueError:
+                if value == "Unknown":
+                    value = None
+                else:
+                    logging.warning("Failed to convert key %s with value %s to int" % (key, repr(value)))
+                    value = str(value)
+        elif key in string_vals:
+            value = str(value)
+        elif key in date_vals:
+            if value == 0:
+                value = None
+            else:
+                value = int(value)
+        #elif key in date_vals:
+        #    value = datetime.datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
+        if key.startswith("MATCH_EXP_JOB_"):
+            key = key[len("MATCH_EXP_JOB_"):]
+        if key.endswith("_RAW"):
+            key = key[:-len("_RAW")]
+        result[key] = value
+
 
 def convert_dates_to_millisecs(record):
     for date_field in date_vals:
