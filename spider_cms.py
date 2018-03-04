@@ -892,11 +892,11 @@ def main(args):
 
     pool = multiprocessing.Pool(processes=5)
 
-    process_histories(schedd_ads=schedd_ads,
-                      starttime=starttime,
-                      pool=pool,
-                      args=args)
-
+    if not args.skip_history:
+        process_histories(schedd_ads=schedd_ads,
+                          starttime=starttime,
+                          pool=pool,
+                          args=args)
 
     # Now that we have the fresh history, process the queues themselves.
     if args.process_queue:
