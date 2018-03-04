@@ -351,7 +351,7 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
         return
 
     count = 0
-    queue.put(schedd_ad['Name'])
+    queue.put(schedd_ad['Name'], timeout=time_remaining(starttime))
 
     sites_jobs_running       = collections.defaultdict(int)
     sites_jobs_idle          = collections.defaultdict(int)
@@ -407,7 +407,7 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
             count += 1
 
             if not args.dry_run and len(batch) == args.query_queue_batch_size:
-                queue.put(batch)
+                queue.put(batch, timeout=time_remaining(starttime))
                 batch = []
 
             if time_remaining(starttime) < 0:
@@ -421,7 +421,7 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
                 break
 
         if batch:  # send remaining docs
-            queue.put(batch)
+            queue.put(batch, timeout=time_remaining(starttime))
             batch = []
 
 
@@ -438,7 +438,7 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
                          message)
         traceback.print_exc()
 
-    queue.put(schedd_ad['Name'])
+    queue.put(schedd_ad['Name'], timeout=time_remaining(starttime))
     total_time = (time.time() - my_start)/60.
     logging.warning(("Schedd %-25s queue: response count: %5d; "
                      "query time %.2f min; ") % (
@@ -623,6 +623,7 @@ class ListenAndBunch(multiprocessing.Process):
     """
     def __init__(self, input_queue, output_queue,
                  n_expected,
+                 starttime,
                  bunch_size=5000,
                  report_every=50000):
         super(ListenAndBunch, self).__init__()
@@ -632,6 +633,7 @@ class ListenAndBunch(multiprocessing.Process):
         self.bunch_size = bunch_size
         self.report_every = report_every
         self.n_expected = n_expected
+        self.starttime = starttime
 
         self.buffer = []
         self.tracker = []
@@ -643,7 +645,7 @@ class ListenAndBunch(multiprocessing.Process):
     def run(self):
         since_last_report = 0
         while True:
-            next_batch = self.input_queue.get()
+            next_batch = self.input_queue.get(timeout=time_remaining(self.starttime))
 
             if isinstance(next_batch, basestring):
                 schedd_name = str(next_batch)
@@ -673,18 +675,18 @@ class ListenAndBunch(multiprocessing.Process):
 
             # If buffer is full, send the docs and clear the buffer
             if len(self.buffer) >= self.bunch_size:
-                self.output_queue.put(self.buffer[:self.bunch_size])
+                self.output_queue.put(self.buffer[:self.bunch_size], timeout=time_remaining(self.starttime))
                 self.buffer = self.buffer[self.bunch_size:]
 
     def close(self):
         """Clear the buffer, send a poison pill and the total number of docs"""
         if self.buffer:
-            self.output_queue.put(self.buffer)
+            self.output_queue.put(self.buffer, timeout=time_remaining(self.starttime))
             self.buffer = []
 
         logging.warning("Closing listener, received %d documents total" % self.count_in)
-        self.output_queue.put(None) # send back a poison pill
-        self.output_queue.put(self.count_in) # send the number of total docs
+        self.output_queue.put(None, timeout=time_remaining(self.starttime)) # send back a poison pill
+        self.output_queue.put(self.count_in, timeout=time_remaining(self.starttime)) # send the number of total docs
 
 
 def process_histories(schedd_ads, starttime, pool, args):
@@ -773,6 +775,7 @@ def process_queues(schedd_ads, starttime, pool, args):
     listener = ListenAndBunch(input_queue=input_queue,
                               output_queue=output_queue,
                               n_expected=len(schedd_ads),
+                              starttime=starttime,
                               bunch_size=5000)
     futures = []
 
@@ -797,9 +800,9 @@ def process_queues(schedd_ads, starttime, pool, args):
             listener.terminate()
             break
 
-        bunch = output_queue.get()
+        bunch = output_queue.get(timeout=time_remaining(starttime))
         if bunch is None: # swallow the poison pill
-            total_processed = int(output_queue.get())
+            total_processed = int(output_queue.get(timeout=time_remaining(starttime)))
             break
 
         if args.feed_amq and not args.read_only:
