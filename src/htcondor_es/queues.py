@@ -200,8 +200,8 @@ def process_queues(schedd_ads, starttime, pool, args):
         return
 
     mp_manager = multiprocessing.Manager()
-    input_queue = mp_manager.Queue(maxsize=10)
-    output_queue = mp_manager.Queue(maxsize=2)
+    input_queue = mp_manager.Queue()
+    output_queue = mp_manager.Queue()
     listener = ListenAndBunch(input_queue=input_queue,
                               output_queue=output_queue,
                               n_expected=len(schedd_ads),
@@ -253,20 +253,15 @@ def process_queues(schedd_ads, starttime, pool, args):
                                              args=(idx, es_bunch, args))
             futures.append(("UPLOADER_ES", future))
 
-        max_in_progress = 3
-        count = len(futures)
-        while count > max_in_progress:
+        logging.info("Starting new uploader, %d items in queue" % output_queue.qsize())
+
+        # Limit the number of concurrent upload processes
+        while len([f for f in futures if f[0].startswith('UPLOADER') and not f[1].ready()]) >= args.upload_pool_size:
             if time_remaining(starttime) < 0:
                 break
-            for future in futures:
-                if future[1].ready():
-                    count -= 1
-            if count > max_in_progress:
-                break
-            for future in futures:
-                future.wait(time_remaining(starttime) + 10)
-                break
-            count = len(futures)
+
+            # Wait a short time before counting again
+            time.sleep(1)
 
     listener.join()
 
