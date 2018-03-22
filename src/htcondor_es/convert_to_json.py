@@ -33,6 +33,7 @@ string_vals = set([ \
   "CRAB_TaskWorker",
   "CRAB_SiteWhitelist",
   "CRAB_SiteBlacklist",
+  "CRAB_SplitAlgo",
   "CRAB_PrimaryDataset",
   "Args",
   "AccountingGroup",
