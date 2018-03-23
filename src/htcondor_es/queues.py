@@ -16,6 +16,7 @@ import htcondor_es.amq
 from htcondor_es.utils import send_email_alert, time_remaining, TIMEOUT_MINS
 from htcondor_es.convert_to_json import convert_to_json
 from htcondor_es.convert_to_json import convert_dates_to_millisecs
+from htcondor_es.convert_to_json import unique_doc_id
 
 
 
@@ -140,7 +141,7 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
             if not dict_ad:
                 continue
 
-            batch.append((job_ad["GlobalJobId"], dict_ad))
+            batch.append((unique_doc_id(dict_ad), dict_ad))
             count += 1
             count_since_last_report += 1
 

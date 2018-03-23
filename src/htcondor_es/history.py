@@ -18,6 +18,7 @@ import htcondor_es.amq
 from htcondor_es.utils import send_email_alert, time_remaining, TIMEOUT_MINS
 from htcondor_es.convert_to_json import convert_to_json
 from htcondor_es.convert_to_json import convert_dates_to_millisecs
+from htcondor_es.convert_to_json import unique_doc_id
 
 
 def process_schedd(starttime, last_completion, schedd_ad, args):
@@ -74,7 +75,7 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
                                            template=args.es_index_template,
                                            update_es=(args.feed_es and not args.read_only))
             ad_list = buffered_ads.setdefault(idx, [])
-            ad_list.append((job_ad["GlobalJobId"], dict_ad))
+            ad_list.append((unique_doc_id(dict_ad), dict_ad))
 
             if len(ad_list) == args.bunching:
                 st = time.time()
