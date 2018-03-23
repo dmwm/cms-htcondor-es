@@ -438,6 +438,7 @@ running_fields = set([
   "CRAB_DataBlock",
   "CRAB_UserHN",
   "CRAB_Workflow",
+  "CRAB_SplitAlgo",
   # "DataLocations",
   "DESIRED_CMSDataset",
   # "DESIRED_Sites",
