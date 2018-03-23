@@ -532,13 +532,15 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     if ad.get("TaskType") == "ROOT":
         return None
     result = {}
-    result['DataCollection'] = ad.get("CompletionDate", 0)
-    result['RecordTime'] = ad.get("CompletionDate", 0)
-    if not result['DataCollection']:
-        result['DataCollection'] = _launch_time
-    if not result['RecordTime']:
-        result['RecordTime'] = _launch_time
+
+    result['DataCollection'] = ad.get('CompletionDate', _launch_time)
+    result['RecordTime'] = _launch_time
+    # Keep RecordTime as _launch_time for unfinished jobs
+    if ad['JobStatus'] in [3, 4, 6] and 'CompletionDate' in ad:
+        result['RecordTime'] = ad['CompletionDate']
+
     result['DataCollectionDate'] = result['RecordTime']
+
     result['ScheddName'] = ad.get("GlobalJobId", "UNKNOWN").split("#")[0]
     if cms and analysis:
         result["Type"] = "analysis"
