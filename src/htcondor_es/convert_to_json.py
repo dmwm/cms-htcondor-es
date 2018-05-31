@@ -471,6 +471,7 @@ running_fields = set([
   "DESIRED_SITES_Diff",
   "DESIRED_SITES_Orig",
   "EstimatedWallTimeMins",
+  "EstimatedWallTimeJobCount",
   "LastRouted",
   "LastTimingTuned",
   "LPCRouted",
