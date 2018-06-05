@@ -150,6 +150,7 @@ int_vals = set([ \
   "NumRestarts",
   "NumShadowStarts",
   "NumSystemHolds",
+  "PilotRestLifeTimeMins",
   "PostJobPrio1",
   "PostJobPrio2",
   "ProcId",
@@ -186,6 +187,8 @@ date_vals = set([ \
   "LastMatchTime",
   "LastSuspensionTime",
   "LastVacateTime_RAW",
+  "MATCH_GLIDEIN_ToDie",
+  "MATCH_GLIDEIN_ToRetire",
   "QDate",
   "ShadowBday",
   "StageInFinish",
@@ -299,8 +302,6 @@ ignore = set([
   "MATCH_GLIDEIN_SiteWMS_JobId",
   "MATCH_GLIDEIN_SiteWMS_Queue",
   "MATCH_GLIDEIN_SiteWMS_Slot",
-  "MATCH_GLIDEIN_ToDie",
-  "MATCH_GLIDEIN_ToRetire",
   "MATCH_Memory",
   "MyType",
   "NiceUser",
@@ -454,6 +455,7 @@ running_fields = set([
   "QueueHrs",
   "ReadTimeMins",
   "RecordTime",
+  "RemoteHost",
   "RequestCpus",
   "RequestMemory",
   "ScheddName",
@@ -472,6 +474,7 @@ running_fields = set([
   "DESIRED_SITES_Orig",
   "EstimatedWallTimeMins",
   "EstimatedWallTimeJobCount",
+  "PilotRestLifeTimeMins",
   "LastRouted",
   "LastTimingTuned",
   "LPCRouted",
@@ -632,6 +635,15 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         ad["RemoteWallClockTime"] = int(now - ad["EnteredCurrentStatus"])
         ad["CommittedTime"] = ad["RemoteWallClockTime"]
     result["WallClockHr"] = ad.get("RemoteWallClockTime", 0)/3600.
+
+    result["PilotRestLifeTimeMins"] = -1
+    if analysis and ad.get("JobStatus") == 2 and 'LastMatchTime' in ad:
+        try:
+            result["PilotRestLifeTimeMins"] = int((ad['MATCH_GLIDEIN_ToDie'] - ad['EnteredCurrentStatus'])/60)
+        except KeyError:
+            result["PilotRestLifeTimeMins"] = -72*60
+
+    result['HasBeenTimingTuned'] = ad.get('HasBeenTimingTuned',False)
 
     if 'RequestCpus' not in ad:
         m = _cream_re.search(ad.get("CreamAttributes", ""))
