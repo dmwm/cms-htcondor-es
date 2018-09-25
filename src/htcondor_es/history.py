@@ -20,7 +20,7 @@ from htcondor_es.convert_to_json import convert_to_json
 from htcondor_es.convert_to_json import convert_dates_to_millisecs
 
 
-def process_schedd(starttime, last_completion, schedd_ad, args):
+def process_schedd(starttime, last_completion, checkpoint_queue, schedd_ad, args):
     """
     Given a schedd, process its entire set of history since last checkpoint.
     """
@@ -44,6 +44,7 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
     count = 0
     total_upload = 0
     sent_warnings = False
+    timed_out = False
     if not args.read_only:
         if args.feed_es:
             es = htcondor_es.es.get_server_handle(args)
@@ -92,9 +93,13 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
                 buffered_ads[idx] = []
 
             count += 1
+
+            # Find the most recent job and use that date as the new
+            # last_completion date
             job_completion = job_ad.get("EnteredCurrentStatus")
             if job_completion > last_completion:
                 last_completion = job_completion
+
             if time_remaining(starttime) < 0:
                 message = ("History crawler on %s has been running for "
                            "more than %d minutes; exiting." % (schedd_ad["Name"], TIMEOUT_MINS))
@@ -102,6 +107,7 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
                 send_email_alert(args.email_alerts,
                                  "spider_cms history timeout warning",
                                  message)
+                timed_out = True
                 break
 
 
@@ -143,22 +149,25 @@ def process_schedd(starttime, last_completion, schedd_ad, args):
                     total_time - total_upload,
                     total_upload)
 
-    try:
-        checkpoint_new = json.load(open("checkpoint.json"))
-    except:
-        checkpoint_new = {}
-
-    if ((schedd_ad["Name"] not in checkpoint_new) or
-            (checkpoint_new[schedd_ad["Name"]] < last_completion)):
-        checkpoint_new[schedd_ad["Name"]] = last_completion
-
-    fd, tmpname = tempfile.mkstemp(dir=".", prefix="checkpoint.json.new")
-    fd = os.fdopen(fd, "w")
-    json.dump(checkpoint_new, fd)
-    fd.close()
-    os.rename(tmpname, "checkpoint.json")
+    # If we got to this point without a timeout, all these jobs have
+    # been processed and uploaded, so we can update the checkpoint
+    if not timed_out:
+        checkpoint_queue.put((schedd_ad["Name"], last_completion))
 
     return last_completion
+
+
+def update_checkpoint(name, completion_date):
+    try:
+        with open("checkpoint.json", "r") as fd:
+            checkpoint = json.load(fd)
+    except IOError, ValueError:
+        checkpoint = {}
+
+    checkpoint[name] = completion_date
+
+    with open("checkpoint.json", "w") as fd:
+        json.dump(checkpoint, fd)
 
 
 def process_histories(schedd_ads, starttime, pool, args):
@@ -168,10 +177,13 @@ def process_histories(schedd_ads, starttime, pool, args):
     """
     try:
         checkpoint = json.load(open("checkpoint.json"))
-    except:
+    except IOError, ValueError:
         checkpoint = {}
 
     futures = []
+
+    manager = multiprocessing.Manager()
+    checkpoint_queue = manager.Queue()
 
     for schedd_ad in schedd_ads:
         name = schedd_ad["Name"]
@@ -187,9 +199,20 @@ def process_histories(schedd_ads, starttime, pool, args):
         future = pool.apply_async(process_schedd,
                                   (starttime,
                                    last_completion,
+                                   checkpoint_queue,
                                    schedd_ad,
                                    args))
         futures.append((name, future))
+
+    def _chkp_updater():
+        while True:
+            job = checkpoint_queue.get()
+            if job is None: # Swallow poison pill
+                break
+            update_checkpoint(*job)
+
+    chkp_updater = multiprocessing.Process(target=_chkp_updater)
+    chkp_updater.start()
 
     # Check whether one of the processes timed out and reset their last
     # completion checkpoint in case
@@ -197,11 +220,9 @@ def process_histories(schedd_ads, starttime, pool, args):
     for name, future in futures:
         if time_remaining(starttime) > -10:
             try:
-                last_completion = future.get(time_remaining(starttime)+10)
-                if name:
-                    checkpoint[name] = last_completion
-
+                future.get(time_remaining(starttime)+10)
             except multiprocessing.TimeoutError:
+                # This implies that the checkpoint hasn't been updated
                 message = "Schedd %s history timed out; ignoring progress." % name
                 logging.error(message)
                 send_email_alert(args.email_alerts,
@@ -214,22 +235,8 @@ def process_histories(schedd_ads, starttime, pool, args):
     if timed_out:
         pool.terminate()
 
-
-    # Update the last completion checkpoint file
-    try:
-        checkpoint_new = json.load(open("checkpoint.json"))
-    except:
-        checkpoint_new = {}
-
-    for key, val in checkpoint.items():
-        if (key not in checkpoint_new) or (val > checkpoint_new[key]):
-            checkpoint_new[key] = val
-
-    fd, tmpname = tempfile.mkstemp(dir=".", prefix="checkpoint.json.new")
-    fd = os.fdopen(fd, "w")
-    json.dump(checkpoint_new, fd)
-    fd.close()
-    os.rename(tmpname, "checkpoint.json")
+    checkpoint_queue.put(None) # Send a poison pill
+    chkp_updater.join()
 
     logging.warning("Processing time for history: %.2f mins",
                     ((time.time()-starttime)/60.))
