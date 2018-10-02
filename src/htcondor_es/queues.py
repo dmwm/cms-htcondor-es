@@ -7,6 +7,7 @@ import time
 import logging
 import resource
 import traceback
+import Queue
 import multiprocessing
 
 import htcondor
@@ -54,7 +55,12 @@ class ListenAndBunch(multiprocessing.Process):
     def run(self):
         since_last_report = 0
         while True:
-            next_batch = self.input_queue.get(timeout=time_remaining(self.starttime))
+            try:
+                next_batch = self.input_queue.get(timeout=time_remaining(self.starttime)-5)
+            except Queue.Empty:
+                logging.warning("Closing listener before all schedds were processed")
+                self.close()
+                return
 
             if isinstance(next_batch, basestring):
                 schedd_name = str(next_batch)
