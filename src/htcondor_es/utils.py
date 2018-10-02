@@ -44,11 +44,14 @@ def send_email_alert(recipients, subject, message):
         logging.warning("Email notification failed: %s", str(exn))
 
 
-def time_remaining(starttime, timeout=TIMEOUT_MINS*60):
+def time_remaining(starttime, timeout=TIMEOUT_MINS*60, positive=True):
     """
     Return the remaining time (in seconds) until starttime + timeout
+    Returns 0 if there is no time remaining
     """
     elapsed = time.time() - starttime
+    if positive:
+        return max(0, timeout - elapsed)
     return timeout - elapsed
 
 
