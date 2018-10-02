@@ -78,7 +78,7 @@ def process_schedd(starttime, last_completion, checkpoint_queue, schedd_ad, args
             ad_list = buffered_ads.setdefault(idx, [])
             ad_list.append((unique_doc_id(dict_ad), dict_ad))
 
-            if len(ad_list) == args.bunching:
+            if len(ad_list) == args.es_bunch_size:
                 st = time.time()
                 if not args.read_only:
                     if args.feed_es:

@@ -207,7 +207,7 @@ def process_queues(schedd_ads, starttime, pool, args):
                               output_queue=output_queue,
                               n_expected=len(schedd_ads),
                               starttime=starttime,
-                              bunch_size=5000)
+                              bunch_size=args.amq_bunch_size)
     futures = []
 
     upload_pool = multiprocessing.Pool(processes=args.upload_pool_size)
@@ -244,6 +244,7 @@ def process_queues(schedd_ads, starttime, pool, args):
             futures.append(("UPLOADER_AMQ", future))
 
         if args.feed_es_for_queues and not args.read_only:
+            ## Note that these bunches are sized according to --amq_bunch_size
             es_bunch = [(id_, json.dumps(dict_ad)) for id_, dict_ad in bunch]
             ## FIXME: Why are we determining the index from one ad?
             idx = htcondor_es.es.get_index(bunch[0][1].get("QDate", int(time.time())),
