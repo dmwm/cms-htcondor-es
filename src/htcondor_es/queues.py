@@ -280,7 +280,10 @@ def process_queues(schedd_ads, starttime, pool, args):
                 elif name == "UPLOADER_ES":
                     total_sent += count
                 else:
-                    total_queried += count
+                    try:
+                        total_queried += count
+                    except TypeError:
+                        pass
             except multiprocessing.TimeoutError:
                 message = "Schedd %s queue timed out; ignoring progress." % name
                 logging.error(message)
