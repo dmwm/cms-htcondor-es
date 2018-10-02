@@ -173,10 +173,6 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
                                  schedd_ad['Name'], count, processing_rate)
                     count_since_last_report = 0
 
-        if batch:  # send remaining docs
-            queue.put(batch, timeout=time_remaining(starttime))
-            batch = []
-
     except RuntimeError, e:
         logging.error("Failed to query schedd %s for jobs: %s",
                       schedd_ad["Name"], str(e))
@@ -187,6 +183,10 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
         send_email_alert(args.email_alerts, "spider_cms schedd queue query error",
                          message)
         traceback.print_exc()
+
+    if batch:  # send remaining docs
+        queue.put(batch, timeout=time_remaining(starttime))
+        batch = []
 
     queue.put(schedd_ad['Name'], timeout=time_remaining(starttime))
     total_time = (time.time() - my_start)/60.
