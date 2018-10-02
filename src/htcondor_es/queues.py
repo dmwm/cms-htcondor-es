@@ -256,14 +256,6 @@ def process_queues(schedd_ads, starttime, pool, args):
 
         logging.info("Starting new uploader, %d items in queue" % output_queue.qsize())
 
-        # Limit the number of concurrent upload processes
-        while len([f for f in futures if f[0].startswith('UPLOADER') and not f[1].ready()]) >= args.upload_pool_size:
-            if time_remaining(starttime) < 0:
-                break
-
-            # Wait a short time before counting again
-            time.sleep(1)
-
     listener.join()
 
     timed_out = False
