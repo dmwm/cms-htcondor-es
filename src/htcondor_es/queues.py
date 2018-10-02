@@ -209,7 +209,7 @@ def process_queues(schedd_ads, starttime, pool, args):
                               bunch_size=5000)
     futures = []
 
-    upload_pool = multiprocessing.Pool(processes=3)
+    upload_pool = multiprocessing.Pool(processes=args.upload_pool_size)
 
     for schedd_ad in schedd_ads:
         future = pool.apply_async(process_schedd_queue,
