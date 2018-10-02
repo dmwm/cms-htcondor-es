@@ -926,3 +926,14 @@ def drop_fields_for_running_jobs(record):
         except KeyError: continue
 
     return skimmed_record
+
+
+def unique_doc_id(doc):
+    """
+    Return a string of format "<GlobalJobId>#<RecordTime>"
+    To uniquely identify documents (not jobs)
+
+    Note that this uniqueness breaks if the same jobs are submitted
+    with the same RecordTime
+    """
+    return "%s#%d" % (doc['GlobalJobId'], doc['RecordTime'])

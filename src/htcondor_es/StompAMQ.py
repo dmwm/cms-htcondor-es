@@ -174,9 +174,10 @@ class StompAMQ(object):
             # 'payload': payload,
             'metadata': {
                 'timestamp': int(timestamp),
-                'id': id_,
+                '_id': id_,
                 'uuid': str(uuid.uuid1()),
-            }
+            },
+            '_id': id_
         }
         body.update(payload)
 
