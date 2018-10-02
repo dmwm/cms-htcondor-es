@@ -127,7 +127,7 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
             dict_ad = None
             try:
                 dict_ad = convert_to_json(job_ad, return_dict=True,
-                                          reduce_data=args.reduce_running_data)
+                                          reduce_data=not args.keep_full_queue_data)
             except Exception as e:
                 message = ("Failure when converting document on %s queue: %s" %
                            (schedd_ad["Name"], str(e)))
