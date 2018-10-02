@@ -129,9 +129,13 @@ def main():
     parser.add_argument("--keep_full_queue_data", action='store_true',
                         dest="keep_full_queue_data",
                         help="Drop all but some fields for running jobs.")
-    parser.add_argument("--bunching", default=250,
-                        type=int, dest="bunching",
-                        help=("Send docs in bunches of this number "
+    parser.add_argument("--amq_bunch_size", default=5000,
+                        type=int, dest="amq_bunch_size",
+                        help=("Send docs to AMQ in bunches of this number "
+                              "[default: %(default)d]"))
+    parser.add_argument("--es_bunch_size", default=250,
+                        type=int, dest="es_bunch_size",
+                        help=("Send docs to ES in bunches of this number "
                               "[default: %(default)d]"))
     parser.add_argument("--query_queue_batch_size", default=50,
                         type=int, dest="query_queue_batch_size",
