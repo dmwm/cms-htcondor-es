@@ -900,7 +900,11 @@ def bulk_convert_ad_data(ad, result):
             if value == 0:
                 value = None
             else:
-                value = int(value)
+                try:
+                    value = int(value)
+                except ValueError:
+                    logging.warning("Failed to convert key %s with value %s to int for a date field" % (key, repr(value)))
+                    value = None
         #elif key in date_vals:
         #    value = datetime.datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
         if key.startswith("MATCH_EXP_JOB_"):
