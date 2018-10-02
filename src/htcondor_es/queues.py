@@ -103,7 +103,7 @@ class ListenAndBunch(multiprocessing.Process):
 def process_schedd_queue(starttime, schedd_ad, queue, args):
     my_start = time.time()
     logging.info("Querying %s queue for jobs.", schedd_ad["Name"])
-    if time_remaining(starttime) < 0:
+    if time_remaining(starttime) < 10:
         message = ("No time remaining to run queue crawler on %s; "
                    "exiting." % schedd_ad['Name'])
         logging.error(message)
@@ -145,7 +145,7 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
             count_since_last_report += 1
 
             if not args.dry_run and len(batch) == args.query_queue_batch_size:
-                if time_remaining(starttime) < 0:
+                if time_remaining(starttime) < 10:
                     message = ("Queue crawler on %s has been running for "
                                "more than %d minutes; exiting" %
                                (schedd_ad['Name'], TIMEOUT_MINS))
@@ -195,7 +195,7 @@ def process_queues(schedd_ads, starttime, pool, args):
     Process all the jobs in all the schedds given.
     """
     my_start = time.time()
-    if time_remaining(starttime) < 0:
+    if time_remaining(starttime) < 10:
         logging.warning("No time remaining to process queues")
         return
 
@@ -225,7 +225,7 @@ def process_queues(schedd_ads, starttime, pool, args):
         if args.dry_run or len(schedd_ads) == 0:
             break
 
-        if time_remaining(starttime) < -10:
+        if time_remaining(starttime) < 5:
             logging.warning("Listener did not shut down properly; terminating.")
             listener.terminate()
             break
@@ -270,7 +270,7 @@ def process_queues(schedd_ads, starttime, pool, args):
     total_upload_time = 0
     total_queried = 0
     for name, future in futures:
-        if time_remaining(starttime) > -10:
+        if time_remaining(starttime) > -20:
             try:
                 count = future.get(time_remaining(starttime)+10)
                 if name == "UPLOADER_AMQ":
@@ -291,6 +291,7 @@ def process_queues(schedd_ads, starttime, pool, args):
             break
 
     if timed_out:
+        logging.error("Timed out when retrieving uploaders. Upload count incomplete.")
         pool.terminate()
         upload_pool.terminate()
 
