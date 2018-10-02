@@ -70,7 +70,7 @@ def main_driver(args):
     schedd_ads = get_schedds()
     logging.warning("&&& There are %d schedds to query.", len(schedd_ads))
 
-    pool = multiprocessing.Pool(processes=5)
+    pool = multiprocessing.Pool(processes=args.query_pool_size)
 
     if not args.skip_history:
         htcondor_es.history.process_histories(schedd_ads=schedd_ads,
@@ -136,6 +136,14 @@ def main():
     parser.add_argument("--query_queue_batch_size", default=50,
                         type=int, dest="query_queue_batch_size",
                         help=("Send docs to listener in batches of this number "
+                              "[default: %(default)d]"))
+    parser.add_argument("--upload_pool_size", default=8,
+                        type=int, dest="upload_pool_size",
+                        help=("Number of parallel processes for uploading "
+                              "[default: %(default)d]"))
+    parser.add_argument("--query_pool_size", default=8,
+                        type=int, dest="query_pool_size",
+                        help=("Number of parallel processes for querying "
                               "[default: %(default)d]"))
 
     parser.add_argument("--es_hostname", default='es-cms.cern.ch',

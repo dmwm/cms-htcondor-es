@@ -209,7 +209,7 @@ def process_queues(schedd_ads, starttime, pool, args):
                               bunch_size=5000)
     futures = []
 
-    upload_pool = multiprocessing.Pool(processes=3)
+    upload_pool = multiprocessing.Pool(processes=args.upload_pool_size)
 
     for schedd_ad in schedd_ads:
         future = pool.apply_async(process_schedd_queue,
@@ -253,15 +253,14 @@ def process_queues(schedd_ads, starttime, pool, args):
                                              args=(idx, es_bunch, args))
             futures.append(("UPLOADER_ES", future))
 
-        max_in_progress = 3
         count = len(futures)
-        while count > max_in_progress:
+        while count > args.upload_pool_size:
             if time_remaining(starttime) < 0:
                 break
             for future in futures:
                 if future[1].ready():
                     count -= 1
-            if count > max_in_progress:
+            if count > args.upload_pool_size: # FIXME: Bug? (Should be <)
                 break
             for future in futures:
                 future.wait(time_remaining(starttime) + 10)
