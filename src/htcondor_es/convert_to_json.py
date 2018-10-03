@@ -759,7 +759,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         if result.get('CpuTimePerEvent', 0) > 0:
             result['HS06CpuTimePerEvent'] = result['CpuTimePerEvent'] * result['BenchmarkJobHS06']
         if result.get('TimePerEvent', 0) > 0:
-            result['HS06TimePerEvent'] = result['TimePerEvent'] * result['BenchmarkJobDB12']
+            result['HS06TimePerEvent'] = result['TimePerEvent'] * result['BenchmarkJobHS06']
         result['HS06CoreHr'] = result['CoreHr'] * result['BenchmarkJobHS06']
         result["HS06CommittedCoreHr"] = result['CommittedCoreHr'] * result['BenchmarkJobHS06']
         result['HS06CpuTimeHr'] = result['CpuTimeHr'] * result['BenchmarkJobHS06']
