@@ -912,7 +912,7 @@ def bulk_convert_ad_data(ad, result):
         elif key in string_vals:
             value = str(value)
         elif key in date_vals:
-            if value == 0:
+            if value == 0 or (isinstance(value, str) and value.lower() == 'unknown'):
                 value = None
             else:
                 try:
