@@ -96,7 +96,7 @@ CMS-specific attributes:
 - `InputGB`: Amount of data read by the CMSSW process; in gigabytes.
 - `ReadTimeHrs` and `ReadTimeMins`: Amount of time CMSSW spent in its IO subsystem
   for reads (in hours and minutes, respectively).
-- `ReadOpPercent`: percentage of reads done via a single `read` operation (as
+- `ReadOpsPercent`: percentage of reads done via a single `read` operation (as
   opposed to a vectored `readv` operation).  If a job issues a single `read`
   and a `readv` of 9 segments, this value would be 50.
 - `ReadOpSegmentPercent`: percentage of read segments done via a single `read`
@@ -116,7 +116,7 @@ CMS-specific attributes:
   user's naming scheme, there may multiple CRAB tasks per `Workflow`.
 - `EventRate`, `CpuEventRate`: The number of events per second (or per CPU second)
   per core.
-- `TimePerEventR`, `CpuTimePerEvent`:  The inverse of `EventRate` and `CpuEventRate`,
+- `TimePerEvent`, `CpuTimePerEvent`:  The inverse of `EventRate` and `CpuEventRate`,
   respectively.
 - `HasSingularity`: Set to `true` if the job was run inside a Singularity container.
 
