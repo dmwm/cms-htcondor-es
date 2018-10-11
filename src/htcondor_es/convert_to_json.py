@@ -640,7 +640,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     if analysis and ad.get("JobStatus") == 2 and 'LastMatchTime' in ad:
         try:
             result["PilotRestLifeTimeMins"] = int((ad['MATCH_GLIDEIN_ToDie'] - ad['EnteredCurrentStatus'])/60)
-        except KeyError:
+        except (KeyError, ValueError, TypeError):
             result["PilotRestLifeTimeMins"] = -72*60
 
     result['HasBeenTimingTuned'] = ad.get('HasBeenTimingTuned',False)
