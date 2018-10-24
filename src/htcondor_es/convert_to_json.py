@@ -593,7 +593,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
 
         result["WMAgent_TaskType"] = ttype
         if analysis:
-            ttype = "Analysis"
+            ttype = result['CMS_JobType']
         elif "CleanupUnmerged" in ttype:
             ttype = "Cleanup"
         elif "Merge" in ttype:
