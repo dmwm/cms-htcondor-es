@@ -780,7 +780,7 @@ def guessTaskType(ad):
     elif ttype == "MonteCarloFromGEN":
         return "GENSIM"
     else:
-        return ttype ## FIXME: Should be changed to "UNKNOWN"
+        return "UNKNOWN"
 
 
 def guessCampaign(ad, analysis):
