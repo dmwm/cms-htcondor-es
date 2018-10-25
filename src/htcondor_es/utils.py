@@ -9,12 +9,51 @@ import sys
 import time
 import errno
 import socket
+import random
 import logging
 import smtplib
 import email.mime.text
 import logging.handlers
 
+import classad
+import htcondor
+
 TIMEOUT_MINS = 11
+
+
+def get_schedds(args=None, collectors=None):
+    """
+    Return a list of schedd ads representing all the schedds in the pool.
+    """
+    collectors = collectors or ["cmssrv221.fnal.gov:9620",
+                                "cmsgwms-collector-tier0.cern.ch:9620",
+                                "cmssrv276.fnal.gov"]
+    schedd_query = classad.ExprTree('!isUndefined(CMSGWMS_Type)')
+
+    schedd_ads = {}
+    for host in collectors:
+        coll = htcondor.Collector(host)
+        try:
+            schedds = coll.query(htcondor.AdTypes.Schedd,
+                                 schedd_query,
+                                 projection=["MyAddress", "ScheddIpAddr", "Name"])
+        except IOError, e:
+            logging.warning(str(e))
+            continue
+
+        for schedd in schedds:
+            try:
+                schedd_ads[schedd['Name']] = schedd
+            except KeyError:
+                pass
+
+    schedd_ads = schedd_ads.values()
+    random.shuffle(schedd_ads)
+
+    if args and args.schedd_filter:
+        return [s for s in schedd_ads if s['Name'] in args.schedd_filter.split(',')]
+
+    return schedd_ads
 
 
 def send_email_alert(recipients, subject, message):
