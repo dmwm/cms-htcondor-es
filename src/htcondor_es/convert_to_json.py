@@ -749,7 +749,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
 
 
 def guessTaskType(ad):
-    # Guess the TaskType from the subtask name
+    """Guess the TaskType from the WMAgent subtask name"""
     ttype = ad.get("WMAgent_SubTaskName", "/UNKNOWN").rsplit("/", 1)[-1]
 
     # Guess an alternate campaign name from the subtask
@@ -765,22 +765,24 @@ def guessTaskType(ad):
         return "Merge"
     elif "LogCollect" in ttype:
         return "LogCollect"
-    elif ("MiniAOD" in ad.get("WMAgent_RequestName", "UNKNOWN")) and (ttype == "StepOneProc"):
+    elif ("MiniAOD" in ad.get("WMAgent_RequestName")) and (ttype == "StepOneProc"):
+        return "MINIAOD"
+    elif "MiniAOD" in ttype:
         return "MINIAOD"
     elif ttype == "StepOneProc" and (("15DR" in camp2) or ("16DR" in camp2) or ("17DR" in camp2)):
         return "DIGIRECO"
-    elif "MiniAOD" in ttype:
-        return "MINIAOD"
     elif (("15GS" in camp2) or ("16GS" in camp2) or ("17GS" in camp2)) and ttype.endswith("_0"):
         return "GENSIM"
     elif ttype.endswith("_0"):
         return "DIGI"
-    elif ttype.endswith("_1"):
+    elif ttype.endswith("_1") or ttype.lower() == 'reco':
         return "RECO"
     elif ttype == "MonteCarloFromGEN":
         return "GENSIM"
+    elif ttype in ['DataProcessing', 'Repack', 'Express']:
+        return ttype
     else:
-        return "UNKNOWN"
+        return "Unknown"
 
 
 def guessCampaign(ad, analysis):
