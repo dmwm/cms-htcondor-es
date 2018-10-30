@@ -6,14 +6,11 @@ Script for processing the contents of the CMS pool.
 import os
 import sys
 import time
-import random
 import signal
 import logging
 import argparse
 import multiprocessing
 
-import classad
-import htcondor
 
 try:
     import htcondor_es
@@ -23,45 +20,10 @@ except ImportError:
 
 import htcondor_es.history
 import htcondor_es.queues
-from htcondor_es.utils import set_up_logging, TIMEOUT_MINS
+from htcondor_es.utils import get_schedds, set_up_logging, TIMEOUT_MINS
 
 
 signal.alarm(TIMEOUT_MINS*60 + 60)
-
-
-def get_schedds(args=None):
-    """
-    Return a list of schedd ads representing all the schedds in the pool.
-    """
-    schedd_query = classad.ExprTree('!isUndefined(CMSGWMS_Type)')
-    collectors = ["cmssrv221.fnal.gov:9620",
-                  "cmsgwms-collector-tier0.cern.ch:9620",
-                  "cmssrv276.fnal.gov"]
-
-    schedd_ads = {}
-    for host in collectors:
-        coll = htcondor.Collector(host)
-        try:
-            schedds = coll.query(htcondor.AdTypes.Schedd,
-                                 schedd_query,
-                                 projection=["MyAddress", "ScheddIpAddr", "Name"])
-        except IOError, e:
-            logging.warning(str(e))
-            continue
-
-        for schedd in schedds:
-            try:
-                schedd_ads[schedd['Name']] = schedd
-            except KeyError:
-                pass
-
-    schedd_ads = schedd_ads.values()
-    random.shuffle(schedd_ads)
-
-    if args and args.schedd_filter:
-        return [s for s in schedd_ads if s['Name'] in args.schedd_filter.split(',')]
-
-    return schedd_ads
 
 
 def main_driver(args):
