@@ -813,6 +813,25 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         return json.dumps(result)
 
 
+def goodCMSSIOSite(sitename):
+    """True if sitename is not only integers and shorter than 20 chars"""
+    try:
+        int(sitename)
+        return False
+    except:
+        if len(sitename) > 20 or len(sitename) < 3:
+            return False
+    return True
+
+
+def cleanChirpCMSSWIOSiteKeys(key):
+    """Clean up ChirpCMSS_IOSite keys"""
+    iosite_match = re.match(r'ChirpCMSSW(.*?)IOSite_(.*)_(?:ReadBytes|ReadTimeMS)', key)
+    if iosite_match and not goodCMSSIOSite(iosite_match.group(2)):
+        return key.replace(iosite_match.group(2), 'undefined')
+    return key
+
+
 def handle_chirp_info(ad, result):
     """
     Process any data present from the Chirp ads.
@@ -824,10 +843,19 @@ def handle_chirp_info(ad, result):
             cmssw_key = 'ChirpCMSSW' + key.split('_', 2)[-1]
             if cmssw_key not in result:
                 result[cmssw_key] = val
-            elif cmssw_key.endswith('LastUpdate') or cmssw_key.endswith('Events') or cmssw_key.endswith('MaxLumis') or cmssw_key.endswith('MaxFiles'):
+            elif (cmssw_key.endswith('LastUpdate') or
+                  cmssw_key.endswith('Events') or
+                  cmssw_key.endswith('MaxLumis') or
+                  cmssw_key.endswith('MaxFiles')):
                 result[cmssw_key] = max(result[cmssw_key], val)
             else:
                 result[cmssw_key] += val
+
+            newkey = cleanChirpCMSSWIOSiteKeys(key)
+            if newkey != key:
+                val = result.pop(key)
+                result[newkey] = val
+
     if 'ChirpCMSSWFiles' in result:
         result['CompletedFiles'] = result['ChirpCMSSWFiles']
     if result.get('ChirpCMSSWMaxFiles', -1) > 0:
