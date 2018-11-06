@@ -765,7 +765,7 @@ def guessTaskType(ad):
         return "Merge"
     elif "LogCollect" in ttype:
         return "LogCollect"
-    elif ("MiniAOD" in ad.get("WMAgent_RequestName")) and (ttype == "StepOneProc"):
+    elif ("MiniAOD" in ad.get("WMAgent_RequestName", "UNKNOWN")) and (ttype == "StepOneProc"):
         return "MINIAOD"
     elif "MiniAOD" in ttype:
         return "MINIAOD"
