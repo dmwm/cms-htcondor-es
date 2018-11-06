@@ -558,78 +558,13 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     bulk_convert_ad_data(ad, result)
 
     if cms:
-        ttype = ad.get("WMAgent_SubTaskName", "/UNKNOWN").rsplit("/", 1)[-1]
-
-        # Guess the campaign from the request name.
-        camp = ad.get("WMAgent_RequestName", "UNKNOWN")
-        m = _camp_re.match(camp)
-        if analysis:
-            camp = "crab_" + ad.get("CRAB_UserHN", "UNKNOWN")
-        elif camp.startswith("PromptReco"):
-            camp = "PromptReco"
-        elif camp.startswith("Repack"):
-            camp = "Repack"
-        elif camp.startswith("Express"):
-            camp = "Express"
-        elif "RVCMSSW" in camp:
-            camp = "RelVal"
-        elif m:
-            camp = m.groups()[0]
-        else:
-            m = _rereco_re.match(camp)
-            if m and ('DataProcessing' in ad.get("WMAgent_SubTaskName", "")):
-                camp = m.groups()[0] + "Reprocessing"
-        result["Campaign"] = camp
-
-        # Guess an alternate campaign name from the subtask
-        camp2_info = ttype.split("-")
-        if len(camp2_info) > 1:
-            camp2 = camp2_info[1]
-        else:
-            camp2 = ttype
-
         result['CMS_JobType'] = str(ad.get('CMS_JobType', 'Analysis' if analysis else 'Unknown'))
         result['CRAB_AsyncDest'] = str(ad.get('CRAB_AsyncDest', 'Unknown'))
+        result["WMAgent_TaskType"] = ad.get("WMAgent_SubTaskName", "/UNKNOWN").rsplit("/", 1)[-1]
+        result["Campaign"] = guessCampaign(ad, analysis)
+        result["TaskType"] = guessTaskType(ad) if not analysis else result["CMS_JobType"]
+        result["Workflow"] = guessWorkflow(ad, analysis)
 
-        result["WMAgent_TaskType"] = ttype
-        if analysis:
-            ttype = "Analysis"
-        elif "CleanupUnmerged" in ttype:
-            ttype = "Cleanup"
-        elif "Merge" in ttype:
-            ttype = "Merge"
-        elif "LogCollect" in ttype:
-            ttype = "LogCollect"
-        elif ("MiniAOD" in ad.get("WMAgent_RequestName", "UNKNOWN")) and (ttype == "StepOneProc"):
-            ttype = "MINIAOD"
-        elif ttype == "StepOneProc" and (("15DR" in camp2) or ("16DR" in camp2) or ("17DR" in camp2)):
-            ttype = "DIGIRECO"
-        elif "MiniAOD" in ttype:
-            ttype = "MINIAOD"
-        elif (("15GS" in camp2) or ("16GS" in camp2) or ("17GS" in camp2)) and ttype.endswith("_0"):
-            ttype = "GENSIM"
-        elif ttype.endswith("_0"):
-            ttype = "DIGI"
-        elif ttype.endswith("_1"):
-            ttype = "RECO"
-        elif ttype == "MonteCarloFromGEN":
-            ttype = "GENSIM"
-        result["TaskType"] = ttype
-        prep = ad.get("WMAgent_RequestName", "UNKNOWN")
-        m = _prep_re.match(prep)
-        if analysis:
-            prep = ad.get("CRAB_Workflow", "UNKNOWN").split(":", 1)[-1]
-        elif m:
-            prep = m.groups()[0]
-        else:
-            m = _prep_prompt_re.match(prep)
-            if m:
-                prep = m.groups()[0] + "_" + m.groups()[1]
-            else:
-                m = _rval_re.match(prep)
-                if m:
-                    prep = m.groups()[0]
-        result["Workflow"] = prep
     now = time.time()
     if ad.get("JobStatus") == 2 and (ad.get("EnteredCurrentStatus", now+1) < now):
         ad["RemoteWallClockTime"] = int(now - ad["EnteredCurrentStatus"])
@@ -813,6 +748,86 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         return json.dumps(result)
 
 
+def guessTaskType(ad):
+    """Guess the TaskType from the WMAgent subtask name"""
+    ttype = ad.get("WMAgent_SubTaskName", "/UNKNOWN").rsplit("/", 1)[-1]
+
+    # Guess an alternate campaign name from the subtask
+    camp2_info = ttype.split("-")
+    if len(camp2_info) > 1:
+        camp2 = camp2_info[1]
+    else:
+        camp2 = ttype
+
+    if "CleanupUnmerged" in ttype:
+        return "Cleanup"
+    elif "Merge" in ttype:
+        return "Merge"
+    elif "LogCollect" in ttype:
+        return "LogCollect"
+    elif ("MiniAOD" in ad.get("WMAgent_RequestName")) and (ttype == "StepOneProc"):
+        return "MINIAOD"
+    elif "MiniAOD" in ttype:
+        return "MINIAOD"
+    elif ttype == "StepOneProc" and (("15DR" in camp2) or ("16DR" in camp2) or ("17DR" in camp2)):
+        return "DIGIRECO"
+    elif (("15GS" in camp2) or ("16GS" in camp2) or ("17GS" in camp2)) and ttype.endswith("_0"):
+        return "GENSIM"
+    elif ttype.endswith("_0"):
+        return "DIGI"
+    elif ttype.endswith("_1") or ttype.lower() == 'reco':
+        return "RECO"
+    elif ttype == "MonteCarloFromGEN":
+        return "GENSIM"
+    elif ttype in ['DataProcessing', 'Repack', 'Express']:
+        return ttype
+    else:
+        return "Unknown"
+
+
+def guessCampaign(ad, analysis):
+    # Guess the campaign from the request name.
+    camp = ad.get("WMAgent_RequestName", "UNKNOWN")
+    m = _camp_re.match(camp)
+    if analysis:
+        return "crab_" + ad.get("CRAB_UserHN", "UNKNOWN")
+    elif camp.startswith("PromptReco"):
+        return "PromptReco"
+    elif camp.startswith("Repack"):
+        return "Repack"
+    elif camp.startswith("Express"):
+        return "Express"
+    elif "RVCMSSW" in camp:
+        return "RelVal"
+    elif m:
+        return m.groups()[0]
+    else:
+        m = _rereco_re.match(camp)
+        if m and ('DataProcessing' in ad.get("WMAgent_SubTaskName", "")):
+            return m.groups()[0] + "Reprocessing"
+
+    return camp
+
+
+def guessWorkflow(ad, analysis):
+    prep = ad.get("WMAgent_RequestName", "UNKNOWN")
+    m = _prep_re.match(prep)
+    if analysis:
+        return ad.get("CRAB_Workflow", "UNKNOWN").split(":", 1)[-1]
+    elif m:
+        return m.groups()[0]
+    else:
+        m = _prep_prompt_re.match(prep)
+        if m:
+            return m.groups()[0] + "_" + m.groups()[1]
+        else:
+            m = _rval_re.match(prep)
+            if m:
+                return m.groups()[0]
+
+    return prep
+
+
 def goodCMSSIOSite(sitename):
     """True if sitename is not only integers and shorter than 20 chars"""
     try:
@@ -964,6 +979,7 @@ def convert_dates_to_millisecs(record):
         except (KeyError, TypeError): continue
 
     return record
+
 
 def drop_fields_for_running_jobs(record):
     skimmed_record = {}
