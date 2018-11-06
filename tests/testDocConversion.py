@@ -90,11 +90,11 @@ if __name__ == "__main__":
                         help=("Read ads from this pickle file. "
                               "If it doesn't exist, query schedds and store "
                               "them here, then convert them."))
-    parser.add_argument("--n_docs_to_query", default=100,
+    parser.add_argument("--n_docs_to_query", default=1000,
                         type=int, dest="n_docs_to_query",
                         help=("Number of documents to test on "
                               "[default: %(default)d]"))
-    parser.add_argument("--n_schedds_to_query", default=1,
+    parser.add_argument("--n_schedds_to_query", default=5,
                         type=int, dest="n_schedds_to_query",
                         help=("Number of schedds to test on "
                               "[default: %(default)d]"))
