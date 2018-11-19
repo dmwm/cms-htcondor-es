@@ -127,6 +127,7 @@ int_vals = set([ \
   "JobPrio",
   "JobRunCount",
   "JobStatus",
+  "JobFailed",
   "JobUniverse",
   "LastJobStatus",
   "LocalSysCpu",
@@ -557,6 +558,8 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
 
     bulk_convert_ad_data(ad, result)
 
+    result['JobFailed'] = jobFailed(ad)
+
     if cms:
         result['CMS_JobType'] = str(ad.get('CMS_JobType', 'Analysis' if analysis else 'Unknown'))
         result['CRAB_AsyncDest'] = str(ad.get('CRAB_AsyncDest', 'Unknown'))
@@ -845,6 +848,22 @@ def cleanChirpCMSSWIOSiteKeys(key):
     if iosite_match and not goodCMSSIOSite(iosite_match.group(2)):
         return key.replace(iosite_match.group(2), 'undefined')
     return key
+
+
+def jobFailed(ad):
+    """
+    Returns 0 when none of the exitcode fields has a non-zero value
+    otherwise returns 1
+    """
+    ec_fields = ['ExitCode',
+                 'Chirp_CRAB3_Job_ExitCode',
+                 'Chirp_WMCore_cmsRun_ExitCode',
+                 'Chirp_WMCore_cmsRun1_ExitCode',
+                 'Chirp_WMCore_cmsRun2_ExitCode']
+
+    if sum([ad.get(k, 0) for k in ec_fields]) > 0:
+        return 1
+    return 0
 
 
 def handle_chirp_info(ad, result):
