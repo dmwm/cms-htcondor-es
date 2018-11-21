@@ -542,7 +542,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     result['DataCollection'] = ad.get('CompletionDate', _launch_time)
     result['RecordTime'] = _launch_time
     # Keep RecordTime as _launch_time for unfinished jobs
-    if ad['JobStatus'] in [3, 4, 6] and 'CompletionDate' in ad:
+    if ad['JobStatus'] in [3, 4, 6] and ad.get('CompletionDate', 0) > 0:
         result['RecordTime'] = ad['CompletionDate']
 
     result['DataCollectionDate'] = result['RecordTime']
