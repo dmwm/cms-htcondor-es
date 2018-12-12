@@ -535,7 +535,6 @@ _generic_site = re.compile("^[A-Za-z0-9]+_[A-Za-z0-9]+_(.*)_")
 _cms_site = re.compile("CMS[A-Za-z]*_(.*)_")
 _cmssw_version = re.compile("CMSSW_((\d*)_(\d*)_.*)")
 def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
-    analysis = ("CRAB_Id" in ad) or (ad.get("AccountingGroup", "").startswith("analysis."))
     if ad.get("TaskType") == "ROOT":
         return None
     result = {}
@@ -549,10 +548,21 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     result['DataCollectionDate'] = result['RecordTime']
 
     result['ScheddName'] = ad.get("GlobalJobId", "UNKNOWN").split("#")[0]
+
+    # Determine pool
+    result["Pool"] = "Unknown" ## FIXME
+
+    # Determine type
+    analysis = ("CRAB_Id" in ad) or (ad.get("AccountingGroup", "").startswith("analysis."))
     if cms and analysis:
         result["Type"] = "analysis"
+    elif cms and (ad.get("AccountingGroup", "").startswith("tier0.")):
+        result["Type"] = "tier0"
+    elif cms and (result["Pool"] == "ITB"): # Add HC here once we have that info
+        result["Type"] = "test"
     elif cms:
         result["Type"] = "production"
+
     if cms:
         ad.setdefault("MATCH_EXP_JOB_GLIDEIN_CMSSite", ad.get("MATCH_EXP_JOBGLIDEIN_CMSSite", "Unknown"))
 
