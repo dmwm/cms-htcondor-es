@@ -844,9 +844,9 @@ def goodCMSSIOSite(sitename):
 
 def cleanChirpCMSSWIOSiteKeys(key):
     """Clean up ChirpCMSS_IOSite keys"""
-    iosite_match = re.match(r'ChirpCMSSW(.*?)IOSite_(.*)_(?:ReadBytes|ReadTimeMS)', key)
+    iosite_match = re.match(r'ChirpCMSSW(.*?)IOSite_(.*)_(ReadBytes|ReadTimeMS)', key)
     if iosite_match and not goodCMSSIOSite(iosite_match.group(2)):
-        return key.replace(iosite_match.group(2), 'undefined')
+        return 'ChirpCMSSW%sIOSite_undefined_%s' % (iosite_match.group(1), iosite_match.group(3))
     return key
 
 
