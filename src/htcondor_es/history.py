@@ -36,6 +36,10 @@ def process_schedd(starttime, last_completion, checkpoint_queue, schedd_ad, args
         return last_completion
 
     schedd = htcondor.Schedd(schedd_ad)
+    schedd_data = {
+        "Schedd_CollectorHost" : schedd_ad.get("CollectorHost", "Unknown"),
+        "Schedd_CMSGWMS_Type" : schedd_ad.get("CMSGWMS_Type", "Unknown"),
+    }
     history_query = classad.ExprTree("EnteredCurrentStatus >= %d" % last_completion)
     logging.info("Querying %s for history: %s.  "
                  "%.1f minutes of ads", schedd_ad["Name"],
@@ -58,7 +62,7 @@ def process_schedd(starttime, last_completion, checkpoint_queue, schedd_ad, args
         for job_ad in history_iter:
             dict_ad = None
             try:
-                dict_ad = convert_to_json(job_ad, return_dict=True)
+                dict_ad = convert_to_json(job_ad, return_dict=True, schedd_data=schedd_data)
             except Exception as e:
                 message = ("Failure when converting document on %s history: %s" %
                            (schedd_ad["Name"], str(e)))

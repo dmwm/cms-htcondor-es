@@ -36,7 +36,8 @@ def get_schedds(args=None, collectors=None):
         try:
             schedds = coll.query(htcondor.AdTypes.Schedd,
                                  schedd_query,
-                                 projection=["MyAddress", "ScheddIpAddr", "Name"])
+                                 projection=["MyAddress", "ScheddIpAddr", "Name",
+                                             "CollectorHost", "CMSGWMS_Type"])
         except IOError, e:
             logging.warning(str(e))
             continue

@@ -286,7 +286,6 @@ ignore = set([
   "Managed",
   "MATCH_EXP_JOBGLIDEIN_CMSSite",
   "MATCH_EXP_JOB_Site",
-  "MATCH_GLIDECLIENT_Name",
   "MATCH_GLIDEIN_ClusterId",
   "MATCH_GLIDEIN_CMSSite",
   "MATCH_GLIDEIN_Entry_Name",
@@ -534,7 +533,8 @@ _rereco_re = re.compile("[A-Za-z0-9_]+_Run20[A-Za-z0-9-_]+-([A-Za-z0-9]+)")
 _generic_site = re.compile("^[A-Za-z0-9]+_[A-Za-z0-9]+_(.*)_")
 _cms_site = re.compile("CMS[A-Za-z]*_(.*)_")
 _cmssw_version = re.compile("CMSSW_((\d*)_(\d*)_.*)")
-def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
+def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False, schedd_data=None):
+    schedd_data = schedd_data or {}
     if ad.get("TaskType") == "ROOT":
         return None
     result = {}
@@ -547,10 +547,12 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
 
     result['DataCollectionDate'] = result['RecordTime']
 
-    result['ScheddName'] = ad.get("GlobalJobId", "UNKNOWN").split("#")[0]
+    # Add in additional schedd data and deduce pool information
+    result.update(schedd_data)
+    result['ScheddPrimaryPool'] = inferPrimaryPool(schedd_data)
+    result['GlideClientFrontendPool'] = inferPoolFromGlideinClient(ad)
 
-    # Determine pool
-    result["Pool"] = "Unknown" ## FIXME
+    result['ScheddName'] = ad.get("GlobalJobId", "UNKNOWN").split("#")[0]
 
     # Determine type
     analysis = ("CRAB_Id" in ad) or (ad.get("AccountingGroup", "").startswith("analysis."))
@@ -558,7 +560,8 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         result["Type"] = "analysis"
     elif cms and (ad.get("AccountingGroup", "").startswith("tier0.")):
         result["Type"] = "tier0"
-    elif cms and (result["Pool"] == "ITB"): # Add HC here once we have that info
+    elif cms and (result["ScheddPrimaryPool"] == "ITB" or # Add HC here once we have that info
+                  result["GlideClientFrontendPool"] == "ITB"): 
         result["Type"] = "test"
     elif cms:
         result["Type"] = "production"
@@ -759,6 +762,28 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         return result
     else:
         return json.dumps(result)
+
+
+_schedd_primpool = {
+    "vocms0815" : "Global",
+    "vocms0820" : "CERN",
+    "vocms0809" : "ITB",
+    "vocms0840" : "Volunteer",
+}
+def inferPrimaryPool(schedd_data):
+    collhost = schedd_data.get('Schedd_CollectorHost', 'Unknown').split('.')[0]
+    return _schedd_primpool.get(collhost, 'Unknown')
+
+
+_client_to_pool = {
+    "CMSG-v1_0" : "Global",
+    "CMS_T0-Frontend" : "CERN",
+    "CMSG-ITB_gWMSFrontend-v1_0" : "ITB",
+    "undefined" : "Undefined",
+}
+def inferPoolFromGlideinClient(ad):
+    frontend = ad.get("MATCH_GLIDECLIENT_Name", "Unknown").split(".")[0]
+    return _client_to_pool.get(frontend, "Unknown")
 
 
 def guessTaskType(ad):

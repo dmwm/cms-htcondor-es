@@ -125,6 +125,10 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
     queue.put(schedd_ad['Name'], timeout=time_remaining(starttime))
 
     schedd = htcondor.Schedd(schedd_ad)
+    schedd_data = {
+        "ScheddPool" : schedd_ad.get("CollectorHost", "Unknown"),
+        "ScheddType" : schedd_ad.get("CMSGWMS_Type", "Unknown"),
+    }
     sent_warnings = False
     batch = []
     try:
@@ -133,7 +137,8 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
             dict_ad = None
             try:
                 dict_ad = convert_to_json(job_ad, return_dict=True,
-                                          reduce_data=not args.keep_full_queue_data)
+                                          reduce_data=not args.keep_full_queue_data,
+                                          schedd_data=schedd_data)
             except Exception as e:
                 message = ("Failure when converting document on %s queue: %s" %
                            (schedd_ad["Name"], str(e)))
