@@ -873,6 +873,10 @@ def handle_chirp_info(ad, result):
     Chirp statistics should be available in CMSSW_8_0_0 and later.
     """
     for key, val in result.items():
+        if key.startswith('ChirpCMSSW') and 'IOSite' in key:
+            newkey = cleanChirpCMSSWIOSiteKeys(key)
+            result[newkey] = result.pop(key)
+
         if key.startswith('ChirpCMSSW_'):
             cmssw_key = 'ChirpCMSSW' + key.split('_', 2)[-1]
             if cmssw_key not in result:
@@ -884,11 +888,6 @@ def handle_chirp_info(ad, result):
                 result[cmssw_key] = max(result[cmssw_key], val)
             else:
                 result[cmssw_key] += val
-
-            newkey = cleanChirpCMSSWIOSiteKeys(key)
-            if newkey != key:
-                val = result.pop(key)
-                result[newkey] = val
 
     if 'ChirpCMSSWFiles' in result:
         result['CompletedFiles'] = result['ChirpCMSSWFiles']
