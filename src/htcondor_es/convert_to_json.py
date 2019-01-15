@@ -558,6 +558,8 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     elif cms:
         result["Type"] = "production"
 
+    result["AccountingGroupClass"] = ad.get("AccountingGroup", "unknown").split('.', 1)[0]
+
     if cms:
         ad.setdefault("MATCH_EXP_JOB_GLIDEIN_CMSSite", ad.get("MATCH_EXP_JOBGLIDEIN_CMSSite", "Unknown"))
 
