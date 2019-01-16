@@ -20,7 +20,8 @@ except ImportError:
 
 import htcondor_es.history
 import htcondor_es.queues
-from htcondor_es.utils import get_schedds, set_up_logging, TIMEOUT_MINS
+from htcondor_es.utils import get_schedds, set_up_logging
+from htcondor_es.utils import collect_metadata, TIMEOUT_MINS
 
 
 signal.alarm(TIMEOUT_MINS*60 + 60)
@@ -38,18 +39,22 @@ def main_driver(args):
 
     pool = multiprocessing.Pool(processes=args.query_pool_size)
 
+    metadata = collect_metadata()
+
     if not args.skip_history:
         htcondor_es.history.process_histories(schedd_ads=schedd_ads,
                                               starttime=starttime,
                                               pool=pool,
-                                              args=args)
+                                              args=args,
+                                              metadata=metadata)
 
     # Now that we have the fresh history, process the queues themselves.
     if args.process_queue:
         htcondor_es.queues.process_queues(schedd_ads=schedd_ads,
                                           starttime=starttime,
                                           pool=pool,
-                                          args=args)
+                                          args=args,
+                                          metadata=metadata)
 
     pool.close()
     pool.join()
