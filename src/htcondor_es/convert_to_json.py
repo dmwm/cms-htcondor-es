@@ -418,6 +418,7 @@ bool_vals = set([
 
 # Fields to be kept in docs concerning running jobs
 running_fields = set([
+  "AccountingGroup",
   "AutoClusterId",
   "BenchmarkJobDB12",
   "Campaign",
