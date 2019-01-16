@@ -10,6 +10,7 @@ import datetime
 import htcondor
 
 string_vals = set([ \
+  "AutoClusterId",
   "Processor",
   "ChirpCMSSWCPUModels",
   "CPUModel",
@@ -236,7 +237,6 @@ ignore = set([
   "AcctGroupUser",
   "AllowOpportunistic",
   "AutoClusterAttrs",
-  "AutoClusterId",
   "BufferBlockSize",
   "BufferSize",
   "CondorPlatform",
@@ -419,6 +419,7 @@ bool_vals = set([
 # Fields to be kept in docs concerning running jobs
 running_fields = set([
   "AccountingGroup",
+  "AutoClusterId",
   "BenchmarkJobDB12",
   "Campaign",
   "CMS_JobType",
