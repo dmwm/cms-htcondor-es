@@ -2,7 +2,6 @@ import time
 import logging
 import multiprocessing
 from htcondor_es.StompAMQ import StompAMQ
-StompAMQ._version = '0.1.2'
 
 _amq_interface = None
 def get_amq_interface():
@@ -15,27 +14,31 @@ def get_amq_interface():
             print "ERROR: Provide username/password for CERN AMQ"
             return []
         _amq_interface = StompAMQ(username=username,
-                                    password=password,
-                                    topic='/topic/cms.jobmon.condor',
-                                    host_and_ports=[('dashb-mb.cern.ch', 61113)])
+                                  password=password,
+                                  producer='CMS_WMCore_StompAMQ',
+                                  topic='/topic/cms.jobmon.condor',
+                                  host_and_ports=[('dashb-mb.cern.ch', 61113)])
 
     return _amq_interface
 
 
-def post_ads(ads):
+def post_ads(ads, metadata=None):
     if not len(ads):
         logging.warning("No new documents found")
         return
 
+    metadata = metadata or {}
     interface = get_amq_interface()
     list_data = []
     for id_, ad in ads:
         list_data.append(interface.make_notification(payload=ad,
-                                                     id_=id_,
-                                                     type_='htcondor_job_info',
-                                                     timestamp=ad['RecordTime']))
+                                                     docType='htcondor_job_info',
+                                                     docId=id_,
+                                                     ts=ad['RecordTime'],
+                                                     metadata=metadata,
+                                                     dataSubfield=None))
 
     starttime = time.time()
-    sent_data = interface.send(list_data)
+    failed_to_send = interface.send(list_data)
     elapsed = time.time() - starttime
-    return (len(sent_data), len(ads), elapsed)
+    return (len(ads)-len(failed_to_send), len(ads), elapsed)

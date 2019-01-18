@@ -8,44 +8,53 @@ from __future__ import division
 import json
 import logging
 import time
+import stomp
+# from WMCore.Services.UUIDLib import makeUUID
 import uuid
 
-import stomp
+def makeUUID():
+    """
+    _makeUUID_
+    Makes a UUID from the uuid class, returns it
+    """
+    return str(uuid.uuid4())
+
+
 
 class StompyListener(object):
     """
     Auxiliar listener class to fetch all possible states in the Stomp
     connection.
     """
-    def __init__(self):
-        self.logr = logging.getLogger(__name__)
+    def __init__(self, logger=None):
+        self.logger = logger if logger else logging.getLogger()
 
     def on_connecting(self, host_and_port):
-        self.logr.info('on_connecting %s', str(host_and_port))
+        self.logger.debug('on_connecting %s', str(host_and_port))
 
     def on_error(self, headers, message):
-        self.logr.info('received an error %s %s', str(headers), str(message))
+        self.logger.debug('received an error %s %s', str(headers), str(message))
 
     def on_message(self, headers, body):
-        self.logr.info('on_message %s %s', str(headers), str(body))
+        self.logger.debug('on_message %s %s', str(headers), str(body))
 
     def on_heartbeat(self):
-        self.logr.info('on_heartbeat')
+        self.logger.debug('on_heartbeat')
 
     def on_send(self, frame):
-        self.logr.info('on_send HEADERS: %s, BODY: %s ...', str(frame.headers), str(frame.body)[:160])
+        self.logger.debug('on_send HEADERS: %s, BODY: %s ...', str(frame.headers), str(frame.body)[:160])
 
     def on_connected(self, headers, body):
-        self.logr.info('on_connected %s %s', str(headers), str(body))
+        self.logger.debug('on_connected %s %s', str(headers), str(body))
 
     def on_disconnected(self):
-        self.logr.info('on_disconnected')
+        self.logger.debug('on_disconnected')
 
     def on_heartbeat_timeout(self):
-        self.logr.info('on_heartbeat_timeout')
+        self.logger.debug('on_heartbeat_timeout')
 
     def on_before_message(self, headers, body):
-        self.logr.info('on_before_message %s %s', str(headers), str(body))
+        self.logger.debug('on_before_message %s %s', str(headers), str(body))
 
         return (headers, body)
 
@@ -61,22 +70,27 @@ class StompAMQ(object):
     :param topic: The topic to be used on the broker
     :param host_and_ports: The hosts and ports list of the brokers.
         E.g.: [('agileinf-mb.cern.ch', 61213)]
+    :param cert: path to certificate file
+    :param key: path to key file
     """
 
     # Version number to be added in header
-    _version = '0.1'
+    _version = '0.3'
 
-    def __init__(self, username, password,
-                 producer='CMS_WMCore_StompAMQ',
-                 topic='/topic/cms.jobmon.wmagent',
-                 host_and_ports=None):
-        self._host_and_ports = host_and_ports or [('agileinf-mb.cern.ch', 61213)]
+    def __init__(self, username, password, producer, topic,
+                 host_and_ports=None, logger=None, cert=None, key=None):
         self._username = username
         self._password = password
         self._producer = producer
         self._topic = topic
-
-        self._logger = logging.getLogger(__name__)
+        self._host_and_ports = host_and_ports or [('agileinf-mb.cern.ch', 61213)]
+        self.logger = logger if logger else logging.getLogger()
+        self._cert = cert
+        self._key = key
+        self._use_ssl = True if key and cert else False
+        # silence the INFO log records from the stomp library, until this issue gets fixed:
+        # https://github.com/jasonrbriggs/stomp.py/issues/226
+        logging.getLogger("stomp.py").setLevel(logging.WARNING)
 
     def send(self, data):
         """
@@ -86,36 +100,45 @@ class StompAMQ(object):
         :param data: Either a single notification (as returned by
             `make_notification`) or a list of such.
 
-        :return: a list of successfully sent notification bodies
+        :return: a list of notification bodies that failed to send
         """
-
-        conn = stomp.Connection(host_and_ports=self._host_and_ports)
-        conn.set_listener('StompyListener', StompyListener())
-        try:
-            conn.start()
-            conn.connect(username=self._username, passcode=self._password, wait=True)
-        except stomp.exception.ConnectFailedException as exc:
-            self._logger.error("Connection to %s failed %s", repr(self._host_and_ports), str(exc))
-            return []
-        except stomp.exception.ConnectFailedException as exc:
-            self._logger.error("Not connected: %s %s", repr(self._host_and_ports), str(exc))
-            return []
-
         # If only a single notification, put it in a list
-        if isinstance(data, dict) and 'topic' in data:
+        if isinstance(data, dict) and 'body' in data:
             data = [data]
 
-        successfully_sent = []
+        conn = stomp.Connection(host_and_ports=self._host_and_ports)
+
+        if self._use_ssl:
+            # This requires stomp >= 4.1.15
+            conn.set_ssl(for_hosts=self._host_and_ports, key_file=self._key, cert_file=self._cert)
+
+        conn.set_listener('StompyListener', StompyListener(self.logger))
+        try:
+            conn.start()
+            # If cert/key are used, ignore username and password
+            if self._use_ssl:
+                conn.connect(wait=True)
+            else:
+                conn.connect(username=self._username, passcode=self._password, wait=True)
+
+        except stomp.exception.ConnectFailedException as exc:
+            self.logger.error("Connection to %s failed %s", repr(self._host_and_ports), str(exc))
+            return []
+
+        failedNotifications = []
         for notification in data:
-            body = self._send_single(conn, notification)
-            if body:
-                successfully_sent.append(body)
+            result = self._send_single(conn, notification)
+            if result:
+                failedNotifications.append(result)
 
         if conn.is_connected():
             conn.disconnect()
 
-        self._logger.info('Sent %d docs to %s', len(successfully_sent), repr(self._host_and_ports))
-        return successfully_sent
+        if failedNotifications:
+            self.logger.warning('Failed to send to %s %i docs out of %i', repr(self._host_and_ports),
+                                len(failedNotifications), len(data))
+
+        return failedNotifications
 
     def _send_single(self, conn, notification):
         """
@@ -124,64 +147,69 @@ class StompAMQ(object):
         :param conn: An already connected stomp.Connection
         :param notification: A dictionary as returned by `make_notification`
 
-        :return: The notification body in case of success, or else None
+        :return: The notification body in case of failure, or else None
         """
         try:
             body = notification.pop('body')
-            destination = notification.pop('topic')
-            conn.send(destination=destination,
+            conn.send(destination=self._topic,
                       headers=notification,
                       body=json.dumps(body),
                       ack='auto')
-            self._logger.debug('Notification %s sent', str(notification))
-            return body
+            self.logger.debug('Notification %s sent', str(notification))
         except Exception as exc:
-            self._logger.error('Notification: %s not send, error: %s',
-                          str(notification), str(exc))
-            return None
+            self.logger.error('Notification: %s not send, error: %s', str(notification), str(exc))
+            return body
+        return
 
-
-    def make_notification(self, payload, id_, producer=None,
-                          type_='cms_wmagent_info',
-                          timestamp=None):
+    def make_notification(self, payload, docType, docId=None, producer=None, ts=None, metadata=None,
+                          dataSubfield="data"):
         """
-        Generate a notification with the specified data
+        Produce a notification from a single payload, adding the necessary
+        headers and metadata. Generic metadata is generated to include a
+        timestamp, producer name, document id, and a unique id. User can
+        pass additional metadata which updates the generic metadata.
 
-        :param payload: Actual notification data.
-        :param id_: Id representing the notification.
-        :param producer: The notification producer.
-            Default: StompAMQ._producer
+        If payload already contains a metadata field, it is overwritten.
 
-        :return: the generated notification
+        :param payload: Actual data.
+        :param docType: document type for metadata.
+        :param docId: document id representing the notification. If none provided,
+               a unique id is created.
+        :param producer: The notification producer name, taken from the StompAMQ
+               instance producer name by default.
+        :param ts: timestamp to be added to metadata. Set as time.time() by default
+        :param metadata: dictionary of user metadata to be added. (Updates generic
+               metadata.)
+        :param dataSubfield: field name to use for the actual data. If none, the data
+               is put directly in the body. Default is "data"
+
+        :return: a single notifications with the proper headers and metadata
         """
         producer = producer or self._producer
+        umetadata = metadata or {}
+        ts = ts or int(time.time())
+        uuid = makeUUID()
+        docId = docId or uuid
+
+        headers = {'type': docType,
+                   'version': self._version,
+                   'producer': producer}
+
+        metadata = {'timestamp': ts,
+                    'producer': producer,
+                    '_id': docId,
+                    'uuid': uuid}
+        metadata.update(umetadata)
+
+        body = {}
+        if dataSubfield:
+            body[dataSubfield] = payload
+        else:
+            body.update(payload)
+        body['metadata'] = metadata
 
         notification = {}
-        notification['topic'] = self._topic
-
-        # Add headers
-        headers = {
-                   'type': type_,
-                   'version': self._version,
-                   'producer': producer
-        }
-
         notification.update(headers)
-
-        # Add body consisting of the payload and metadata
-        timestamp = timestamp or time.time()
-        body = {
-            # 'payload': payload,
-            'metadata': {
-                'timestamp': int(timestamp),
-                '_id': id_,
-                'uuid': str(uuid.uuid1()),
-            },
-            '_id': id_
-        }
-        body.update(payload)
-
         notification['body'] = body
 
         return notification
-    
