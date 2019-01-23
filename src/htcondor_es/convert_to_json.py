@@ -440,6 +440,7 @@ running_fields = set([
   "CpuTimePerEvent",
   "CRAB_AsyncDest",
   "CRAB_DataBlock",
+  "CRAB_Id",
   "CRAB_UserHN",
   "CRAB_Workflow",
   "CRAB_SplitAlgo",
