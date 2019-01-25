@@ -25,6 +25,7 @@ string_vals = set([ \
   "CRAB_JobType",
   "CRAB_JobSW",
   "CRAB_JobArch",
+  "CRAB_Id",
   "CRAB_ISB",
   "CRAB_Workflow",
   "CRAB_UserRole",
@@ -69,6 +70,7 @@ string_vals = set([ \
   "MATCH_EXP_JOB_GLIDEIN_SiteWMS_Queue",
   "MATCH_EXP_JOB_GLIDEIN_SiteWMS_Slot",
   "Owner",
+  "Rank",
   "RemoteHost",
   "REQUIRED_OS",
   "ShouldTransferFiles",
@@ -110,7 +112,6 @@ string_vals = set([ \
 ])
 
 int_vals = set([ \
-  "CRAB_Id",
   "CRAB_Retry",
   "BytesRecvd",
   "BytesSent",
@@ -156,7 +157,6 @@ int_vals = set([ \
   "PostJobPrio1",
   "PostJobPrio2",
   "ProcId",
-  "Rank",
   "RecentBlockReadKbytes",
   "RecentBlockReads",
   "RecentBlockWriteKbytes",
