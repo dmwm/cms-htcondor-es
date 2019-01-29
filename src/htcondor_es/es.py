@@ -161,7 +161,7 @@ def post_ads(es, idx, ads):
     for id, ad in ads:
         body += json.dumps({"index": {"_id": id}}) + "\n"
         body += ad + "\n"
-    es.bulk(body=body, doc_type="job", index=idx, request_timeout=30)
+    es.bulk(body=body, doc_type="job", index=idx, request_timeout=60)
 
 
 def post_ads_nohandle(idx, ads, args):
@@ -170,7 +170,7 @@ def post_ads_nohandle(idx, ads, args):
     for id, ad in ads:
         body += json.dumps({"index": {"_id": id}}) + "\n"
         body += ad + "\n"
-    es.bulk(body=body, doc_type="job", index=idx)
+    es.bulk(body=body, doc_type="job", index=idx, request_timeout=60)
     ## FIXME: Check if successful?
 
     return len(ads)
