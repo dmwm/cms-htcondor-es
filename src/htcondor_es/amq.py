@@ -15,7 +15,7 @@ def get_amq_interface():
             return []
         _amq_interface = StompAMQ(username=username,
                                   password=password,
-                                  producer='CMS_WMCore_StompAMQ',
+                                  producer='condor',
                                   topic='/topic/cms.jobmon.condor',
                                   host_and_ports=[('dashb-mb.cern.ch', 61113)])
 
