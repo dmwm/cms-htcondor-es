@@ -107,7 +107,7 @@ class ListenAndBunch(multiprocessing.Process):
         self.output_queue.put(self.count_in, timeout=time_remaining(self.starttime))
 
 
-def process_schedd_queue(starttime, schedd_ad, queue, args):
+def query_schedd_queue(starttime, schedd_ad, queue, args):
     my_start = time.time()
     logging.info("Querying %s queue for jobs.", schedd_ad["Name"])
     if time_remaining(starttime) < 10:
@@ -197,7 +197,7 @@ def process_schedd_queue(starttime, schedd_ad, queue, args):
     return count
 
 
-def process_queues(schedd_ads, starttime, pool, args):
+def process_queues(schedd_ads, starttime, pool, args, metadata=None):
     """
     Process all the jobs in all the schedds given.
     """
@@ -205,6 +205,9 @@ def process_queues(schedd_ads, starttime, pool, args):
     if time_remaining(starttime) < 10:
         logging.warning("No time remaining to process queues")
         return
+
+    metadata = metadata or {}
+    metadata['spider_source'] = 'condor_queue'
 
     mp_manager = multiprocessing.Manager()
     input_queue = mp_manager.Queue()
@@ -219,7 +222,7 @@ def process_queues(schedd_ads, starttime, pool, args):
     upload_pool = multiprocessing.Pool(processes=args.upload_pool_size)
 
     for schedd_ad in schedd_ads:
-        future = pool.apply_async(process_schedd_queue,
+        future = pool.apply_async(query_schedd_queue,
                                   args=(starttime, schedd_ad, input_queue, args))
         futures.append((schedd_ad['Name'], future))
 
@@ -245,20 +248,19 @@ def process_queues(schedd_ads, starttime, pool, args):
         if args.feed_amq and not args.read_only:
             amq_bunch = [(id_, convert_dates_to_millisecs(dict_ad)) for id_, dict_ad in bunch]
             future = upload_pool.apply_async(htcondor_es.amq.post_ads,
-                                             args=(amq_bunch,),
+                                             args=(amq_bunch, metadata),
                                              callback=_callback_amq)
             futures.append(("UPLOADER_AMQ", future))
 
         if args.feed_es_for_queues and not args.read_only:
             ## Note that these bunches are sized according to --amq_bunch_size
-            es_bunch = [(id_, json.dumps(dict_ad)) for id_, dict_ad in bunch]
             ## FIXME: Why are we determining the index from one ad?
             idx = htcondor_es.es.get_index(bunch[0][1].get("QDate", int(time.time())),
                                            template=args.es_index_template,
                                            update_es=(args.feed_es and not args.read_only))
 
             future = upload_pool.apply_async(htcondor_es.es.post_ads_nohandle,
-                                             args=(idx, es_bunch, args))
+                                             args=(idx, bunch, args, metadata))
             futures.append(("UPLOADER_ES", future))
 
         logging.info("Starting new uploader, %d items in queue" % output_queue.qsize())
