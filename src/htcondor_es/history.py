@@ -83,8 +83,7 @@ def process_schedd(starttime, last_completion, checkpoint_queue, schedd_ad, args
                 st = time.time()
                 if not args.read_only:
                     if args.feed_es:
-                        data_for_es = [(id_, json.dumps(dict_ad)) for id_, dict_ad in ad_list]
-                        htcondor_es.es.post_ads(es=es.handle, idx=idx, ads=data_for_es)
+                        htcondor_es.es.post_ads(es.handle, idx, ad_list, metadata=metadata)
                     if args.feed_amq:
                         data_for_amq = [(id_, convert_dates_to_millisecs(dict_ad)) for \
                                         id_, dict_ad in ad_list]
@@ -132,9 +131,7 @@ def process_schedd(starttime, last_completion, checkpoint_queue, schedd_ad, args
                           schedd_ad["Name"])
             if not args.read_only:
                 if args.feed_es:
-                    htcondor_es.es.post_ads(es=es.handle, idx=idx,
-                                            ads=[(id_, json.dumps(dict_ad)) for
-                                                 id_, dict_ad in ad_list])
+                    htcondor_es.es.post_ads(es.handle, idx, ad_list, metadata=metadata)
                 if args.feed_amq:
                     data_for_amq = [(id_, convert_dates_to_millisecs(dict_ad)) for \
                                     id_, dict_ad in ad_list]

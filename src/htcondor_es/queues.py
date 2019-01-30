@@ -254,14 +254,13 @@ def process_queues(schedd_ads, starttime, pool, args, metadata=None):
 
         if args.feed_es_for_queues and not args.read_only:
             ## Note that these bunches are sized according to --amq_bunch_size
-            es_bunch = [(id_, json.dumps(dict_ad)) for id_, dict_ad in bunch]
             ## FIXME: Why are we determining the index from one ad?
             idx = htcondor_es.es.get_index(bunch[0][1].get("QDate", int(time.time())),
                                            template=args.es_index_template,
                                            update_es=(args.feed_es and not args.read_only))
 
             future = upload_pool.apply_async(htcondor_es.es.post_ads_nohandle,
-                                             args=(idx, es_bunch, args))
+                                             args=(idx, bunch, args, metadata))
             futures.append(("UPLOADER_ES", future))
 
         logging.info("Starting new uploader, %d items in queue" % output_queue.qsize())
