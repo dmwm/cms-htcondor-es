@@ -68,12 +68,15 @@ def make_mappings():
 
 
 def make_settings():
-    settings = {"analysis": {"analyzer": \
-        {"analyzer_keyword": { \
-            "tokenizer": "keyword",
-            "filter": "lowercase",
-        }
-    }}}
+    settings = {"analysis": {
+                    "analyzer": {
+                        "analyzer_keyword": {
+                            "tokenizer": "keyword",
+                            "filter": "lowercase",
+                            }
+                        }
+                    },
+                "mapping.total_fields.limit": 2000}
     return settings
 
 
