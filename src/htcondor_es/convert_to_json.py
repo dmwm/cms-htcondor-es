@@ -839,23 +839,10 @@ def guessWorkflow(ad, analysis):
     return prep
 
 
-def goodCMSSIOSite(sitename):
-    """True if sitename is not only integers and shorter than 20 chars"""
-    try:
-        int(sitename)
-        return False
-    except:
-        if len(sitename) > 20 or len(sitename) < 3:
-            return False
-    return True
-
-
-def cleanChirpCMSSWIOSiteKeys(key):
-    """Clean up ChirpCMSS_IOSite keys"""
+def chirpCMSSWIOSiteName(key):
+    """Extract site name from ChirpCMSS_IOSite key"""
     iosite_match = re.match(r'ChirpCMSSW(.*?)IOSite_(.*)_(ReadBytes|ReadTimeMS)', key)
-    if iosite_match and not goodCMSSIOSite(iosite_match.group(2)):
-        return 'ChirpCMSSW%sIOSite_undefined_%s' % (iosite_match.group(1), iosite_match.group(3))
-    return key
+    return iosite_match.group(2), iosite_match.group(1).strip('_')
 
 
 def jobFailed(ad):
@@ -882,8 +869,24 @@ def handle_chirp_info(ad, result):
     """
     for key, val in result.items():
         if key.startswith('ChirpCMSSW') and 'IOSite' in key:
-            newkey = cleanChirpCMSSWIOSiteKeys(key)
-            result[newkey] = result.pop(key)
+            sitename, chirpstring = chirpCMSSWIOSiteName(key)
+            keybase = key.rsplit('_', 1)[0]
+            try:
+                readbytes = result.pop(keybase + "_ReadBytes")
+                readtimems = result.pop(keybase + "_ReadTimeMS")
+                siteio = {}
+                siteio["SiteName"] = sitename
+                siteio["ChirpString"] = chirpstring
+                siteio["ReadBytes"] = readbytes
+                siteio["ReadTimeMS"] = readtimems
+                result.setdefault("ChirpCMSSW_SiteIO", []).append(siteio)
+                    
+            except KeyError:
+                # First hit will pop both ReadBytes and ReadTimeMS fields hence
+                # second hit will throw a KeyError that we want to ignore
+                pass
+
+            continue
 
         if key.startswith('ChirpCMSSW_'):
             cmssw_key = 'ChirpCMSSW' + key.split('_', 2)[-1]
