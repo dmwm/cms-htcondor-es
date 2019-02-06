@@ -517,8 +517,6 @@ universe = { \
 }
 
 _launch_time = int(time.time())
-def get_data_collection_time():
-    return _launch_time
 
 def make_list_from_string_field(ad, key, split_re="\s*,?\s*", default=None):
     default = default or ['UNKNOWN']
@@ -543,12 +541,8 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         return None
     result = {}
 
+    result['RecordTime'] = recordTime(ad)
     result['DataCollection'] = ad.get('CompletionDate', 0) or _launch_time
-    result['RecordTime'] = _launch_time
-    # Keep RecordTime as _launch_time for unfinished jobs
-    if ad['JobStatus'] in [3, 4, 6] and ad.get('CompletionDate', 0) > 0:
-        result['RecordTime'] = ad['CompletionDate']
-
     result['DataCollectionDate'] = result['RecordTime']
 
     result['ScheddName'] = ad.get("GlobalJobId", "UNKNOWN").split("#")[0]
@@ -758,6 +752,25 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         return result
     else:
         return json.dumps(result)
+
+
+def recordTime(ad):
+    """
+    RecordTime falls back to launch time as last-resort and for jobs in the queue
+
+    For Completed/Removed/Error jobs, try to update it:
+        - to CompletionDate if present
+        - else to EnteredCurrentStatus if present
+        - else fall back to launch time
+    """
+    if ad['JobStatus'] in [3, 4, 6]:
+        if ad.get('CompletionDate', 0) > 0:
+            return ad['CompletionDate']
+
+        elif ad.get('EnteredCurrentStatus', 0) > 0:
+            return ad['EnteredCurrentStatus']
+
+    return _launch_time
 
 
 def guessTaskType(ad):
