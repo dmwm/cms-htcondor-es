@@ -40,7 +40,6 @@ string_vals = set([ \
   "Args",
   "AccountingGroup",
   "Cmd",
-  "CMSGroups",
   "CMS_JobType",
   "DESIRED_Archs",
   "DESIRED_CMSDataLocations",
@@ -636,13 +635,13 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
             result['CMSPrimaryDataTier'] = info[-1]
 
     if cms and analysis:
-        result["CMSGroups"] = make_list_from_string_field(ad, "CMSGroups")
         result["OutputFiles"] = len(ad.get("CRAB_AdditionalOutputFiles", [])) + len(ad.get("CRAB_TFileOutputFiles", [])) + len(ad.get("CRAB_EDMOutputFiles", [])) + ad.get("CRAB_SaveLogsFlag", 0)
     if "x509UserProxyFQAN" in ad:
         result["x509UserProxyFQAN"] = str(ad["x509UserProxyFQAN"]).split(",")
     if "x509UserProxyVOName" in ad:
         result["VO"] = str(ad["x509UserProxyVOName"])
     if cms:
+        result["CMSGroups"] = make_list_from_string_field(ad, "CMSGroups")
         result["Site"] = ad.get("MATCH_EXP_JOB_GLIDEIN_CMSSite", "UNKNOWN")
     elif ('GlideinEntryName' in ad) and ("MATCH_EXP_JOBGLIDEIN_ResourceName" not in ad):
         m = _generic_site.match(ad['GlideinEntryName'])
