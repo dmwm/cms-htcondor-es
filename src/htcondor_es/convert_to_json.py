@@ -447,6 +447,7 @@ running_fields = set([
   # "DataLocations",
   "DESIRED_CMSDataset",
   # "DESIRED_Sites",
+  "EnteredCurrentStatus",
   "EventRate",
   "GlobalJobId",
   "HasSingularity",
