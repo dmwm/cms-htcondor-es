@@ -44,6 +44,7 @@ def make_mappings():
     # props["x509UserProxyFQAN"]["analyzer"] = "standard"
     # props["x509userproxysubject"]["analyzer"] = "standard"
     props["metadata"] = {"properties":{"spider_runtime" : {"type": "date", "format": "epoch_millis"}}}
+    props["ChirpCMSSW_SiteIO"] = {"type": "nested"}
 
     dynamic_string_template = {
         "strings_as_keywords" : {
