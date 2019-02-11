@@ -745,7 +745,22 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         result['CPUModel'] = str(ad['MachineAttrCPUModel0'])
         result['CPUModelName'] = str(ad['MachineAttrCPUModel0'])
         result['Processor'] = str(ad['MachineAttrCPUModel0'])
-
+    # Create URL's
+    result['jobLogURL'] = 'https://cmsweb.cern.ch/scheddmon/{sched}/{cmsUserId}/{task}/job.{job}.{retry}.txt'\
+    .format({
+        'sched': result['ScheddName'],
+        'cmsUserId': result['User'],
+        'task': result['CRAB_Workflow'],
+        'job': result['CRAB_Id'],
+        'retry': result['Retry']
+        })
+    result['postJobLogURL'] = 'https://cmsweb.cern.ch/scheddmon/{sched}/{cmsUserId}/{task}/postjob.{job}.{retry}.txt'.format({
+        'sched': result['ScheddName'],
+        'cmsUserId': result['User'],
+        'task': result['CRAB_Workflow'],
+        'job': result['CRAB_Id'],
+        'retry': result['Retry']
+        })
     if reduce_data:
         result = drop_fields_for_running_jobs(result)
 
