@@ -43,6 +43,8 @@ def make_mappings():
     props["StartdIpAddr"]["index"] = "no"
     # props["x509UserProxyFQAN"]["analyzer"] = "standard"
     # props["x509userproxysubject"]["analyzer"] = "standard"
+    props["metadata"] = {"properties":{"spider_runtime" : {"type": "date", "format": "epoch_millis"}}}
+    props["ChirpCMSSW_SiteIO"] = {"type": "nested"}
 
     dynamic_string_template = {
         "strings_as_keywords" : {
@@ -67,12 +69,15 @@ def make_mappings():
 
 
 def make_settings():
-    settings = {"analysis": {"analyzer": \
-        {"analyzer_keyword": { \
-            "tokenizer": "keyword",
-            "filter": "lowercase",
-        }
-    }}}
+    settings = {"analysis": {
+                    "analyzer": {
+                        "analyzer_keyword": {
+                            "tokenizer": "keyword",
+                            "filter": "lowercase",
+                            }
+                        }
+                    },
+                "mapping.total_fields.limit": 2000}
     return settings
 
 
@@ -156,22 +161,40 @@ def get_index(timestamp, template="cms", update_es=True):
     return idx
 
 
-def post_ads(es, idx, ads):
+def make_es_body(ads, metadata=None):
+    metadata = metadata or {}
     body = ''
-    for id, ad in ads:
-        body += json.dumps({"index": {"_id": id}}) + "\n"
-        body += ad + "\n"
-    es.bulk(body=body, doc_type="job", index=idx, request_timeout=30)
+    for id_, ad in ads:
+        if metadata:
+            ad.setdefault('metadata', {}).update(metadata)
+
+        body += json.dumps({"index": {"_id": id_}}) + "\n"
+        body += json.dumps(ad) + "\n"
+
+    return body
 
 
-def post_ads_nohandle(idx, ads, args):
+def parse_errors(result):
+    from collections import Counter
+    reasons = [d.get('index', {}).get('error', {}).get('reason', None) for d in result['items']]
+    counts = Counter(filter(None, reasons))
+    n_failed = sum(counts.values())
+    logging.error("Failed to index %d documents to ES: %s" % (n_failed, str(counts.most_common(3))))
+    return n_failed
+
+
+def post_ads(es, idx, ads, metadata=None):
+    body = make_es_body(ads, metadata)
+    res = es.bulk(body=body, doc_type="job", index=idx, request_timeout=60)
+    if res.get('errors'):
+        return parse_errors(res)
+
+
+def post_ads_nohandle(idx, ads, args, metadata=None):
     es = get_server_handle(args).handle
-    body = ''
-    for id, ad in ads:
-        body += json.dumps({"index": {"_id": id}}) + "\n"
-        body += ad + "\n"
-    es.bulk(body=body, doc_type="job", index=idx)
-    ## FIXME: Check if successful?
+    body = make_es_body(ads, metadata)
+    res = es.bulk(body=body, doc_type="job", index=idx, request_timeout=60)
+    if res.get('errors'):
+        return parse_errors(res)
 
     return len(ads)
-

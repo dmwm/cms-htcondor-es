@@ -32,15 +32,10 @@ def process_pickle(filename, args):
         except Exception, e:
             print e
 
-        for job_ad in job_ads:
-            dict_ad = convert_to_json(job_ad, return_dict=True)
-
-            if not dict_ad:
-                continue
-
-            json.dump(dict_ad, dfile, indent=4, sort_keys=True)
-            count += 1
-            dfile.write('\n')
+        dict_ads = [convert_to_json(job_ad, return_dict=True) for job_ad in job_ads]
+        dict_ads = filter(None, dict_ads)
+        json.dump(dict_ads, dfile, indent=4, sort_keys=True)
+        count = len(dict_ads)
 
     print "   ...done, converted %d docs, written to %s" % (count, dumpfile)
     return True

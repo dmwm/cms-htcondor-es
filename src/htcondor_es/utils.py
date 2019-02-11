@@ -8,10 +8,12 @@ import pwd
 import sys
 import time
 import errno
+import shlex
 import socket
 import random
 import logging
 import smtplib
+import subprocess
 import email.mime.text
 import logging.handlers
 
@@ -122,3 +124,35 @@ def set_up_logging(args):
     if os.isatty(sys.stdout.fileno()):
         streamhandler = logging.StreamHandler(stream=sys.stdout)
         logger.addHandler(streamhandler)
+
+
+def collect_metadata():
+    """
+    Return a dictionary with:
+    - hostname
+    - username
+    - current time (in epoch millisec)
+    - hash of current git commit
+    """
+    result = {}
+    result['spider_git_hash'] = get_githash()
+    result['spider_hostname'] = socket.gethostname()
+    result['spider_username'] = pwd.getpwuid(os.geteuid()).pw_name
+    result['spider_runtime']  = int(time.time()*1000)
+    return result
+
+
+def get_githash():
+    """Returns the git hash of the current commit in the scripts repository"""
+    gitwd = os.path.dirname(os.path.realpath(__file__))
+    cmd = r"git rev-parse --verify HEAD"
+    try:
+        call = subprocess.Popen(shlex.split(cmd),
+                                stdout=subprocess.PIPE,
+                                cwd=gitwd)
+        out, err = call.communicate()
+        return out.strip()
+
+    except Exception, e:
+        logging.warning(str(e))
+        return 'unknown'

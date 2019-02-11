@@ -25,6 +25,7 @@ string_vals = set([ \
   "CRAB_JobType",
   "CRAB_JobSW",
   "CRAB_JobArch",
+  "CRAB_Id",
   "CRAB_ISB",
   "CRAB_Workflow",
   "CRAB_UserRole",
@@ -69,6 +70,7 @@ string_vals = set([ \
   "MATCH_EXP_JOB_GLIDEIN_SiteWMS_Queue",
   "MATCH_EXP_JOB_GLIDEIN_SiteWMS_Slot",
   "Owner",
+  "Rank",
   "RemoteHost",
   "REQUIRED_OS",
   "ShouldTransferFiles",
@@ -110,7 +112,6 @@ string_vals = set([ \
 ])
 
 int_vals = set([ \
-  "CRAB_Id",
   "CRAB_Retry",
   "BytesRecvd",
   "BytesSent",
@@ -156,7 +157,6 @@ int_vals = set([ \
   "PostJobPrio1",
   "PostJobPrio2",
   "ProcId",
-  "Rank",
   "RecentBlockReadKbytes",
   "RecentBlockReads",
   "RecentBlockWriteKbytes",
@@ -440,12 +440,14 @@ running_fields = set([
   "CpuTimePerEvent",
   "CRAB_AsyncDest",
   "CRAB_DataBlock",
+  "CRAB_Id",
   "CRAB_UserHN",
   "CRAB_Workflow",
   "CRAB_SplitAlgo",
   # "DataLocations",
   "DESIRED_CMSDataset",
   # "DESIRED_Sites",
+  "EnteredCurrentStatus",
   "EventRate",
   "GlobalJobId",
   "HasSingularity",
@@ -515,8 +517,6 @@ universe = { \
 }
 
 _launch_time = int(time.time())
-def get_data_collection_time():
-    return _launch_time
 
 def make_list_from_string_field(ad, key, split_re="\s*,?\s*", default=None):
     default = default or ['UNKNOWN']
@@ -541,12 +541,8 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         return None
     result = {}
 
+    result['RecordTime'] = recordTime(ad)
     result['DataCollection'] = ad.get('CompletionDate', 0) or _launch_time
-    result['RecordTime'] = _launch_time
-    # Keep RecordTime as _launch_time for unfinished jobs
-    if ad['JobStatus'] in [3, 4, 6] and ad.get('CompletionDate', 0) > 0:
-        result['RecordTime'] = ad['CompletionDate']
-
     result['DataCollectionDate'] = result['RecordTime']
 
     result['ScheddName'] = ad.get("GlobalJobId", "UNKNOWN").split("#")[0]
@@ -758,6 +754,25 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         return json.dumps(result)
 
 
+def recordTime(ad):
+    """
+    RecordTime falls back to launch time as last-resort and for jobs in the queue
+
+    For Completed/Removed/Error jobs, try to update it:
+        - to CompletionDate if present
+        - else to EnteredCurrentStatus if present
+        - else fall back to launch time
+    """
+    if ad['JobStatus'] in [3, 4, 6]:
+        if ad.get('CompletionDate', 0) > 0:
+            return ad['CompletionDate']
+
+        elif ad.get('EnteredCurrentStatus', 0) > 0:
+            return ad['EnteredCurrentStatus']
+
+    return _launch_time
+
+
 def guessTaskType(ad):
     """Guess the TaskType from the WMAgent subtask name"""
     ttype = ad.get("WMAgent_SubTaskName", "/UNKNOWN").rsplit("/", 1)[-1]
@@ -838,23 +853,10 @@ def guessWorkflow(ad, analysis):
     return prep
 
 
-def goodCMSSIOSite(sitename):
-    """True if sitename is not only integers and shorter than 20 chars"""
-    try:
-        int(sitename)
-        return False
-    except:
-        if len(sitename) > 20 or len(sitename) < 3:
-            return False
-    return True
-
-
-def cleanChirpCMSSWIOSiteKeys(key):
-    """Clean up ChirpCMSS_IOSite keys"""
+def chirpCMSSWIOSiteName(key):
+    """Extract site name from ChirpCMSS_IOSite key"""
     iosite_match = re.match(r'ChirpCMSSW(.*?)IOSite_(.*)_(ReadBytes|ReadTimeMS)', key)
-    if iosite_match and not goodCMSSIOSite(iosite_match.group(2)):
-        return 'ChirpCMSSW%sIOSite_undefined_%s' % (iosite_match.group(1), iosite_match.group(3))
-    return key
+    return iosite_match.group(2), iosite_match.group(1).strip('_')
 
 
 def jobFailed(ad):
@@ -881,8 +883,24 @@ def handle_chirp_info(ad, result):
     """
     for key, val in result.items():
         if key.startswith('ChirpCMSSW') and 'IOSite' in key:
-            newkey = cleanChirpCMSSWIOSiteKeys(key)
-            result[newkey] = result.pop(key)
+            sitename, chirpstring = chirpCMSSWIOSiteName(key)
+            keybase = key.rsplit('_', 1)[0]
+            try:
+                readbytes = result.pop(keybase + "_ReadBytes")
+                readtimems = result.pop(keybase + "_ReadTimeMS")
+                siteio = {}
+                siteio["SiteName"] = sitename
+                siteio["ChirpString"] = chirpstring
+                siteio["ReadBytes"] = readbytes
+                siteio["ReadTimeMS"] = readtimems
+                result.setdefault("ChirpCMSSW_SiteIO", []).append(siteio)
+                    
+            except KeyError:
+                # First hit will pop both ReadBytes and ReadTimeMS fields hence
+                # second hit will throw a KeyError that we want to ignore
+                pass
+
+            continue
 
         if key.startswith('ChirpCMSSW_'):
             cmssw_key = 'ChirpCMSSW' + key.split('_', 2)[-1]

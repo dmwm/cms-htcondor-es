@@ -21,7 +21,7 @@ from htcondor_es.convert_to_json import convert_dates_to_millisecs
 from htcondor_es.convert_to_json import unique_doc_id
 
 
-def process_schedd(starttime, last_completion, checkpoint_queue, schedd_ad, args):
+def process_schedd(starttime, last_completion, checkpoint_queue, schedd_ad, args, metadata=None):
     """
     Given a schedd, process its entire set of history since last checkpoint.
     """
@@ -35,6 +35,7 @@ def process_schedd(starttime, last_completion, checkpoint_queue, schedd_ad, args
                          message)
         return last_completion
 
+    metadata = metadata or {}
     schedd = htcondor.Schedd(schedd_ad)
     history_query = classad.ExprTree("EnteredCurrentStatus >= %d" % last_completion)
     logging.info("Querying %s for history: %s.  "
@@ -82,12 +83,12 @@ def process_schedd(starttime, last_completion, checkpoint_queue, schedd_ad, args
                 st = time.time()
                 if not args.read_only:
                     if args.feed_es:
-                        data_for_es = [(id_, json.dumps(dict_ad)) for id_, dict_ad in ad_list]
-                        htcondor_es.es.post_ads(es=es.handle, idx=idx, ads=data_for_es)
+                        htcondor_es.es.post_ads(es.handle, idx, ad_list, metadata=metadata)
                     if args.feed_amq:
                         data_for_amq = [(id_, convert_dates_to_millisecs(dict_ad)) for \
                                         id_, dict_ad in ad_list]
-                        htcondor_es.amq.post_ads(data_for_amq)
+                        htcondor_es.amq.post_ads(data_for_amq, metadata=metadata)
+
                 logging.debug("...posting %d ads from %s (process_schedd)", len(ad_list),
                               schedd_ad["Name"])
                 total_upload += time.time() - st
@@ -130,13 +131,11 @@ def process_schedd(starttime, last_completion, checkpoint_queue, schedd_ad, args
                           schedd_ad["Name"])
             if not args.read_only:
                 if args.feed_es:
-                    htcondor_es.es.post_ads(es=es.handle, idx=idx,
-                                            ads=[(id_, json.dumps(dict_ad)) for
-                                                 id_, dict_ad in ad_list])
+                    htcondor_es.es.post_ads(es.handle, idx, ad_list, metadata=metadata)
                 if args.feed_amq:
                     data_for_amq = [(id_, convert_dates_to_millisecs(dict_ad)) for \
                                     id_, dict_ad in ad_list]
-                    htcondor_es.amq.post_ads(data_for_amq)
+                    htcondor_es.amq.post_ads(data_for_amq, metadata=metadata)
 
 
     total_time = (time.time() - my_start) / 60.
@@ -171,7 +170,7 @@ def update_checkpoint(name, completion_date):
         json.dump(checkpoint, fd)
 
 
-def process_histories(schedd_ads, starttime, pool, args):
+def process_histories(schedd_ads, starttime, pool, args, metadata=None):
     """
     Process history files for each schedd listed in a given
     multiprocessing pool
@@ -182,6 +181,8 @@ def process_histories(schedd_ads, starttime, pool, args):
         checkpoint = {}
 
     futures = []
+    metadata = metadata or {}
+    metadata['spider_source'] = 'condor_history'
 
     manager = multiprocessing.Manager()
     checkpoint_queue = manager.Queue()
@@ -202,7 +203,8 @@ def process_histories(schedd_ads, starttime, pool, args):
                                    last_completion,
                                    checkpoint_queue,
                                    schedd_ad,
-                                   args))
+                                   args,
+                                   metadata))
         futures.append((name, future))
 
     def _chkp_updater():
