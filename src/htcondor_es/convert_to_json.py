@@ -611,6 +611,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     result["CoreHr"] = ad.get("RequestCpus", 1.0)*int(ad.get("RemoteWallClockTime", 0))/3600.
     result["CommittedCoreHr"] = ad.get("RequestCpus", 1.0)*ad.get("CommittedTime", 0)/3600.
     result["CommittedWallClockHr"] = ad.get("CommittedTime", 0)/3600.
+    result["CommittedWallClockSc"] = ad.get("CommittedTime", 0)
     result["CpuTimeHr"] = (ad.get("RemoteSysCpu", 0)+ad.get("RemoteUserCpu", 0))/3600.
     result["DiskUsageGB"] = ad.get("DiskUsage_RAW", 0)/1000000.
     result["MemoryMB"] = ad.get("ResidentSetSize_RAW", 0)/1024.
