@@ -561,7 +561,10 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
 
     bulk_convert_ad_data(ad, result)
 
+    # Classify failed jobs
     result['JobFailed'] = jobFailed(ad)
+    result['ErrorType'] = errorType(ad)
+    result['ErrorClass'] = errorClass(result)
 
     if cms:
         result['CMS_JobType'] = str(ad.get('CMS_JobType', 'Analysis' if analysis else 'Unknown'))
@@ -873,6 +876,68 @@ def jobFailed(ad):
     if sum([ad.get(k, 0) for k in ec_fields]) > 0:
         return 1
     return 0
+
+
+def errorType(ad):
+    """
+    Categorization of exit codes into a handful of readable error types.
+
+    Allowed values are:
+    'Success', 'Environment' 'Executable', 'Stageout', 'Publication',
+    'JobWrapper', 'FileOpen', 'FileRead', 'OutOfBounds', 'Other'
+
+    This currently only works for CRAB jobs. Production jobs will always
+    fall into 'Other' as they don't have the Chirp_CRAB3_Job_ExitCode
+    """
+    crab_ec = ad.get('Chirp_CRAB3_Job_ExitCode', 0)
+
+    if not jobFailed(ad):
+        return "Success"
+
+    if (crab_ec >= 10000 and crab_ec <= 19999) or crab_ec == 50513:
+        return "Environment"
+
+    if crab_ec >= 60000 and crab_ec <= 69999:
+        if crab_ec >= 69000: ## Not yet in classads?
+            return "Publication"
+        else:
+            return "StageOut" ## FIXME: split into 'StageOut' and 'AsyncStageOut'
+
+    if crab_ec >= 80000 and crab_ec <= 89999:
+        return "JobWrapper"
+
+    if crab_ec in [8020, 8028]:
+        return "FileOpen"
+
+    if crab_ec == 8021:
+        return "FileRead"
+
+    if crab_ec in [8030, 8031, 8032, 9000] or (crab_ec >=50660 and crab_ec <= 50669):
+        return "OutOfBounds"
+
+    if crab_ec >= 7000 and crab_ec <= 9000:
+        return "Executable"
+
+    return "Other"
+
+
+def errorClass(result):
+    """
+    Further classify error types into even broader failure classes
+    """
+    if result['ErrorType'] in ['Environment', 'Publication', 'StageOut', 'AsyncStageOut']:
+        return "System"
+
+    elif result['ErrorType'] in ['FileOpen', 'FileRead']:
+        return "DataAccess"
+
+    elif result['ErrorType'] in ['JobWrapper', 'OutOfBounds', 'Executable']:
+        return "Application"
+
+    elif result['JobFailed']:
+        return "Other"
+
+    return "Success"
 
 
 def handle_chirp_info(ad, result):
