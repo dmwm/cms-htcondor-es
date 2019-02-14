@@ -97,6 +97,10 @@ def main():
                         dest="dry_run",
                         help=("Don't even read info, just pretend to. (Still "
                               "query the collector for the schedd's though.)"))
+    parser.add_argument("--max_documents_to_process", default=0,
+                        type=int, dest="max_documents_to_process",
+                        help=("Abort after this many documents (per schedd). "
+                              "[default: %(default)d (process all)]"))
     parser.add_argument("--keep_full_queue_data", action='store_true',
                         dest="keep_full_queue_data",
                         help="Drop all but some fields for running jobs.")
