@@ -441,6 +441,7 @@ running_fields = set([
   "CRAB_AsyncDest",
   "CRAB_DataBlock",
   "CRAB_Id",
+  "CRAB_Retry",
   "CRAB_UserHN",
   "CRAB_Workflow",
   "CRAB_SplitAlgo",
