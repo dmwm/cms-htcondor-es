@@ -459,6 +459,7 @@ running_fields = set([
   "MemoryMB",
   "OutputGB",
   "QueueHrs",
+  "QDate",
   "ReadTimeMins",
   "RecordTime",
   "RemoteHost",
