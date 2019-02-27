@@ -112,6 +112,11 @@ def process_schedd(starttime, last_completion, checkpoint_queue, schedd_ad, args
                 timed_out = True
                 break
 
+            if args.max_documents_to_process and count > args.max_documents_to_process:
+                logging.warning('Aborting after %d documents (--max_documents_to_process option)' %
+                                args.max_documents_to_process)
+                break
+
 
     except RuntimeError:
         logging.error("Failed to query schedd for job history: %s", schedd_ad["Name"])

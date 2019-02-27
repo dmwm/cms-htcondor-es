@@ -173,6 +173,11 @@ def query_schedd_queue(starttime, schedd_ad, queue, args):
                                  schedd_ad['Name'], count, processing_rate)
                     count_since_last_report = 0
 
+            if args.max_documents_to_process and count > args.max_documents_to_process:
+                logging.warning('Aborting after %d documents (--max_documents_to_process option)' %
+                                args.max_documents_to_process)
+                break
+
     except RuntimeError, e:
         logging.error("Failed to query schedd %s for jobs: %s",
                       schedd_ad["Name"], str(e))
