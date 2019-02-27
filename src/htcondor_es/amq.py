@@ -17,7 +17,7 @@ def get_amq_interface():
                                   password=password,
                                   producer='condor',
                                   topic='/topic/cms.jobmon.condor',
-                                  host_and_ports=[('dashb-mb.cern.ch', 61113)])
+                                  host_and_ports=[('cms-mb.cern.ch', 61313)])
 
     return _amq_interface
 
