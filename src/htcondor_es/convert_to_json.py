@@ -891,33 +891,34 @@ def errorType(ad):
     This currently only works for CRAB jobs. Production jobs will always
     fall into 'Other' as they don't have the Chirp_CRAB3_Job_ExitCode
     """
-    crab_ec = ad.get('Chirp_CRAB3_Job_ExitCode', 0)
-
     if not jobFailed(ad):
         return "Success"
 
-    if (crab_ec >= 10000 and crab_ec <= 19999) or crab_ec == 50513:
+    # Prioritize the CRAB exitcode and fall back to WMCore exitcode for production jobs
+    exitcode = ad.get('Chirp_CRAB3_Job_ExitCode', ad.get('Chirp_WMCore_cmsRun_ExitCode', 0))
+
+    if (exitcode >= 10000 and exitcode <= 19999) or exitcode == 50513:
         return "Environment"
 
-    if crab_ec >= 60000 and crab_ec <= 69999:
-        if crab_ec >= 69000: ## Not yet in classads?
+    if exitcode >= 60000 and exitcode <= 69999:
+        if exitcode >= 69000: ## Not yet in classads?
             return "Publication"
         else:
-            return "StageOut" ## FIXME: split into 'StageOut' and 'AsyncStageOut'
+            return "StageOut"
 
-    if crab_ec >= 80000 and crab_ec <= 89999:
+    if exitcode >= 80000 and exitcode <= 89999:
         return "JobWrapper"
 
-    if crab_ec in [8020, 8028]:
+    if exitcode in [8020, 8028]:
         return "FileOpen"
 
-    if crab_ec == 8021:
+    if exitcode == 8021:
         return "FileRead"
 
-    if crab_ec in [8030, 8031, 8032, 9000] or (crab_ec >=50660 and crab_ec <= 50669):
+    if exitcode in [8030, 8031, 8032, 9000] or (exitcode >= 50660 and exitcode <= 50669):
         return "OutOfBounds"
 
-    if crab_ec >= 7000 and crab_ec <= 9000:
+    if exitcode >= 7000 and exitcode <= 9000:
         return "Executable"
 
     return "Other"
@@ -1026,7 +1027,7 @@ def handle_chirp_info(ad, result):
         ops = result['ChirpCMSSWReadOps'] + result['ChirpCMSSWReadVOps']
         if ops:
             result['ReadOpsPercent'] = result['ChirpCMSSWReadOps'] / float(ops)*100
-    if ('Chirp_WMCore_cmsRun_ExitCode' in result) and (result.get('ExitCode', 0) == 0):
+    if ('Chirp_WMCore_cmsRun_ExitCode' in result) and (result.get('ExitCode', 0) == 0): ## FIXME?
         result['ExitCode'] = result['Chirp_WMCore_cmsRun_ExitCode']
 
 _CONVERT_COUNT = 0
