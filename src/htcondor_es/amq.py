@@ -1,7 +1,7 @@
 import time
 import logging
 import multiprocessing
-from htcondor_es.StompAMQ import StompAMQ
+from CMSMonitoring.StompAMQ import StompAMQ
 
 _amq_interface = None
 def get_amq_interface():
@@ -17,7 +17,8 @@ def get_amq_interface():
                                   password=password,
                                   producer='condor',
                                   topic='/topic/cms.jobmon.condor',
-                                  host_and_ports=[('cms-mb.cern.ch', 61313)])
+                                  host_and_ports=[('cms-mb.cern.ch', 61313)],
+                                  validation_schema='JobMonitoring.json')
 
     return _amq_interface
 
@@ -31,12 +32,13 @@ def post_ads(ads, metadata=None):
     interface = get_amq_interface()
     list_data = []
     for id_, ad in ads:
-        list_data.append(interface.make_notification(payload=ad,
-                                                     docType='htcondor_job_info',
-                                                     docId=id_,
-                                                     ts=ad['RecordTime'],
-                                                     metadata=metadata,
-                                                     dataSubfield=None))
+        notif, _, _  = interface.make_notification(payload=ad,
+                                                   docType='htcondor_job_info',
+                                                   docId=id_,
+                                                   ts=ad['RecordTime'],
+                                                   metadata=metadata,
+                                                   dataSubfield=None)
+        list_data.append(notif)
 
     starttime = time.time()
     failed_to_send = interface.send(list_data)
