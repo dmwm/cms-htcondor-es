@@ -7,6 +7,8 @@ import time
 import classad
 import logging
 import datetime
+import zlib
+import base64
 import htcondor
 
 string_vals = set([ \
@@ -532,6 +534,8 @@ _camp_re = re.compile("[A-Za-z0-9_]+_[A-Z0-9]+-([A-Za-z0-9]+)-")
 _prep_re = re.compile("[A-Za-z0-9_]+_([A-Z]+-([A-Za-z0-9]+)-[0-9]+)")
 _rval_re = re.compile("[A-Za-z0-9]+_(RVCMSSW_[0-9]+_[0-9]+_[0-9]+)")
 _prep_prompt_re = re.compile("(PromptReco|Repack|Express)_[A-Za-z0-9]+_([A-Za-z0-9]+)")
+# Executable error messages in WMCore
+_wmcore_exe_exmsg = re.compile("^Chirp_WMCore_[A-Za-z0-9]+_Exception_Message$")
 # 2016 reRECO; of the form cerminar_Run2016B-v2-JetHT-23Sep2016_8020_160923_164036_4747
 _rereco_re = re.compile("[A-Za-z0-9_]+_Run20[A-Za-z0-9-_]+-([A-Za-z0-9]+)")
 _generic_site = re.compile("^[A-Za-z0-9]+_[A-Za-z0-9]+_(.*)_")
@@ -1079,8 +1083,18 @@ def bulk_convert_ad_data(ad, result):
             key = key[len("MATCH_EXP_JOB_"):]
         if key.endswith("_RAW"):
             key = key[:-len("_RAW")]
+        if _wmcore_exe_exmsg.match(key):
+            value = str(decode_and_decompress(value))
         result[key] = value
 
+def decode_and_decompress(value):
+    try:
+        value = zlib.decompress(base64.b64decode(value))
+    except (TypeError, zlib.error):
+        logging.warning("Failed to decode and decompress value: %s" % (repr(value)))
+    
+    return value
+        
 
 def convert_dates_to_millisecs(record):
     for date_field in date_vals:
