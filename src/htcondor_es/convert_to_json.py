@@ -7,6 +7,7 @@ import time
 import classad
 import logging
 import datetime
+import time
 import zlib
 import base64
 import htcondor
@@ -181,6 +182,7 @@ int_vals = set([ \
 
 date_vals = set([ \
   "CompletionDate",
+  "CRAB_TaskCreationDate",
   "EnteredCurrentStatus",
   "JobCurrentStartDate",
   "JobCurrentStartExecutingDate",
@@ -443,9 +445,11 @@ running_fields = set([
   "CRAB_DataBlock",
   "CRAB_Id",
   "CRAB_Retry",
+  "CRAB_TaskCreationDate",
   "CRAB_UserHN",
   "CRAB_Workflow",
   "CRAB_SplitAlgo",
+  "CMS_SubmissionTool",
   # "DataLocations",
   "DESIRED_CMSDataset",
   # "DESIRED_Sites",
@@ -527,6 +531,22 @@ def make_list_from_string_field(ad, key, split_re="\s*,?\s*", default=None):
         return re.split(split_re, ad[key])
     except (TypeError, KeyError):
         return default
+
+
+def get_creation_time_from_taskname(ad):
+    """
+    returns the task creation date as a timestamp given the task name. 
+    CRAB task names includes the creation time in format %y%m%d_%H%M%S: 
+    190309_085131:adeiorio_crab_80xV2_ST_t-channel_top_4f_scaleup_inclusiveDecays_13TeV-powhegV2-madspin-pythia8 
+    """
+    if not 'CRAB_Workflow' in ad:
+        return recordTime(ad)
+    
+    _str_date = ad.get('CRAB_Workflow').split(':')[0]
+    try:
+        return int(time.mktime(datetime.datetime.strptime(_str_date, '%y%m%d_%H%M%S').timetuple()))
+    except:
+        return recordTime(ad)
 
 _cream_re = re.compile("CPUNumber = (\d+)")
 _nordugrid_re = re.compile("\(count=(\d+)\)")
@@ -627,6 +647,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     result["Original_DESIRED_Sites"] = make_list_from_string_field(ad, "ExtDESIRED_Sites")
     result["DesiredSiteCount"] = len(result["DESIRED_Sites"])
     result["DataLocationsCount"] = len(result["DataLocations"])
+    result["CRAB_TaskCreationDate"] = get_creation_time_from_taskname(ad)
 
     result['CMSPrimaryPrimaryDataset'] = 'Unknown'
     result['CMSPrimaryProcessedDataset'] = 'Unknown'
