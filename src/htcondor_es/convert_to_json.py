@@ -7,7 +7,6 @@ import time
 import classad
 import logging
 import datetime
-import time
 import zlib
 import base64
 import htcondor
@@ -535,17 +534,16 @@ def make_list_from_string_field(ad, key, split_re="\s*,?\s*", default=None):
 
 def get_creation_time_from_taskname(ad):
     """
-    returns the task creation date as a timestamp given the task name. 
-    CRAB task names includes the creation time in format %y%m%d_%H%M%S: 
-    190309_085131:adeiorio_crab_80xV2_ST_t-channel_top_4f_scaleup_inclusiveDecays_13TeV-powhegV2-madspin-pythia8 
+    returns the task creation date as a timestamp given the task name.
+    CRAB task names includes the creation time in format %y%m%d_%H%M%S:
+    190309_085131:adeiorio_crab_80xV2_ST_t-channel_top_4f_scaleup_inclusiveDecays_13TeV-powhegV2-madspin-pythia8
     """
-    if not 'CRAB_Workflow' in ad:
-        return recordTime(ad)
-    
-    _str_date = ad.get('CRAB_Workflow').split(':')[0]
     try:
+        _str_date = ad['CRAB_Workflow'].split(':')[0]
         return int(time.mktime(datetime.datetime.strptime(_str_date, '%y%m%d_%H%M%S').timetuple()))
-    except:
+    except(KeyError, TypeError, ValueError):
+        # fallback to recordtime if there is not a CRAB_Workflow value
+        # or if it hasn't the expected format.
         return recordTime(ad)
 
 _cream_re = re.compile("CPUNumber = (\d+)")
