@@ -588,6 +588,9 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     result['JobFailed'] = jobFailed(ad)
     result['ErrorType'] = errorType(ad)
     result['ErrorClass'] = errorClass(result)
+    result['ExitCode'] = commonExitCode(ad)
+    if 'ExitCode' in ad:
+        result['CondorExitCode'] = ad['ExitCode']
 
     if cms:
         result['CMS_JobType'] = str(ad.get('CMS_JobType', 'Analysis' if analysis else 'Unknown'))
@@ -902,6 +905,16 @@ def jobFailed(ad):
     return 0
 
 
+def commonExitCode(ad):
+    """
+    Consolidate the exit code values of chirped CRAB and WMCore values and
+    the original condor exit code.
+    """
+    return ad.get('Chirp_CRAB3_Job_ExitCode',
+                  ad.get('Chirp_WMCore_cmsRun_ExitCode', 
+                         ad.get('ExitCode', 0)))
+
+
 def errorType(ad):
     """
     Categorization of exit codes into a handful of readable error types.
@@ -916,8 +929,7 @@ def errorType(ad):
     if not jobFailed(ad):
         return "Success"
 
-    # Prioritize the CRAB exitcode and fall back to WMCore exitcode for production jobs
-    exitcode = ad.get('Chirp_CRAB3_Job_ExitCode', ad.get('Chirp_WMCore_cmsRun_ExitCode', 0))
+    exitcode = commonExitCode(ad)
 
     if (exitcode >= 10000 and exitcode <= 19999) or exitcode == 50513:
         return "Environment"
@@ -1049,8 +1061,6 @@ def handle_chirp_info(ad, result):
         ops = result['ChirpCMSSWReadOps'] + result['ChirpCMSSWReadVOps']
         if ops:
             result['ReadOpsPercent'] = result['ChirpCMSSWReadOps'] / float(ops)*100
-    if ('Chirp_WMCore_cmsRun_ExitCode' in result) and (result.get('ExitCode', 0) == 0): ## FIXME?
-        result['ExitCode'] = result['Chirp_WMCore_cmsRun_ExitCode']
 
 _CONVERT_COUNT = 0
 _CONVERT_CPU = 0
