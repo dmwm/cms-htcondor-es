@@ -952,7 +952,7 @@ def errorType(ad):
     if exitcode in [8030, 8031, 8032, 9000] or (exitcode >= 50660 and exitcode <= 50669):
         return "OutOfBounds"
 
-    if exitcode >= 7000 and exitcode <= 9000:
+    if (exitcode >= 7000 and exitcode <= 9000) or exitcode == 139:
         return "Executable"
 
     return "Other"
