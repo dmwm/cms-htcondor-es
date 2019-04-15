@@ -61,16 +61,24 @@ class AffiliationManager():
                             break
                     if login:
                         _tmp_dir[login] = {'institute': _json[x]['institute'],
-                                           'country': _json[x]['institute_country']}
+                                           'country': _json[x]['institute_country'],
+                                           'dn': _json[x]['dn']}
                 json.dump(_tmp_dir, _dir_file)
         else:
             with open(self.path, 'rb') as dir_file:
                 _tmp_dir = json.load(dir_file)
         return _tmp_dir
 
-    def getAffiliation(self, login):
+    def getAffiliation(self, login=None, dn=None):
         """
         Returns a python dictionary with the institute and country
-        for the given login
+        for the given login or dn.
+        Returns None if not found.
         """
-        return self.__dir[login]
+        if login:
+            return self.__dir[login]
+        elif dn:
+            for _person in self.__dir.values():
+                if _person['dn'] == dn:
+                    return _person
+        return None
