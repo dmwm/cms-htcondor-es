@@ -21,7 +21,7 @@ from htcondor_es.convert_to_json import convert_dates_to_millisecs
 from htcondor_es.convert_to_json import unique_doc_id
 
 
-def process_schedd(starttime, last_completion, checkpoint_queue, schedd_ad, args, metadata=None):
+def process_schedd(starttime, last_completion, checkpoint_queue, schedd_ad, args, metadata=None,kwargs={}):
     """
     Given a schedd, process its entire set of history since last checkpoint.
     """
@@ -59,7 +59,7 @@ def process_schedd(starttime, last_completion, checkpoint_queue, schedd_ad, args
         for job_ad in history_iter:
             dict_ad = None
             try:
-                dict_ad = convert_to_json(job_ad, return_dict=True)
+                dict_ad = convert_to_json(job_ad, return_dict=True,**kwargs)
             except Exception as e:
                 message = ("Failure when converting document on %s history: %s" %
                            (schedd_ad["Name"], str(e)))
