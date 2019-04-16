@@ -568,8 +568,6 @@ _cmssw_version = re.compile("CMSSW_((\d*)_(\d*)_.*)")
 def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False, aff_mgr=None):
     if ad.get("TaskType") == "ROOT":
         return None
-    if not aff_mgr:
-        aff_mgr = AffiliationManager(recreate=False)
     result = {}
     result['RecordTime'] = recordTime(ad)
     result['DataCollection'] = ad.get('CompletionDate', 0) or _launch_time
@@ -783,15 +781,16 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False, aff_mgr=
         result['Processor'] = str(ad['MachineAttrCPUModel0'])
    
    # Affiliation data:
-    _aff = None
-    if 'CRAB_UserHN' in result:
-        _aff = aff_mgr.getAffiliation(login=result['CRAB_UserHN'])
-    elif 'x509userproxysubject' in result:
-        _aff = aff_mgr.getAffiliation(dn=result['x509userproxysubject'])
-    
-    if _aff is not None: 
-        result['AffiliationInstitute'] = _aff['institute']
-        result['AffiliationCountry'] = _aff['country']
+    if aff_mgr:
+        _aff = None
+        if 'CRAB_UserHN' in result:
+            _aff = aff_mgr.getAffiliation(login=result['CRAB_UserHN'])
+        elif 'x509userproxysubject' in result:
+            _aff = aff_mgr.getAffiliation(dn=result['x509userproxysubject'])
+        
+        if _aff is not None: 
+            result['AffiliationInstitute'] = _aff['institute']
+            result['AffiliationCountry'] = _aff['country']
     if reduce_data:
         result = drop_fields_for_running_jobs(result)
 

@@ -28,14 +28,13 @@ def process_pickle(filename, args):
     dumpfile = os.path.join(args.dump_target, '%s.json' % dumpfile_name)
     count = 0
     aff_mgr = AffiliationManager()
-    kwargs = {'aff_mgr': aff_mgr}
     with open(filename, 'r') as pfile, open(dumpfile, 'w') as dfile:
         try:
             job_ads = pickle.load(pfile)
         except Exception, e:
             print e
 
-        dict_ads = [convert_to_json(job_ad, return_dict=True, **kwargs) for job_ad in job_ads]
+        dict_ads = [convert_to_json(job_ad, return_dict=True, aff_mgr=aff_mgr) for job_ad in job_ads]
         dict_ads = filter(None, dict_ads)
         json.dump(dict_ads, dfile, indent=4, sort_keys=True)
         count = len(dict_ads)

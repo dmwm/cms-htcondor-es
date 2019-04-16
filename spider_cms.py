@@ -25,14 +25,15 @@ from htcondor_es.utils import collect_metadata, TIMEOUT_MINS
 from htcondor_es.AffiliationManager import AffiliationManager
 
 
-signal.alarm(TIMEOUT_MINS*60 + 60)
-
-
 def main_driver(args):
     """
     Driver method for the spider script.
     """
     starttime = time.time()
+
+    aff_mgr = AffiliationManager(recreate_older_days=1)
+
+    signal.alarm(TIMEOUT_MINS*60 + 60)
 
     # Get all the schedd ads
     schedd_ads = get_schedds(args)
@@ -41,14 +42,13 @@ def main_driver(args):
     pool = multiprocessing.Pool(processes=args.query_pool_size)
 
     metadata = collect_metadata()
-    aff_mgr = AffiliationManager(recreate_older_days=1)
 
     if not args.skip_history:
         htcondor_es.history.process_histories(schedd_ads=schedd_ads,
                                               starttime=starttime,
                                               pool=pool,
                                               args=args,
-                                              kwargs={'aff_mgr':aff_mgr},
+                                              aff_mgr=aff_mgr,
                                               metadata=metadata)
 
     # Now that we have the fresh history, process the queues themselves.
@@ -57,7 +57,7 @@ def main_driver(args):
                                           starttime=starttime,
                                           pool=pool,
                                           args=args,
-                                          kwargs={'aff_mgr':aff_mgr},
+                                          aff_mgr=aff_mgr,
                                           metadata=metadata)
 
     pool.close()
@@ -66,6 +66,7 @@ def main_driver(args):
     logging.warning("@@@ Total processing time: %.2f mins", ((time.time()-starttime)/60.))
 
     return 0
+
 
 def main():
     """
