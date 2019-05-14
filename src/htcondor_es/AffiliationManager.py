@@ -3,14 +3,16 @@
 # Author: Christian Ariza <christian.ariza AT gmail [DOT] com>
 # pylint: disable=line-too-long
 import os
+import errno
 import json
 import requests
 from datetime import datetime, timedelta
 
 
+
 class AffiliationManager():
     __DEFAULT_URL = 'https://cms-cric-dev.cern.ch/api/accounts/user/query/?json'
-    __DEFAULT_DIR_PATH = 'dir.json'
+    __DEFAULT_DIR_PATH = '/tmp/dir.json'
 
     def __init__(self,
                  dir_file=__DEFAULT_DIR_PATH,
@@ -26,12 +28,22 @@ class AffiliationManager():
         self.path = dir_file
         self.url = service_url
         if not recreate\
-           and recreate_older_days \
-           and os.path.isfile(self.path):
-            _min_date = datetime.now() - timedelta(days=recreate_older_days)
-            _dir_time = datetime.fromtimestamp(os.path.getmtime(self.path))
-            recreate = _dir_time < _min_date
-        self.__dir = self.loadOrCreateDirectory(recreate)
+           and recreate_older_days:
+                if os.path.isfile(self.path):
+                    _min_date = datetime.now() - timedelta(days=recreate_older_days)
+                    _dir_time = datetime.fromtimestamp(os.path.getmtime(self.path))
+                    recreate = _dir_time < _min_date
+                else:
+                    recreate = True
+
+        try:
+            self.__dir = self.loadOrCreateDirectory(recreate)
+        except (IOError, requests.RequestException, requests.HTTPError) as cause:
+            raise AffiliationManagerException(cause)
+            # python 3 note:
+            # this line should be:
+            #  raise AffiliationManagerException()  from cause
+            # In order to keep the traceback.
 
     def loadOrCreateDirectory(self, recreate=False):
         """
@@ -45,11 +57,16 @@ class AffiliationManager():
                          u'institute': u'Universita e INFN Trieste'}
             ...
         }
+        raises  IOError if the file doesn't exists (of it cannot be read)
+                   RequestException if something happen with the request
+                   HTTPError if the response was something different
+                   to a success
         """
         _tmp_dir = None
-        if not os.path.isfile(self.path) or recreate:
+        if recreate:
             with open(self.path, 'wb') as _dir_file:
                 response = requests.get(self.url, verify=False)
+                response.raise_for_status()
                 _json = json.loads(response.text)
                 _tmp_dir = {}
                 for person in _json.values():
@@ -63,9 +80,11 @@ class AffiliationManager():
                                            'country': person['institute_country'],
                                            'dn': person['dn']}
                 json.dump(_tmp_dir, _dir_file)
-        else:
+        elif os.path.isfile(self.path):
             with open(self.path, 'rb') as dir_file:
                 _tmp_dir = json.load(dir_file)
+        else:
+            raise IOError(errno.ENOENT, os.strerror(errno.ENOENT), self.path)
         return _tmp_dir
 
     def getAffiliation(self, login=None, dn=None):
@@ -81,3 +100,7 @@ class AffiliationManager():
                 if _person['dn'] == dn:
                     return _person
         return None
+
+
+class AffiliationManagerException(Exception):
+    pass

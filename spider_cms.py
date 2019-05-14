@@ -10,7 +10,7 @@ import signal
 import logging
 import argparse
 import multiprocessing
-
+import traceback
 
 try:
     import htcondor_es
@@ -20,9 +20,9 @@ except ImportError:
 
 import htcondor_es.history
 import htcondor_es.queues
-from htcondor_es.utils import get_schedds, set_up_logging
+from htcondor_es.utils import get_schedds, set_up_logging, send_email_alert
 from htcondor_es.utils import collect_metadata, TIMEOUT_MINS
-from htcondor_es.AffiliationManager import AffiliationManager
+from htcondor_es.AffiliationManager import AffiliationManager, AffiliationManagerException
 
 
 def main_driver(args):
@@ -30,8 +30,17 @@ def main_driver(args):
     Driver method for the spider script.
     """
     starttime = time.time()
-
-    aff_mgr = AffiliationManager(recreate_older_days=1)
+    try:
+        aff_mgr = AffiliationManager(recreate=False)
+    except AffiliationManagerException as e:
+        # If its not possible to create the affiliation manager
+        aff_mgr = None
+        # Log it
+        logging.error("There were an error creating the affiliation manager, %s", e)
+        send_email_alert(args.email_alerts,
+                         'There were an error creating the affiliation manager',
+                         traceback.format_exc(e))
+        # Continue execution without affiliation.
 
     signal.alarm(TIMEOUT_MINS*60 + 60)
 
