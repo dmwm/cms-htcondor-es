@@ -577,7 +577,9 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     
     if "CRAB_Id" in ad:
         _cid = ad.get("CRAB_Id")
-        result["FormattedCrabId"] = "{:06d}".format(int(_cid)) if _cid.isdigit() else (_cid.replace("-", ".") if "-" in _cid else _cid)
+        result["FormattedCrabId"] = "{:06d}".format(int(_cid)) if _cid.isdigit()\
+                                                 else ("{}.{:06d}".format(*[int(x) for x in _cid.split("-")]) if "-" in _cid\
+                                                 else _cid)
     if cms and analysis:
         result["Type"] = "analysis"
     elif cms and (ad.get("AccountingGroup", "").startswith("tier0.")):
