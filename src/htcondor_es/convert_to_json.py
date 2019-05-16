@@ -48,6 +48,7 @@ string_vals = set([ \
   "DESIRED_CMSDataset",
   "DESIRED_Sites",
   "ExtDESIRED_Sites",
+  "FormattedCrabId",
   "GlobalJobId",
   "GlideinClient",
   "GlideinEntryName",
@@ -454,6 +455,7 @@ running_fields = set([
   # "DESIRED_Sites",
   "EnteredCurrentStatus",
   "EventRate",
+  "FormattedCrabId",
   "GlobalJobId",
   "HasSingularity",
   "InputData",
@@ -572,6 +574,10 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
 
     # Determine type
     analysis = ("CRAB_Id" in ad) or (ad.get("AccountingGroup", "").startswith("analysis."))
+    
+    if "CRAB_Id" in ad:
+        _cid = ad.get("CRAB_Id")
+        result["FormattedCrabId"] = "{:06d}".format(int(_cid)) if _cid.isdigit() else (_cid.replace("-", ".") if "-" in _cid else _cid)
     if cms and analysis:
         result["Type"] = "analysis"
     elif cms and (ad.get("AccountingGroup", "").startswith("tier0.")):
