@@ -10,9 +10,12 @@ import datetime
 import zlib
 import base64
 import htcondor
+from htcondor_es.AffiliationManager import AffiliationManager
 
 string_vals = set([ \
   "AutoClusterId",
+  "AffiliationInstitute",
+  "AffiliationCountry",
   "Processor",
   "ChirpCMSSWCPUModels",
   "CPUModel",
@@ -423,6 +426,8 @@ bool_vals = set([
 running_fields = set([
   "AccountingGroup",
   "AutoClusterId",
+  "AffiliationInstitute",
+  "AffiliationCountry",
   "BenchmarkJobDB12",
   "Campaign",
   "CMS_JobType",
@@ -561,11 +566,11 @@ _rereco_re = re.compile("[A-Za-z0-9_]+_Run20[A-Za-z0-9-_]+-([A-Za-z0-9]+)")
 _generic_site = re.compile("^[A-Za-z0-9]+_[A-Za-z0-9]+_(.*)_")
 _cms_site = re.compile("CMS[A-Za-z]*_(.*)_")
 _cmssw_version = re.compile("CMSSW_((\d*)_(\d*)_.*)")
-def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
+
+def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False, aff_mgr=None):
     if ad.get("TaskType") == "ROOT":
         return None
     result = {}
-
     result['RecordTime'] = recordTime(ad)
     result['DataCollection'] = ad.get('CompletionDate', 0) or _launch_time
     result['DataCollectionDate'] = result['RecordTime']
@@ -776,7 +781,18 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         result['CPUModel'] = str(ad['MachineAttrCPUModel0'])
         result['CPUModelName'] = str(ad['MachineAttrCPUModel0'])
         result['Processor'] = str(ad['MachineAttrCPUModel0'])
-
+   
+   # Affiliation data:
+    if aff_mgr:
+        _aff = None
+        if 'CRAB_UserHN' in result:
+            _aff = aff_mgr.getAffiliation(login=result['CRAB_UserHN'])
+        elif 'x509userproxysubject' in result:
+            _aff = aff_mgr.getAffiliation(dn=result['x509userproxysubject'])
+        
+        if _aff is not None: 
+            result['AffiliationInstitute'] = _aff['institute']
+            result['AffiliationCountry'] = _aff['country']
     if reduce_data:
         result = drop_fields_for_running_jobs(result)
 
