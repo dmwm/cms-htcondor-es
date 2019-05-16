@@ -113,6 +113,7 @@ string_vals = set([ \
 ])
 
 int_vals = set([ \
+  "_versionHint",
   "CRAB_Retry",
   "BytesRecvd",
   "BytesSent",
@@ -420,6 +421,7 @@ bool_vals = set([
 
 # Fields to be kept in docs concerning running jobs
 running_fields = set([
+  "_versionHint",
   "AccountingGroup",
   "AutoClusterId",
   "BenchmarkJobDB12",
@@ -566,6 +568,10 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
 
     result['RecordTime'] = recordTime(ad)
     result['DataCollection'] = ad.get('CompletionDate', 0) or _launch_time
+    # The version hint will help to identify the lattest record for each job
+    # It must be a positive integer between 0 and 9223372036854775807
+    # As a first approach the version hint is the current launch time
+    result["_versionHint"] = _launch_time
     result['DataCollectionDate'] = result['RecordTime']
 
     result['ScheddName'] = ad.get("GlobalJobId", "UNKNOWN").split("#")[0]
