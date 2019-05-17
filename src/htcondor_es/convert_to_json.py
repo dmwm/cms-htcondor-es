@@ -574,12 +574,9 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
 
     # Determine type
     analysis = ("CRAB_Id" in ad) or (ad.get("AccountingGroup", "").startswith("analysis."))
-    
+     
     if "CRAB_Id" in ad:
-        _cid = ad.get("CRAB_Id")
-        result["FormattedCrabId"] = "{:06d}".format(int(_cid)) if _cid.isdigit()\
-                                                 else ("{}.{:06d}".format(*[int(x) for x in _cid.split("-")]) if "-" in _cid\
-                                                 else _cid)
+        result["FormattedCrabId"] = get_formatted_CRAB_Id(ad.get("CRAB_Id"))
     if cms and analysis:
         result["Type"] = "analysis"
     elif cms and (ad.get("AccountingGroup", "").startswith("tier0.")):
@@ -1161,3 +1158,30 @@ def unique_doc_id(doc):
     with the same RecordTime
     """
     return "%s#%d" % (doc['GlobalJobId'], doc['RecordTime'])
+
+
+def get_formatted_CRAB_Id(CRAB_Id):
+    # FormattedCrabId
+    # In this field, we want to format the crab_id (if exists)
+    #  to ensure that the lexicographical order is the desired.
+    # Currently there are two CRAB_Id formats:
+    #  a positive integer or an integer tuple formated as X-N
+    # 
+    # The desired order is start with the 0-N then the integer values then the 
+    # 1-N...X-N
+    # To do that we will use leading zeros to ensure the lexicographical order,
+    # e.g:
+    # 0.000001,0.000002 ...0.000012, 000001,000002,....009999,010000,
+    # 1.000001....3,009999.
+    # Falls back to the CRAB Id
+    # args: CRAB_Id
+    _cid = CRAB_Id
+    formatted = _cid
+    try:
+        if '-' in _cid:
+            formatted = "{}.{:06d}".format(*[int(x) for x in _cid.split("-")])
+        elif _cid.isdigit():
+           formatted = "{:06d}".format(int(_cid))
+    except TypeError:
+        pass
+    return formatted
