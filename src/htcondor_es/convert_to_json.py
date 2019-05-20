@@ -1173,10 +1173,10 @@ def get_formatted_CRAB_Id(CRAB_Id):
     # e.g:
     # 0.000001,0.000002 ...0.000012, 000001,000002,....009999,010000,
     # 1.000001....3,009999.
-    # Falls back to the CRAB Id
+    # Falls back to '000000'
     # args: CRAB_Id
     _cid = CRAB_Id
-    formatted = _cid
+    formatted = '000000'
     try:
         if '-' in _cid:
             formatted = "{}.{:06d}".format(*[int(x) for x in _cid.split("-")])
