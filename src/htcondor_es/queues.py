@@ -202,7 +202,7 @@ def query_schedd_queue(starttime, schedd_ad, queue, args, aff_mgr=None):
     return count
 
 
-def process_queues(schedd_ads, starttime, pool, args, metadata=None):
+def process_queues(schedd_ads, starttime, pool, args, metadata=None, aff_mgr=None):
     """
     Process all the jobs in all the schedds given.
     """
@@ -228,7 +228,7 @@ def process_queues(schedd_ads, starttime, pool, args, metadata=None):
 
     for schedd_ad in schedd_ads:
         future = pool.apply_async(query_schedd_queue,
-                                  args=(starttime, schedd_ad, input_queue, args))
+                                  args=(starttime, schedd_ad, input_queue, args, aff_mgr))
         futures.append((schedd_ad['Name'], future))
 
     def _callback_amq(result):
