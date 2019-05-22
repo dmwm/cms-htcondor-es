@@ -32,6 +32,7 @@ string_vals = set([ \
   "CRAB_JobArch",
   "CRAB_Id",
   "CRAB_ISB",
+  "CRAB_PostJobStatus",
   "CRAB_Workflow",
   "CRAB_UserRole",
   "CMSGroups",
@@ -450,6 +451,7 @@ running_fields = set([
   "CRAB_AsyncDest",
   "CRAB_DataBlock",
   "CRAB_Id",
+  "CRAB_PostJobStatus",
   "CRAB_Retry",
   "CRAB_TaskCreationDate",
   "CRAB_UserHN",
@@ -648,7 +650,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False, aff_mgr=
     except:
         ad["RequestCpus"] = 1.0
     result['RequestCpus'] = ad['RequestCpus']
-
+    
     result["CoreHr"] = ad.get("RequestCpus", 1.0)*int(ad.get("RemoteWallClockTime", 0))/3600.
     result["CommittedCoreHr"] = ad.get("RequestCpus", 1.0)*ad.get("CommittedTime", 0)/3600.
     result["CommittedWallClockHr"] = ad.get("CommittedTime", 0)/3600.
@@ -798,6 +800,14 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False, aff_mgr=
         if _aff is not None: 
             result['AffiliationInstitute'] = _aff['institute']
             result['AffiliationCountry'] = _aff['country']
+            
+    # We will use the CRAB_PostJobStatus as the actual status.
+    # If is an analysis task and is not completed, 
+    # its status is defined by Status, else it will be defined by
+    # CRAB_PostJobStatus.
+    if analysis and result['Status'] != 'Completed':
+        result['CRAB_PostJobStatus'] = result['Status']
+      
     if reduce_data:
         result = drop_fields_for_running_jobs(result)
 
