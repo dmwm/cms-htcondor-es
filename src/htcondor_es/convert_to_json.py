@@ -1158,6 +1158,13 @@ def convert_dates_to_millisecs(record):
 
 
 def drop_fields_for_running_jobs(record):
+    """
+        Check if the job is running or pending
+        and prune it if it is.
+    """
+    if 'Status' in record\
+      and record['Status'] not in ['Running', 'Idle', 'Held']:
+        return record
     skimmed_record = {}
     for field in running_fields:
         try:
