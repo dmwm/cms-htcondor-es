@@ -533,6 +533,14 @@ universe = { \
  12: "Local",
 }
 
+postjob_status_decode = { 
+ 'NOT RUN': 'wnpostproc',
+ 'TRANSFERRING': 'transferring',
+ 'COOLOFF': 'toretry',
+  'FAILED': 'failed',
+  'FINISHED': 'finished'
+ }
+
 _launch_time = int(time.time())
 
 def make_list_from_string_field(ad, key, split_re="\s*,?\s*", default=None):
@@ -805,9 +813,13 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False, aff_mgr=
     # If is an analysis task and is not completed, 
     # its status is defined by Status, else it will be defined by
     # CRAB_PostJobStatus.
+    # We will use the postjob_status_decode dict to decode 
+    # the status. If there is an unknown value it will set to it. 
     if analysis and result['Status'] != 'Completed':
         result['CRAB_PostJobStatus'] = result['Status']
-      
+    elif 'CRAB_PostJobStatus' in result:
+        _pjst = result['CRAB_PostJobStatus']
+        result[ 'CRAB_PostJobStatus'] = postjob_status_decode.get(_pjst, _pjst)
     if reduce_data:
         result = drop_fields_for_running_jobs(result)
 
