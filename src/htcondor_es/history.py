@@ -38,7 +38,7 @@ def process_schedd(starttime, last_completion, checkpoint_queue, schedd_ad, args
     metadata = metadata or {}
     schedd = htcondor.Schedd(schedd_ad)
     _q = "EnteredCurrentStatus >= %(last_completion)d "\
-            "or CRAB_PostJobLastUpdate >= %(last_completion)d" 
+            "|| CRAB_PostJobLastUpdate >= %(last_completion)d" 
     history_query = classad.ExprTree(_q% {'last_completion': last_completion})
     logging.info("Querying %s for history: %s.  "
                  "%.1f minutes of ads", schedd_ad["Name"],
