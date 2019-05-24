@@ -107,7 +107,7 @@ class ListenAndBunch(multiprocessing.Process):
         self.output_queue.put(self.count_in, timeout=time_remaining(self.starttime))
 
 
-def query_schedd_queue(starttime, schedd_ad, queue, args, aff_mgr=None):
+def query_schedd_queue(starttime, schedd_ad, queue, args):
     my_start = time.time()
     logging.info("Querying %s queue for jobs.", schedd_ad["Name"])
     if time_remaining(starttime) < 10:
@@ -133,7 +133,7 @@ def query_schedd_queue(starttime, schedd_ad, queue, args, aff_mgr=None):
             dict_ad = None
             try:
                 dict_ad = convert_to_json(job_ad, return_dict=True,
-                                          reduce_data=not args.keep_full_queue_data, aff_mgr=aff_mgr)
+                                          reduce_data=not args.keep_full_queue_data)
             except Exception as e:
                 message = ("Failure when converting document on %s queue: %s" %
                            (schedd_ad["Name"], str(e)))
@@ -202,7 +202,7 @@ def query_schedd_queue(starttime, schedd_ad, queue, args, aff_mgr=None):
     return count
 
 
-def process_queues(schedd_ads, starttime, pool, args, metadata=None, aff_mgr=None):
+def process_queues(schedd_ads, starttime, pool, args, metadata=None):
     """
     Process all the jobs in all the schedds given.
     """
@@ -228,7 +228,7 @@ def process_queues(schedd_ads, starttime, pool, args, metadata=None, aff_mgr=Non
 
     for schedd_ad in schedd_ads:
         future = pool.apply_async(query_schedd_queue,
-                                  args=(starttime, schedd_ad, input_queue, args, aff_mgr))
+                                  args=(starttime, schedd_ad, input_queue, args))
         futures.append((schedd_ad['Name'], future))
 
     def _callback_amq(result):

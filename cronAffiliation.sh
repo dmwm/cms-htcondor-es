@@ -2,7 +2,7 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export PYTHONPATH="$DIR/src/:$DIR/../CMSMonitoring/src/python:$PYTHONPATH"
-
+source "$DIR/venv/bin/activate"
 create=$(cat <<EOF
 from htcondor_es.AffiliationManager import AffiliationManager, AffiliationManagerException
 try:
