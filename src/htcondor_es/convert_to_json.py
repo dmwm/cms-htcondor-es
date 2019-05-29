@@ -10,7 +10,7 @@ import datetime
 import zlib
 import base64
 import htcondor
-from htcondor_es.AffiliationManager import AffiliationManager
+from htcondor_es.AffiliationManager import AffiliationManager, AffiliationManagerException
 
 string_vals = set([ \
   "AutoClusterId",
@@ -533,6 +533,16 @@ universe = { \
 
 _launch_time = int(time.time())
 
+#Initialize aff_mgr
+aff_mgr = None
+try:
+    aff_mgr = AffiliationManager(recreate=False)
+except AffiliationManagerException as e:
+    # If its not possible to create the affiliation manager
+    # Log it
+    logging.error("There were an error creating the affiliation manager, %s", e)
+    # Continue execution without affiliation.
+    
 def make_list_from_string_field(ad, key, split_re="\s*,?\s*", default=None):
     default = default or ['UNKNOWN']
     try:
@@ -569,7 +579,7 @@ _generic_site = re.compile("^[A-Za-z0-9]+_[A-Za-z0-9]+_(.*)_")
 _cms_site = re.compile("CMS[A-Za-z]*_(.*)_")
 _cmssw_version = re.compile("CMSSW_((\d*)_(\d*)_.*)")
 
-def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False, aff_mgr=None):
+def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     if ad.get("TaskType") == "ROOT":
         return None
     result = {}

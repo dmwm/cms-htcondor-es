@@ -38,6 +38,7 @@ class AffiliationManager():
 
         try:
             self.__dir = self.loadOrCreateDirectory(recreate)
+            self.__dn_dir = {person["dn"]:person for person in self.__dir.values()}
         except (IOError, requests.RequestException, requests.HTTPError) as cause:
             raise AffiliationManagerException(cause)
             # python 3 note:
@@ -96,9 +97,7 @@ class AffiliationManager():
         if login:
             return self.__dir.get(login)
         elif dn:
-            for _person in self.__dir.values():
-                if _person['dn'] == dn:
-                    return _person
+            return self.__dn_dir.get(dn)
         return None
 
 
