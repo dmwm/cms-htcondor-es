@@ -533,7 +533,7 @@ universe = { \
  12: "Local",
 }
 
-postjob_status_decode = { 
+postjob_status_decode = {
  'NOT RUN': 'wnpostproc',
  'TRANSFERRING': 'transferring',
  'COOLOFF': 'toretry',
@@ -552,7 +552,7 @@ except AffiliationManagerException as e:
     # Log it
     logging.error("There were an error creating the affiliation manager, %s", e)
     # Continue execution without affiliation.
-    
+
 def make_list_from_string_field(ad, key, split_re="\s*,?\s*", default=None):
     default = default or ['UNKNOWN']
     try:
@@ -601,7 +601,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
 
     # Determine type
     analysis = ("CRAB_Id" in ad) or (ad.get("AccountingGroup", "").startswith("analysis."))
-     
+
     if "CRAB_Id" in ad:
         result["FormattedCrabId"] = get_formatted_CRAB_Id(ad.get("CRAB_Id"))
     if cms and analysis:
@@ -668,7 +668,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     except:
         ad["RequestCpus"] = 1.0
     result['RequestCpus'] = ad['RequestCpus']
-    
+
     result["CoreHr"] = ad.get("RequestCpus", 1.0)*int(ad.get("RemoteWallClockTime", 0))/3600.
     result["CommittedCoreHr"] = ad.get("RequestCpus", 1.0)*ad.get("CommittedTime", 0)/3600.
     result["CommittedWallClockHr"] = ad.get("CommittedTime", 0)/3600.
@@ -806,7 +806,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         result['CPUModel'] = str(ad['MachineAttrCPUModel0'])
         result['CPUModelName'] = str(ad['MachineAttrCPUModel0'])
         result['Processor'] = str(ad['MachineAttrCPUModel0'])
-   
+
    # Affiliation data:
     if aff_mgr:
         _aff = None
@@ -814,22 +814,26 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
             _aff = aff_mgr.getAffiliation(login=result['CRAB_UserHN'])
         elif 'x509userproxysubject' in result:
             _aff = aff_mgr.getAffiliation(dn=result['x509userproxysubject'])
-        
-        if _aff is not None: 
+
+        if _aff is not None:
             result['AffiliationInstitute'] = _aff['institute']
             result['AffiliationCountry'] = _aff['country']
-            
+
     # We will use the CRAB_PostJobStatus as the actual status.
-    # If is an analysis task and is not completed, 
+    # If is an analysis task and is not completed
+    # (or removed if the postjob status is failed),
     # its status is defined by Status, else it will be defined by
     # CRAB_PostJobStatus.
-    # We will use the postjob_status_decode dict to decode 
-    # the status. If there is an unknown value it will set to it. 
-    if analysis and result['Status'] != 'Completed':
+    #
+    # We will use the postjob_status_decode dict to decode
+    # the status. If there is an unknown value it will set to it.
+    _pjst = result.get('CRAB_PostJobStatus', None)
+    if (result['Status'] == 'Removed' and _pjst == 'FAILED')\
+       or (result['Status'] == 'Completed' and _pjst):
+        result['CRAB_PostJobStatus'] = postjob_status_decode.get(_pjst, _pjst)
+    elif analysis:
         result['CRAB_PostJobStatus'] = result['Status']
-    elif 'CRAB_PostJobStatus' in result:
-        _pjst = result['CRAB_PostJobStatus']
-        result[ 'CRAB_PostJobStatus'] = postjob_status_decode.get(_pjst, _pjst)
+
     if reduce_data:
         result = drop_fields_for_running_jobs(result)
 
@@ -966,7 +970,7 @@ def commonExitCode(ad):
     the original condor exit code.
     """
     return ad.get('Chirp_CRAB3_Job_ExitCode',
-                  ad.get('Chirp_WMCore_cmsRun_ExitCode', 
+                  ad.get('Chirp_WMCore_cmsRun_ExitCode',
                          ad.get('ExitCode', 0)))
 
 
@@ -1051,7 +1055,7 @@ def handle_chirp_info(ad, result):
                 siteio["ReadBytes"] = readbytes
                 siteio["ReadTimeMS"] = readtimems
                 result.setdefault("ChirpCMSSW_SiteIO", []).append(siteio)
-                    
+
             except KeyError:
                 # First hit will pop both ReadBytes and ReadTimeMS fields hence
                 # second hit will throw a KeyError that we want to ignore
@@ -1176,9 +1180,9 @@ def decode_and_decompress(value):
         value = zlib.decompress(base64.b64decode(value))
     except (TypeError, zlib.error):
         logging.warning("Failed to decode and decompress value: %s" % (repr(value)))
-    
+
     return value
-        
+
 
 def convert_dates_to_millisecs(record):
     for date_field in date_vals:
@@ -1223,8 +1227,8 @@ def get_formatted_CRAB_Id(CRAB_Id):
     #  to ensure that the lexicographical order is the desired.
     # Currently there are two CRAB_Id formats:
     #  a positive integer or an integer tuple formated as X-N
-    # 
-    # The desired order is start with the 0-N then the integer values then the 
+    #
+    # The desired order is start with the 0-N then the integer values then the
     # 1-N...X-N
     # To do that we will use leading zeros to ensure the lexicographical order,
     # e.g:
