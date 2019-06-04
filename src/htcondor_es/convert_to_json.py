@@ -534,7 +534,7 @@ universe = { \
 }
 
 postjob_status_decode = {
- 'NOT RUN': 'wnpostproc',
+ 'NOT RUN': 'postProc',
  'TRANSFERRING': 'transferring',
  'COOLOFF': 'toretry',
   'FAILED': 'failed',
@@ -821,18 +821,20 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
 
     # We will use the CRAB_PostJobStatus as the actual status.
     # If is an analysis task and is not completed
-    # (or removed if the postjob status is failed),
+    # (or removed if the postjob status is not "NOT RUN"),
     # its status is defined by Status, else it will be defined by
     # CRAB_PostJobStatus.
     #
     # We will use the postjob_status_decode dict to decode
     # the status. If there is an unknown value it will set to it.
     _pjst = result.get('CRAB_PostJobStatus', None)
-    if (result['Status'] == 'Removed' and _pjst == 'FAILED')\
-       or (result['Status'] == 'Completed' and _pjst):
+    _status = result['Status']
+    if _pjst and ((_status == 'Removed' and _pjst != 'NOT RUN')
+       or (_status == 'Completed')):
         result['CRAB_PostJobStatus'] = postjob_status_decode.get(_pjst, _pjst)
     elif analysis:
-        result['CRAB_PostJobStatus'] = result['Status']
+        result['CRAB_PostJobStatus'] = _status if _status != 'Removed'\
+                                     else postjob_status_decode.get('FAILED',_status)
 
     if reduce_data:
         result = drop_fields_for_running_jobs(result)
