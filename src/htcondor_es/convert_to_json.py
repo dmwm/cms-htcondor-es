@@ -968,12 +968,14 @@ def jobFailed(ad):
 
 def commonExitCode(ad):
     """
-    Consolidate the exit code values of chirped CRAB and WMCore values and
+    Consolidate the exit code values of JobExitCode, 
+    the  chirped CRAB and WMCore values, and
     the original condor exit code.
     """
-    return ad.get('Chirp_CRAB3_Job_ExitCode',
-                  ad.get('Chirp_WMCore_cmsRun_ExitCode',
-                         ad.get('ExitCode', 0)))
+    return ad.get('Chirp_WMCore_cmsRun_ExitCode',
+                  ad.get('JobExitCode',
+                         ad.get('Chirp_CRAB3_Job_ExitCode',
+                                ad.get('ExitCode', 0))))
 
 
 def errorType(ad):
