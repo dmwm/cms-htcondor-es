@@ -7,6 +7,7 @@ import time
 import classad
 import logging
 import datetime
+from pytz import UTC
 import zlib
 import base64
 import htcondor
@@ -569,7 +570,9 @@ def get_creation_time_from_taskname(ad):
     """
     try:
         _str_date = ad['CRAB_Workflow'].split(':')[0]
-        return int(time.mktime(datetime.datetime.strptime(_str_date, '%y%m%d_%H%M%S').timetuple()))
+        _naive_date = datetime.datetime.strptime(_str_date, '%y%m%d_%H%M%S')
+        _time_tuple = _naive_date.replace(tzinfo=UTC).timetuple()
+        return int(time.mktime(_time_tuple))
     except(KeyError, TypeError, ValueError):
         # fallback to recordtime if there is not a CRAB_Workflow value
         # or if it hasn't the expected format.
@@ -827,11 +830,18 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     #
     # We will use the postjob_status_decode dict to decode
     # the status. If there is an unknown value it will set to it.
+    # Note: if the completed task has not a committed time 
+    # or completion date, we will set it using RemoteWallClockTime
+    # and EnteredCurrentStatus. 
     _pjst = result.get('CRAB_PostJobStatus', None)
     _status = result['Status']
     if _pjst and ((_status == 'Removed' and _pjst != 'NOT RUN')
        or (_status == 'Completed')):
         result['CRAB_PostJobStatus'] = postjob_status_decode.get(_pjst, _pjst)
+        if 'CompletionDate' not in result:
+            result['CompletionDate'] = result.get('EnteredCurrentStatus')
+        if 'CommittedTime' not in result or result.get('CommittedTime', 0) == 0:
+            result['CommittedTime'] = result.get('RemoteWallClockTime', 0)
     elif analysis:
         result['CRAB_PostJobStatus'] = _status if _status != 'Removed'\
                                      else postjob_status_decode.get('FAILED',_status)
@@ -971,10 +981,12 @@ def commonExitCode(ad):
     Consolidate the exit code values of JobExitCode, 
     the  chirped CRAB and WMCore values, and
     the original condor exit code.
+    JobExitCode and Chirp_CRAB3_Job_ExitCode
+    exists only on analysis jobs.
     """
-    return ad.get('Chirp_WMCore_cmsRun_ExitCode',
-                  ad.get('JobExitCode',
-                         ad.get('Chirp_CRAB3_Job_ExitCode',
+    return ad.get('JobExitCode',
+                  ad.get('Chirp_CRAB3_Job_ExitCode',
+                         ad.get('Chirp_WMCore_cmsRun_ExitCode',
                                 ad.get('ExitCode', 0))))
 
 
