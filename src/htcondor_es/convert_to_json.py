@@ -470,6 +470,7 @@ running_fields = set([
   "HasSingularity",
   "InputData",
   "InputGB",
+  "JobPrio",
   "KEvents",
   "MegaEvents",
   "MemoryMB",
