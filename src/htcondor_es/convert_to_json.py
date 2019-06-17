@@ -843,8 +843,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         if 'CommittedTime' not in result or result.get('CommittedTime', 0) == 0:
             result['CommittedTime'] = result.get('RemoteWallClockTime', 0)
     elif analysis:
-        result['CRAB_PostJobStatus'] = _status if _status != 'Removed'\
-                                     else postjob_status_decode.get('FAILED',_status)
+        result['CRAB_PostJobStatus'] = _status
 
     if reduce_data:
         result = drop_fields_for_running_jobs(result)
