@@ -3,4 +3,3 @@ stomp.py==4.1.21
 elasticsearch==6.3.1
 CMSMonitoring==0.0.7
 requests==2.22.0
-pytz==2019.1

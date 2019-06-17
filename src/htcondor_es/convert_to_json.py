@@ -5,9 +5,9 @@ import re
 import json
 import time
 import classad
+import calendar
 import logging
 import datetime
-from pytz import UTC
 import zlib
 import base64
 import htcondor
@@ -470,6 +470,7 @@ running_fields = set([
   "HasSingularity",
   "InputData",
   "InputGB",
+  "JobPrio",
   "KEvents",
   "MegaEvents",
   "MemoryMB",
@@ -571,8 +572,7 @@ def get_creation_time_from_taskname(ad):
     try:
         _str_date = ad['CRAB_Workflow'].split(':')[0]
         _naive_date = datetime.datetime.strptime(_str_date, '%y%m%d_%H%M%S')
-        _time_tuple = _naive_date.replace(tzinfo=UTC).timetuple()
-        return int(time.mktime(_time_tuple))
+        return int(calendar.timegm(_naive_date.timetuple()))
     except(KeyError, TypeError, ValueError):
         # fallback to recordtime if there is not a CRAB_Workflow value
         # or if it hasn't the expected format.
@@ -843,8 +843,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
         if 'CommittedTime' not in result or result.get('CommittedTime', 0) == 0:
             result['CommittedTime'] = result.get('RemoteWallClockTime', 0)
     elif analysis:
-        result['CRAB_PostJobStatus'] = _status if _status != 'Removed'\
-                                     else postjob_status_decode.get('FAILED',_status)
+        result['CRAB_PostJobStatus'] = _status
 
     if reduce_data:
         result = drop_fields_for_running_jobs(result)
