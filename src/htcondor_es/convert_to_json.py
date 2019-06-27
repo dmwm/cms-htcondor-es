@@ -603,16 +603,12 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     result['ScheddName'] = ad.get("GlobalJobId", "UNKNOWN").split("#")[0]
 
     # Determine type
-    analysis = ("CRAB_Id" in ad) or (ad.get("AccountingGroup", "").startswith("analysis."))
+    if cms:
+        result["Type"] = ad.get("CMS_Type", "unknown").lower()
+    analysis = (result.get("Type") == 'analysis')
 
     if "CRAB_Id" in ad:
         result["FormattedCrabId"] = get_formatted_CRAB_Id(ad.get("CRAB_Id"))
-    if cms and analysis:
-        result["Type"] = "analysis"
-    elif cms and (ad.get("AccountingGroup", "").startswith("tier0.")):
-        result["Type"] = "tier0"
-    elif cms:
-        result["Type"] = "production"
 
     if cms:
         ad.setdefault("MATCH_EXP_JOB_GLIDEIN_CMSSite", ad.get("MATCH_EXP_JOBGLIDEIN_CMSSite", "Unknown"))
