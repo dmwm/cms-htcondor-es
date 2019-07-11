@@ -1138,9 +1138,8 @@ def bulk_convert_ad_data(ad, result):
     """
     Given a ClassAd, bulk convert to a python dictionary.
     """
-    for key in ad.keys():
-        if key in ignore:
-            continue
+    _keys = set(ad.keys()) - ignore
+    for key in _keys:
         if key.startswith("HasBeen") and not key in bool_vals:
             continue
         if key == "DESIRED_SITES":
@@ -1212,12 +1211,8 @@ def drop_fields_for_running_jobs(record):
     if 'Status' in record\
       and record['Status'] not in ['Running', 'Idle', 'Held']:
         return record
-    skimmed_record = {}
-    for field in running_fields:
-        try:
-            skimmed_record[field] = record[field]
-        except KeyError: continue
-
+    _fields = running_fields.intersection(set(record.keys()))
+    skimmed_record = {field: record[field] for field in _fields}
     return skimmed_record
 
 
