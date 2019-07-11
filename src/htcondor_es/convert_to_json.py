@@ -1163,7 +1163,7 @@ def bulk_convert_ad_data(ad, result):
                     value = None
                 else:
                     logging.warning("Failed to convert key %s with value %s to int" % (key, repr(value)))
-                    value = str(value)
+                    continue
         elif key in string_vals:
             value = str(value)
         elif key in date_vals:
