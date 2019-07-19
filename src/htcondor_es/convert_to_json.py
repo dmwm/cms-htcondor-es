@@ -1304,7 +1304,7 @@ def bulk_convert_ad_data(ad, result):
 
 def decode_and_decompress(value):
     try:
-        value = zlib.decompress(base64.b64decode(value))
+        value = str(zlib.decompress(base64.b64decode(value)))
     except (TypeError, zlib.error):
         logging.warning("Failed to decode and decompress value: %s" % (repr(value)))
 

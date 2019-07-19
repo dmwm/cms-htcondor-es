@@ -155,7 +155,7 @@ def get_githash():
     try:
         call = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, cwd=gitwd)
         out, err = call.communicate()
-        return out.strip()
+        return str(out.strip())
 
     except Exception as e:
         logging.warning(str(e))

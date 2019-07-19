@@ -290,17 +290,6 @@ def process_queues(schedd_ads, starttime, pool, args, metadata=None):
             total_processed = int(output_queue.get(timeout=time_remaining(starttime)))
             break
 
-        if args.feed_amq and not args.read_only:
-            amq_bunch = [
-                (id_, convert_dates_to_millisecs(dict_ad)) for id_, dict_ad in bunch
-            ]
-            future = upload_pool.apply_async(
-                htcondor_es.amq.post_ads,
-                args=(amq_bunch, metadata),
-                callback=_callback_amq,
-            )
-            futures.append(("UPLOADER_AMQ", future))
-
         if args.feed_es_for_queues and not args.read_only:
             ## Note that these bunches are sized according to --amq_bunch_size
             ## FIXME: Why are we determining the index from one ad?
@@ -314,6 +303,17 @@ def process_queues(schedd_ads, starttime, pool, args, metadata=None):
                 htcondor_es.es.post_ads_nohandle, args=(idx, bunch, args, metadata)
             )
             futures.append(("UPLOADER_ES", future))
+
+        if args.feed_amq and not args.read_only:
+            amq_bunch = [
+                (id_, convert_dates_to_millisecs(dict_ad)) for id_, dict_ad in bunch
+            ]
+            future = upload_pool.apply_async(
+                htcondor_es.amq.post_ads,
+                args=(amq_bunch, metadata),
+                callback=_callback_amq,
+            )
+            futures.append(("UPLOADER_AMQ", future))
 
         logging.info("Starting new uploader, %d items in queue" % output_queue.qsize())
 
