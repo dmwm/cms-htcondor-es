@@ -1,5 +1,4 @@
 htcondor==8.7.9
-stomp.py==4.1.21
 elasticsearch==6.3.1
-CMSMonitoring==0.0.7
+CMSMonitoring==0.2.6
 requests==2.22.0

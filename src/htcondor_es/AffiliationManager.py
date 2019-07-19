@@ -9,16 +9,17 @@ import requests
 from datetime import datetime, timedelta
 
 
+class AffiliationManager:
+    __DEFAULT_URL = "https://cms-cric-dev.cern.ch/api/accounts/user/query/?json"
+    __DEFAULT_DIR_PATH = "/tmp/dir.json"
 
-class AffiliationManager():
-    __DEFAULT_URL = 'https://cms-cric-dev.cern.ch/api/accounts/user/query/?json'
-    __DEFAULT_DIR_PATH = '/tmp/dir.json'
-
-    def __init__(self,
-                 dir_file=__DEFAULT_DIR_PATH,
-                 recreate=False,
-                 recreate_older_days=None,
-                 service_url=__DEFAULT_URL):
+    def __init__(
+        self,
+        dir_file=__DEFAULT_DIR_PATH,
+        recreate=False,
+        recreate_older_days=None,
+        service_url=__DEFAULT_URL,
+    ):
         """
         params:
             recreate: boolean
@@ -27,18 +28,19 @@ class AffiliationManager():
         """
         self.path = dir_file
         self.url = service_url
-        if not recreate\
-           and recreate_older_days:
-                if os.path.isfile(self.path):
-                    _min_date = datetime.now() - timedelta(days=recreate_older_days)
-                    _dir_time = datetime.fromtimestamp(os.path.getmtime(self.path))
-                    recreate = _dir_time < _min_date
-                else:
-                    recreate = True
+        if not recreate and recreate_older_days:
+            if os.path.isfile(self.path):
+                _min_date = datetime.now() - timedelta(days=recreate_older_days)
+                _dir_time = datetime.fromtimestamp(os.path.getmtime(self.path))
+                recreate = _dir_time < _min_date
+            else:
+                recreate = True
 
         try:
             self.__dir = self.loadOrCreateDirectory(recreate)
-            self.__dn_dir = {person["dn"]:person for person in self.__dir.values()}
+            self.__dn_dir = {
+                person["dn"]: person for person in list(self.__dir.values())
+            }
         except (IOError, requests.RequestException, requests.HTTPError) as cause:
             raise AffiliationManagerException(cause)
             # python 3 note:
@@ -65,24 +67,26 @@ class AffiliationManager():
         """
         _tmp_dir = None
         if recreate:
-            with open(self.path, 'wb') as _dir_file:
+            with open(self.path, "wb") as _dir_file:
                 response = requests.get(self.url, verify=False)
                 response.raise_for_status()
                 _json = json.loads(response.text)
                 _tmp_dir = {}
-                for person in _json.values():
+                for person in list(_json.values()):
                     login = None
-                    for profile in person['profiles']:
-                        if 'login' in profile:
-                            login = profile['login']
+                    for profile in person["profiles"]:
+                        if "login" in profile:
+                            login = profile["login"]
                             break
                     if login:
-                        _tmp_dir[login] = {'institute': person['institute'],
-                                           'country': person['institute_country'],
-                                           'dn': person['dn']}
+                        _tmp_dir[login] = {
+                            "institute": person["institute"],
+                            "country": person["institute_country"],
+                            "dn": person["dn"],
+                        }
                 json.dump(_tmp_dir, _dir_file)
         elif os.path.isfile(self.path):
-            with open(self.path, 'rb') as dir_file:
+            with open(self.path, "rb") as dir_file:
                 _tmp_dir = json.load(dir_file)
         else:
             raise IOError(errno.ENOENT, os.strerror(errno.ENOENT), self.path)
