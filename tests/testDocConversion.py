@@ -26,7 +26,7 @@ def process_pickle(filename, args):
     dumpfile_name = filename.strip(".pck")
     dumpfile = os.path.join(args.dump_target, "%s.json" % dumpfile_name)
     count = 0
-    with open(filename, "r") as pfile, open(dumpfile, "w") as dfile:
+    with open(filename, "rb") as pfile, open(dumpfile, "w") as dfile:
         try:
             job_ads = pickle.load(pfile)
         except Exception as e:
@@ -51,10 +51,10 @@ def get_ads_from_schedd(schedd_ad, args):
     pckfile = os.path.join(args.filename)
     # If the file already exists, append the ads
     if os.path.isfile(pckfile):
-        with open(pckfile, "r") as pfile:
+        with open(pckfile, "rb") as pfile:
             job_ads.extend(pickle.load(pfile))
 
-    with open(pckfile, "w") as pfile:
+    with open(pckfile, "wb") as pfile:
         pickle.dump(job_ads, pfile, pickle.HIGHEST_PROTOCOL)
 
     print("   ...done, wrote %d docs to %s" % (len(job_ads), pckfile))

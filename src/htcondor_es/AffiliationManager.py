@@ -3,6 +3,7 @@
 # Author: Christian Ariza <christian.ariza AT gmail [DOT] com>
 # pylint: disable=line-too-long
 import os
+from pathlib import Path
 import errno
 import json
 import requests
@@ -11,7 +12,7 @@ from datetime import datetime, timedelta
 
 class AffiliationManager:
     __DEFAULT_URL = "https://cms-cric-dev.cern.ch/api/accounts/user/query/?json"
-    __DEFAULT_DIR_PATH = "/tmp/dir.json"
+    __DEFAULT_DIR_PATH = Path.home().joinpath(".affiliation_dir.json")
 
     def __init__(
         self,
@@ -26,12 +27,12 @@ class AffiliationManager:
             recreate_older_days: int, recreate the dir if is older
                     than that number of days.
         """
-        self.path = dir_file
+        self.path = Path(dir_file)
         self.url = service_url
         if not recreate and recreate_older_days:
-            if os.path.isfile(self.path):
+            if self.path.is_file():
                 _min_date = datetime.now() - timedelta(days=recreate_older_days)
-                _dir_time = datetime.fromtimestamp(os.path.getmtime(self.path))
+                _dir_time = datetime.fromtimestamp(self.path.stat().st_mtime)
                 recreate = _dir_time < _min_date
             else:
                 recreate = True
@@ -42,11 +43,7 @@ class AffiliationManager:
                 person["dn"]: person for person in list(self.__dir.values())
             }
         except (IOError, requests.RequestException, requests.HTTPError) as cause:
-            raise AffiliationManagerException(cause)
-            # python 3 note:
-            # this line should be:
-            #  raise AffiliationManagerException()  from cause
-            # In order to keep the traceback.
+            raise AffiliationManagerException from cause
 
     def loadOrCreateDirectory(self, recreate=False):
         """
@@ -67,8 +64,8 @@ class AffiliationManager:
         """
         _tmp_dir = None
         if recreate:
-            with open(self.path, "wb") as _dir_file:
-                response = requests.get(self.url, verify=False)
+            with open(self.path, "w") as _dir_file:
+                response = requests.get(self.url)
                 response.raise_for_status()
                 _json = json.loads(response.text)
                 _tmp_dir = {}
@@ -85,8 +82,8 @@ class AffiliationManager:
                             "dn": person["dn"],
                         }
                 json.dump(_tmp_dir, _dir_file)
-        elif os.path.isfile(self.path):
-            with open(self.path, "rb") as dir_file:
+        elif self.path.is_file():
+            with open(self.path, "r") as dir_file:
                 _tmp_dir = json.load(dir_file)
         else:
             raise IOError(errno.ENOENT, os.strerror(errno.ENOENT), self.path)
