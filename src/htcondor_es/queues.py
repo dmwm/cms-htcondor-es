@@ -127,8 +127,14 @@ def query_schedd_queue(starttime, schedd_ad, queue, args):
     schedd = htcondor.Schedd(schedd_ad)
     sent_warnings = False
     batch = []
+    # Query for a snapshot of the jobs running/idle/held, 
+    # but only the completed that had changed in the last period of time. 
+    _completed_since = starttime - (TIMEOUT_MINS + 1) * 60
+    query =  "JobStatus < 3 || JobStatus > 4 "\
+                 " || EnteredCurrentStatus >= %(completed_since)d"\
+                 " || CRAB_PostJobLastUpdate >= %(completed_since)d"%{'completed_since': _completed_since}
     try:
-        query_iter = schedd.xquery() if not args.dry_run else []
+        query_iter = schedd.xquery(requirements=query) if not args.dry_run else []
         for job_ad in query_iter:
             dict_ad = None
             try:
