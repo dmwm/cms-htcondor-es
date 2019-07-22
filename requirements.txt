@@ -1,4 +1,5 @@
 htcondor==8.7.9
 elasticsearch==6.3.1
-CMSMonitoring==0.2.6
+#CMSMonitoring==0.2.6
+git+https://github.com/cronosnull/CMSMonitoring.git@python3#egg=CMSMonitoring
 requests==2.22.0
