@@ -2,12 +2,10 @@
 Methods for processing the history in a schedd queue.
 """
 
-import os
 import json
 import time
 import logging
 import datetime
-import tempfile
 import multiprocessing
 
 import classad

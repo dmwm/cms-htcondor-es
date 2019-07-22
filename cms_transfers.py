@@ -6,7 +6,6 @@ import time
 import urllib.request, urllib.parse, urllib.error
 import urllib.request, urllib.error, urllib.parse
 import pprint
-import socket
 import collections
 
 import influxdb

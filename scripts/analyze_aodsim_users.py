@@ -1,4 +1,3 @@
-import sys
 import sqlite3
 
 conn = sqlite3.connect("popdb.sqlite")

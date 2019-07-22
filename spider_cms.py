@@ -10,7 +10,6 @@ import signal
 import logging
 import argparse
 import multiprocessing
-import traceback
 
 try:
     import htcondor_es

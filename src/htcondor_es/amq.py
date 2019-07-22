@@ -1,6 +1,5 @@
 import time
 import logging
-import multiprocessing
 from CMSMonitoring.StompAMQ import StompAMQ
 
 _amq_interface = None

@@ -7,3 +7,5 @@ log/
 tmp/
 username
 password
+
+*.pyc

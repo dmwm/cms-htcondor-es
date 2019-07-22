@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 import os
-import json
 import ijson
 import collections
 import sqlite3

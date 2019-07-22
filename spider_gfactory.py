@@ -5,13 +5,10 @@ import sys
 import json
 import time
 import random
-import socket
 import classad
 import htcondor
 import datetime
 import tempfile
-import traceback
-import collections
 import multiprocessing
 
 

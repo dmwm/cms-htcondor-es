@@ -2,7 +2,6 @@
 Process the jobs in queue for given set of schedds.
 """
 
-import json
 import time
 import logging
 import resource
