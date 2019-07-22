@@ -38,7 +38,7 @@ def get_schedds():
 
 
 def clean_old_jobs(starttime, name, es):
-    collection_date = htcondor_es.convert_to_json.get_data_collection_time()
+    collection_date = starttime
     idx = htcondor_es.es.get_index(time.time(), template="osg")
     body = {
         "query": {
