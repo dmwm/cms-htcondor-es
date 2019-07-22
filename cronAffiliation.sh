@@ -3,6 +3,7 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export PYTHONPATH="$DIR/src/:$DIR/../CMSMonitoring/src/python:$PYTHONPATH"
 source "$DIR/venv/bin/activate"
+export REQUESTS_CA_BUNDLE="/etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt"
 create=$(cat <<EOF
 from htcondor_es.AffiliationManager import AffiliationManager, AffiliationManagerException
 try:
