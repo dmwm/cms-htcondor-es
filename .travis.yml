@@ -1,0 +1,13 @@
+language: python 
+python: 
+  - "3.6" 
+# command to install dependencies 
+install: 
+  - pip install -r requirements.txt
+  - pip install influxdb
+  - pip install --upgrade pylint bandit black
+# command to run tests 
+script: 
+  - black --check -t py36 #fail if is not correctly formated
+  - pylint -f colorized --disable=R,C,W --extension-pkg-whitelist=htcondor,classad  *.py src/htcondor_es 
+  - bandit -r . -n 3 -ll || true #do not mark the build as failed  
