@@ -97,10 +97,14 @@ class AffiliationManager:
         """
         if login:
             return self.__dir.get(login)
-        elif dn:
+        if dn:
             return self.__dn_dir.get(dn)
         return None
 
 
 class AffiliationManagerException(Exception):
+    """
+    Exception wrapper for problems that prevents us to obtain the affiliation info. 
+    """
+
     pass

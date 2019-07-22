@@ -573,7 +573,7 @@ except AffiliationManagerException as e:
     # Continue execution without affiliation.
 
 
-def make_list_from_string_field(ad, key, split_re="\s*,?\s*", default=None):
+def make_list_from_string_field(ad, key, split_re=r"\s*,?\s*", default=None):
     default = default or ["UNKNOWN"]
     try:
         return re.split(split_re, ad[key])
@@ -597,19 +597,19 @@ def get_creation_time_from_taskname(ad):
         return recordTime(ad)
 
 
-_cream_re = re.compile("CPUNumber = (\d+)")
-_nordugrid_re = re.compile("\(count=(\d+)\)")
-_camp_re = re.compile("[A-Za-z0-9_]+_[A-Z0-9]+-([A-Za-z0-9]+)-")
-_prep_re = re.compile("[A-Za-z0-9_]+_([A-Z]+-([A-Za-z0-9]+)-[0-9]+)")
-_rval_re = re.compile("[A-Za-z0-9]+_(RVCMSSW_[0-9]+_[0-9]+_[0-9]+)")
-_prep_prompt_re = re.compile("(PromptReco|Repack|Express)_[A-Za-z0-9]+_([A-Za-z0-9]+)")
+_cream_re = re.compile(r"CPUNumber = (\d+)")
+_nordugrid_re = re.compile(r"\(count=(\d+)\)")
+_camp_re = re.compile(r"[A-Za-z0-9_]+_[A-Z0-9]+-([A-Za-z0-9]+)-")
+_prep_re = re.compile(r"[A-Za-z0-9_]+_([A-Z]+-([A-Za-z0-9]+)-[0-9]+)")
+_rval_re = re.compile(r"[A-Za-z0-9]+_(RVCMSSW_[0-9]+_[0-9]+_[0-9]+)")
+_prep_prompt_re = re.compile(r"(PromptReco|Repack|Express)_[A-Za-z0-9]+_([A-Za-z0-9]+)")
 # Executable error messages in WMCore
-_wmcore_exe_exmsg = re.compile("^Chirp_WMCore_[A-Za-z0-9]+_Exception_Message$")
+_wmcore_exe_exmsg = re.compile(r"^Chirp_WMCore_[A-Za-z0-9]+_Exception_Message$")
 # 2016 reRECO; of the form cerminar_Run2016B-v2-JetHT-23Sep2016_8020_160923_164036_4747
-_rereco_re = re.compile("[A-Za-z0-9_]+_Run20[A-Za-z0-9-_]+-([A-Za-z0-9]+)")
-_generic_site = re.compile("^[A-Za-z0-9]+_[A-Za-z0-9]+_(.*)_")
-_cms_site = re.compile("CMS[A-Za-z]*_(.*)_")
-_cmssw_version = re.compile("CMSSW_((\d*)_(\d*)_.*)")
+_rereco_re = re.compile(r"[A-Za-z0-9_]+_Run20[A-Za-z0-9-_]+-([A-Za-z0-9]+)")
+_generic_site = re.compile(r"^[A-Za-z0-9]+_[A-Za-z0-9]+_(.*)_")
+_cms_site = re.compile(r"CMS[A-Za-z]*_(.*)_")
+_cmssw_version = re.compile(r"CMSSW_((\d*)_(\d*)_.*)")
 
 
 def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):

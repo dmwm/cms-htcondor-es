@@ -7,7 +7,7 @@ import sqlite3
 
 # See https://stackoverflow.com/questions/3424899/whats-the-simplest-way-to-subtract-a-month-from-a-date-in-python
 def monthdelta(date, delta):
-    m, y = (date.month + delta) % 12, date.year + ((date.month) + delta - 1) // 12
+    m, y = ((date.month + delta) % 12, date.year + ((date.month) + delta - 1) // 12)
     if not m:
         m = 12
     d = min(date.day, calendar.monthrange(y, m)[1])

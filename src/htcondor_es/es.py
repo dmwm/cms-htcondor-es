@@ -133,7 +133,7 @@ class ElasticInterface(object):
             ],
         }
         logging.info(
-            idx_clt.put_mapping(
+            idx_clt.put_mapping(  # pylint: disable = unexpected-keyword-arg
                 doc_type="job",
                 index=idx,
                 body=json.dumps({"properties": custom_mappings}),
@@ -153,7 +153,9 @@ class ElasticInterface(object):
         with open("last_mappings.json", "w") as jsonfile:
             json.dump(json.loads(body), jsonfile, indent=2, sort_keys=True)
 
-        result = self.handle.indices.create(index=idx, body=body, ignore=400)
+        result = self.handle.indices.create(  # pylint: disable = unexpected-keyword-arg
+            index=idx, body=body, ignore=400
+        )
         if result.get("status") != 400:
             logging.warning("Creation of index %s: %s" % (idx, str(result)))
         elif "already exists" not in result.get("error", "").get("reason", ""):
