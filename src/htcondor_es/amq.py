@@ -1,3 +1,4 @@
+import os
 import time
 import logging
 from CMSMonitoring.StompAMQ import StompAMQ
@@ -17,9 +18,11 @@ def get_amq_interface():
         _amq_interface = StompAMQ(
             username=username,
             password=password,
-            producer="condor",
-            topic="/topic/cms.jobmon.condor",
-            host_and_ports=[("cms-mb.cern.ch", 61313)],
+            producer=os.getenv("CMS_HTCONDOR_PRODUCER", "condor"),
+            topic=os.getenv("CMS_HTCONDOR_TOPIC", "/topic/cms.jobmon.condor"),
+            host_and_ports=[
+                (os.getenv("CMS_HTCONDOR_BROKER", "cms-mb.cern.ch"), 61313)
+            ],
             validation_schema="JobMonitoring.json",
         )
 
