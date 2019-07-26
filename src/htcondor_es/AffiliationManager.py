@@ -42,7 +42,12 @@ class AffiliationManager:
             self.__dn_dir = {
                 person["dn"]: person for person in list(self.__dir.values())
             }
-        except (IOError, requests.RequestException, requests.HTTPError) as cause:
+        except (
+            IOError,
+            requests.RequestException,
+            requests.HTTPError,
+            json.JSONDecodeError,
+        ) as cause:
             raise AffiliationManagerException from cause
 
     def loadOrCreateDirectory(self, recreate=False):
@@ -64,24 +69,26 @@ class AffiliationManager:
         """
         _tmp_dir = None
         if recreate:
-            with open(self.path, "w") as _dir_file:
-                response = requests.get(self.url)
-                response.raise_for_status()
-                _json = json.loads(response.text)
-                _tmp_dir = {}
-                for person in list(_json.values()):
-                    login = None
-                    for profile in person["profiles"]:
-                        if "login" in profile:
-                            login = profile["login"]
-                            break
-                    if login:
-                        _tmp_dir[login] = {
-                            "institute": person["institute"],
-                            "country": person["institute_country"],
-                            "dn": person["dn"],
-                        }
-                json.dump(_tmp_dir, _dir_file)
+            response = requests.get(self.url)
+            response.raise_for_status()
+            _json = json.loads(response.text)
+            _tmp_dir = {}
+            for person in list(_json.values()):
+                login = None
+                for profile in person["profiles"]:
+                    if "login" in profile:
+                        login = profile["login"]
+                        break
+                if login:
+                    _tmp_dir[login] = {
+                        "institute": person["institute"],
+                        "country": person["institute_country"],
+                        "dn": person["dn"],
+                    }
+            # Only override the file if the dict is not empty.
+            if _tmp_dir:
+                with open(self.path, "w") as _dir_file:
+                    json.dump(_tmp_dir, _dir_file)
         elif self.path.is_file():
             with open(self.path, "r") as dir_file:
                 _tmp_dir = json.load(dir_file)
