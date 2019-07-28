@@ -39,7 +39,7 @@ class AffiliationManager():
         try:
             self.__dir = self.loadOrCreateDirectory(recreate)
             self.__dn_dir = {person["dn"]:person for person in self.__dir.values()}
-        except (IOError, requests.RequestException, requests.HTTPError, json.JSONDecodeError) as cause:
+        except (IOError, requests.RequestException, requests.HTTPError, ValueError) as cause:
             raise AffiliationManagerException(cause)
             # python 3 note:
             # this line should be:
@@ -76,7 +76,7 @@ class AffiliationManager():
                         if 'login' in profile:
                             login = profile['login']
                             break
-                    if login:
+                    if login and 'institute' in person:
                         _tmp_dir[login] = {'institute': person['institute'],
                                            'country': person['institute_country'],
                                            'dn': person['dn']}
