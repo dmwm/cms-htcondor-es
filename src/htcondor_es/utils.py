@@ -27,7 +27,7 @@ def get_schedds(args=None, collectors=None):
     Return a list of schedd ads representing all the schedds in the pool.
     """
     collectors = collectors or [
-        "cmssrv221.fnal.gov:9620",
+        "cmssrv623.fnal.gov:9620",
         "cmsgwms-collector-tier0.cern.ch:9620",
         "cmssrv276.fnal.gov",
     ]
