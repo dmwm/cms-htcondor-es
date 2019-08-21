@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import os
 import re
 import json
 import time
@@ -578,7 +579,6 @@ postjob_status_decode = {
     "FINISHED": "finished",
 }
 
-_launch_time = int(time.time())
 
 # Initialize aff_mgr
 aff_mgr = None
@@ -641,8 +641,9 @@ def convert_to_json(
 ):
     if ad.get("TaskType") == "ROOT":
         return None
+    _launch_time = int(start_time or time.time())
     result = {}
-    result["RecordTime"] = recordTime(ad)
+    result["RecordTime"] = recordTime(ad, launch_time=_launch_time)
     result["DataCollection"] = ad.get("CompletionDate", 0) or _launch_time
     result["DataCollectionDate"] = result["RecordTime"]
 
@@ -958,7 +959,7 @@ def convert_to_json(
         return json.dumps(result)
 
 
-def recordTime(ad):
+def recordTime(ad, launch_time=None):
     """
     RecordTime falls back to launch time as last-resort and for jobs in the queue
 
@@ -974,7 +975,7 @@ def recordTime(ad):
         elif ad.get("EnteredCurrentStatus", 0) > 0:
             return ad["EnteredCurrentStatus"]
 
-    return _launch_time
+    return launch_time or int(time.time())
 
 
 def guessTaskType(ad):

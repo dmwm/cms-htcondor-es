@@ -10,10 +10,17 @@ def get_amq_interface():
     global _amq_interface
     if not _amq_interface:
         try:
-            username = open("username", "r").read().strip()
-            password = open("password", "r").read().strip()
+            username_file = os.getenv("CMS_AMQ_USERNAME_FILE", "username")
+            password_file = os.getenv("CMS_AMQ_PASSWORD_FILE", "password")
+            username = open(username_file, "r").read().strip()
+            password = open(password_file, "r").read().strip()
         except IOError:
             print("ERROR: Provide username/password for CERN AMQ")
+            print(
+                "username_file {}\npassword_file {}".format(
+                    username_file, password_file
+                )
+            )
             return []
         _amq_interface = StompAMQ(
             username=username,
