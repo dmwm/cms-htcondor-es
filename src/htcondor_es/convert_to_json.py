@@ -911,6 +911,9 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     # or completion date, we will set it using RemoteWallClockTime
     # and EnteredCurrentStatus.
     _pjst = result.get("CRAB_PostJobStatus", None)
+    # Sometimes there are some inconsistences in the value from CRAB
+    # to avoid this we can remove the spaces and make it uppercase.
+    _pjst = _pjst.strip().upper() if _pjst else None
     _status = result["Status"]
     if _pjst and (
         (_status == "Removed" and _pjst != "NOT RUN") or (_status == "Completed")
