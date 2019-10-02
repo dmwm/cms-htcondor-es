@@ -30,6 +30,7 @@ def get_schedds(args=None, collectors=None):
         "cmssrv623.fnal.gov:9620",
         "cmsgwms-collector-tier0.cern.ch:9620",
         "cmssrv276.fnal.gov",
+        "cmsgwms-collector-itb.cern.ch",
     ]
     schedd_query = classad.ExprTree("!isUndefined(CMSGWMS_Type)")
 
