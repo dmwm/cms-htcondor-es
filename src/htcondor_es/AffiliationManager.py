@@ -79,7 +79,7 @@ class AffiliationManager:
                     if "login" in profile:
                         login = profile["login"]
                         break
-                if login:
+                if login and "institute" in person:
                     _tmp_dir[login] = {
                         "institute": person["institute"],
                         "country": person["institute_country"],

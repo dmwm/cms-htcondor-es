@@ -573,7 +573,7 @@ except AffiliationManagerException as e:
     # Continue execution without affiliation.
 
 
-def make_list_from_string_field(ad, key, split_re=r"\s*,?\s*", default=None):
+def make_list_from_string_field(ad, key, split_re=r"[\s,]+\s*", default=None):
     default = default or ["UNKNOWN"]
     try:
         return re.split(split_re, ad[key])

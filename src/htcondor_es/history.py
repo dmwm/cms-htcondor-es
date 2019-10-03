@@ -244,8 +244,12 @@ def process_histories(schedd_ads, starttime, pool, args, metadata=None):
 
     def _chkp_updater():
         while True:
-            job = checkpoint_queue.get()
-            if job is None:  # Swallow poison pill
+            try:
+                job = checkpoint_queue.get()
+                if job is None:  # Swallow poison pill
+                    break
+            except EOFError as error:
+                logging.error("EOFError - Nothing to consume left in the queue %s", error)
                 break
             update_checkpoint(*job)
 
