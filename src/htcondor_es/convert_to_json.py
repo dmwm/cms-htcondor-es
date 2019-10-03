@@ -490,6 +490,7 @@ running_fields = set(
         "InputData",
         "InputGB",
         "JobPrio",
+        "JobCurrentStartDate",
         "JobLastStartDate",
         "KEvents",
         "MegaEvents",
