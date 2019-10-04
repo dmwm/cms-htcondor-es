@@ -451,6 +451,7 @@ running_fields = set(
         "BenchmarkJobDB12",
         "Campaign",
         "CMS_JobType",
+        "CMS_Pool",
         "CMSGroups",
         "CMSPrimaryDataTier",
         "CMSSWKLumis",
@@ -617,7 +618,7 @@ _cms_site = re.compile(r"CMS[A-Za-z]*_(.*)_")
 _cmssw_version = re.compile(r"CMSSW_((\d*)_(\d*)_.*)")
 
 
-def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
+def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False, pool_name="Unknown"):
     if ad.get("TaskType") == "ROOT":
         return None
     result = {}
@@ -626,7 +627,7 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False):
     result["DataCollectionDate"] = result["RecordTime"]
 
     result["ScheddName"] = ad.get("GlobalJobId", "UNKNOWN").split("#")[0]
-
+    result["CMS_Pool"] = pool_name
     # Determine type
     if cms:
         result["Type"] = ad.get("CMS_Type", "unknown").lower()

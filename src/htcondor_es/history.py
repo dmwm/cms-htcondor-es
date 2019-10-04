@@ -26,6 +26,7 @@ def process_schedd(
     Given a schedd, process its entire set of history since last checkpoint.
     """
     my_start = time.time()
+    pool_name = schedd_ad.get("CMS_Pool", "Unknown")
     if time_remaining(starttime) < 0:
         message = (
             "No time remaining to process %s history; exiting." % schedd_ad["Name"]
@@ -66,7 +67,7 @@ def process_schedd(
         for job_ad in history_iter:
             dict_ad = None
             try:
-                dict_ad = convert_to_json(job_ad, return_dict=True)
+                dict_ad = convert_to_json(job_ad, return_dict=True, pool_name=pool_name)
             except Exception as e:
                 message = "Failure when converting document on %s history: %s" % (
                     schedd_ad["Name"],
@@ -249,7 +250,7 @@ def process_histories(schedd_ads, starttime, pool, args, metadata=None):
                 if job is None:  # Swallow poison pill
                     break
             except EOFError as error:
-                logging.error("EOFError - Nothing to consume left in the queue %s", error)
+                logging.warning("EOFError - Nothing to consume left in the queue %s", error)
                 break
             update_checkpoint(*job)
 

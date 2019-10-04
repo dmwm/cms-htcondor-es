@@ -15,14 +15,26 @@ import smtplib
 import subprocess
 import email.mime.text
 import logging.handlers
+import json
 
 import classad
 import htcondor
 
 TIMEOUT_MINS = 11
 
+def get_schedds_from_file(args=None, collectors_file=None):
+    schedds = []
+    try:
+        pools = json.load(collectors_file)
+        for pool in pools:
+            schedds.extend( get_schedds(args, collectors=pools[pool], pool_name=pool))
+        
+    except (IOError, json.JSONDecodeError):
+        schedds = get_schedds(args)
+    return schedds
+    
 
-def get_schedds(args=None, collectors=None):
+def get_schedds(args=None, collectors=None, pool_name="Unknown"):
     """
     Return a list of schedd ads representing all the schedds in the pool.
     """
@@ -49,6 +61,7 @@ def get_schedds(args=None, collectors=None):
 
         for schedd in schedds:
             try:
+                schedd["CMS_Pool"] = pool_name
                 schedd_ads[schedd["Name"]] = schedd
             except KeyError:
                 pass

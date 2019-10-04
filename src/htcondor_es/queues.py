@@ -114,6 +114,7 @@ class ListenAndBunch(multiprocessing.Process):
 
 def query_schedd_queue(starttime, schedd_ad, queue, args):
     my_start = time.time()
+    pool_name = schedd_ad.get("CMS_Pool", "Unknown")
     logging.info("Querying %s queue for jobs.", schedd_ad["Name"])
     if time_remaining(starttime) < 10:
         message = (
@@ -147,7 +148,7 @@ def query_schedd_queue(starttime, schedd_ad, queue, args):
             dict_ad = None
             try:
                 dict_ad = convert_to_json(
-                    job_ad, return_dict=True, reduce_data=not args.keep_full_queue_data
+                    job_ad, return_dict=True, reduce_data=not args.keep_full_queue_data, pool_name=pool_name
                 )
             except Exception as e:
                 message = "Failure when converting document on %s queue: %s" % (

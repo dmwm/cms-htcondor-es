@@ -19,7 +19,7 @@ except ImportError:
 
 import htcondor_es.history
 import htcondor_es.queues
-from htcondor_es.utils import get_schedds, set_up_logging, send_email_alert
+from htcondor_es.utils import get_schedds, get_schedds_from_file, set_up_logging, send_email_alert
 from htcondor_es.utils import collect_metadata, TIMEOUT_MINS
 
 
@@ -32,7 +32,12 @@ def main_driver(args):
     signal.alarm(TIMEOUT_MINS * 60 + 60)
 
     # Get all the schedd ads
-    schedd_ads = get_schedds(args)
+    schedd_ads = []
+    if args.collectors_file:
+        schedd_ads = get_schedds_from_file(args, collectors_file=args.collectors_file)
+        del args.collectors_file #sending a file through postprocessing will cause problems. 
+    else:
+        schedd_ads = get_schedds(args, collectors=args.collectors)
     logging.warning("&&& There are %d schedds to query.", len(schedd_ads))
 
     pool = multiprocessing.Pool(processes=args.query_pool_size)
@@ -226,7 +231,27 @@ def main():
         dest="email_alerts",
         help="Email addresses for alerts [default: none]",
     )
-
+    parser.add_argument(
+        "--collectors",
+        default=[
+        "cmssrv623.fnal.gov:9620",
+        "cmsgwms-collector-tier0.cern.ch:9620",
+        "cmssrv276.fnal.gov",
+        "cmsgwms-collector-itb.cern.ch",
+        "vocms0840.cern.ch"
+        ],
+        action="append",
+        dest="collectors",
+        help="Collectors' addresses",
+    )
+    parser.add_argument(
+        "--collectors_file",
+        default=None,
+        action="store",
+        type=argparse.FileType('r'),
+        dest="collectors_file",
+        help="FIle defining the pools and collectors",
+    )
     args = parser.parse_args()
     set_up_logging(args)
 
