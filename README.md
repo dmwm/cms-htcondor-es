@@ -7,6 +7,7 @@ a HTCondor pool to ElasticSearch.  It queries for both historical and current
 job ClassAds, converts them to a JSON document, and uploads them to the
 local ElasticSearch instance.
 
+It will ignore the jobs with the value DONOTMONIT in the classsad CMS_Type.
 
 The majority of the logic is in the conversion of ClassAds to values that
 are immediately useful in Kibana / ElasticSearch.  A significant portion

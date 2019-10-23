@@ -39,9 +39,11 @@ def process_schedd(
 
     metadata = metadata or {}
     schedd = htcondor.Schedd(schedd_ad)
-    _q = (
-        "EnteredCurrentStatus >= %(last_completion)d "
-        "|| CRAB_PostJobLastUpdate >= %(last_completion)d"
+    _q = ("""
+        ( EnteredCurrentStatus >= %(last_completion)d 
+        || CRAB_PostJobLastUpdate >= %(last_completion)d )
+        && (CMS_Type != "DONOTMONIT")
+        """
     )
     history_query = classad.ExprTree(_q % {"last_completion": last_completion})
     logging.info(
