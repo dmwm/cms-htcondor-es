@@ -618,7 +618,9 @@ _cms_site = re.compile(r"CMS[A-Za-z]*_(.*)_")
 _cmssw_version = re.compile(r"CMSSW_((\d*)_(\d*)_.*)")
 
 
-def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False, pool_name="Unknown"):
+def convert_to_json(
+    ad, cms=True, return_dict=False, reduce_data=False, pool_name="Unknown"
+):
     if ad.get("TaskType") == "ROOT":
         return None
     result = {}
@@ -662,10 +664,10 @@ def convert_to_json(ad, cms=True, return_dict=False, reduce_data=False, pool_nam
         )[-1]
         result["Campaign"] = guessCampaign(ad, analysis)
         result["TaskType"] = (
-            guessTaskType(ad) if not analysis else result["CMS_JobType"]
+            result.get("CMS_TaskType",
+            guessTaskType(ad) if not analysis else result["CMS_JobType"])
         )
         result["Workflow"] = guessWorkflow(ad, analysis)
-
     now = time.time()
     if ad.get("JobStatus") == 2 and (ad.get("EnteredCurrentStatus", now + 1) < now):
         ad["RemoteWallClockTime"] = int(now - ad["EnteredCurrentStatus"])

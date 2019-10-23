@@ -72,7 +72,9 @@ CMS-specific attributes:
   Example: `HIG`.
 - `Type`: the kind of job run; `analysis` or `production`.
 - `TaskType`: A more detailed task type classification, based on the CMSSW config.
-  Typically, `analysis`, `DIGI`, `RECO`, `DIGI-RECO`, `GEN-SIM`, or `Cleanup`.
+  Typically, `analysis`, `DIGI`, `RECO`, `DIGI-RECO`, `GEN-SIM`, or `Cleanup`. 
+  Is set to the CMS_TaskType classad if exists, otherwise it is infered for production jobs.
+- `CMS_Pool`: Condor pool to which the scheduler belongs. e.g. Global, Volunteer, Tier0,
 - `MegaEvents`: The number of events processed by the job, in millions.
 - `KEvents`: The number of events processed by the job, in thousands.
 - `CMSSWKLumis`: The number of lumi sections processed by the job, in thousands.
