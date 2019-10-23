@@ -633,8 +633,9 @@ def convert_to_json(
     # Determine type
     if cms:
         result["Type"] = ad.get("CMS_Type", "unknown").lower()
-    analysis = result.get("Type") == "analysis"
-
+    analysis = (
+        result.get("Type") == "analysis" or result.get("CMS_JobType") == "Analysis"
+    )
     if "CRAB_Id" in ad:
         result["FormattedCrabId"] = get_formatted_CRAB_Id(ad.get("CRAB_Id"))
 
