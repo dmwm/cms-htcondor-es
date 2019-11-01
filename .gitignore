@@ -5,6 +5,7 @@ checkpoint*.json*
 last_mappings.json
 log/
 tmp/
+etc/*
 username
 password
 venv
