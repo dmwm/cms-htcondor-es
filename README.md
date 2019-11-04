@@ -126,3 +126,47 @@ CMS-specific attributes:
 In general, the data from CMSSW itself (number of events, data read and written)
 may be missing.  This information depends on a sufficiently recent version of
 CMSSW and HTCondor.
+
+## Configuration
+
+```plain
+usage: spider_cms.py [-h] [--process_queue] [--feed_es] [--feed_es_for_queues]
+                     [--feed_amq] [--schedd_filter SCHEDD_FILTER]
+                     [--skip_history] [--read_only] [--dry_run]
+                     [--max_documents_to_process MAX_DOCUMENTS_TO_PROCESS]
+                     [--keep_full_queue_data]
+                     [--amq_bunch_size AMQ_BUNCH_SIZE]
+                     [--es_bunch_size ES_BUNCH_SIZE]
+                     [--query_queue_batch_size QUERY_QUEUE_BATCH_SIZE]
+                     [--upload_pool_size UPLOAD_POOL_SIZE]
+                     [--query_pool_size QUERY_POOL_SIZE]
+                     [--es_hostname ES_HOSTNAME] [--es_port ES_PORT]
+                     [--es_index_template ES_INDEX_TEMPLATE]
+                     [--log_dir LOG_DIR] [--log_level LOG_LEVEL]
+                     [--email_alerts EMAIL_ALERTS] [--collectors COLLECTORS]
+                     [--collectors_file COLLECTORS_FILE]
+
+```
+
+The collectors file is a json file with the pools and a list of the collectors: 
+
+```json
+{
+    "Global":[ "thefirstcollector.example.com:8080","thesecondcollector.other.com"],
+    "Volunteer":["next.example.com"],
+    "ITB":["newcollector.virtual.com"]
+}
+```
+
+Example of the command:
+
+```bash
+# To process the condor queues without sending the documents to es-cms
+python spider_cms.py --log_dir $LOGDIR --log_level WARNING --feed_amq\
+                     --email_alerts 'mail@example.com'\
+                     --skip_history --process_queue\
+                     --query_queue_batch_size 100 --query_pool_size 16\
+                     --upload_pool_size 8\
+                     --collectors_file $WORKDIR/etc/collectors.json
+```
+

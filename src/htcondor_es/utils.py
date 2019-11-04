@@ -38,12 +38,7 @@ def get_schedds(args=None, collectors=None, pool_name="Unknown"):
     """
     Return a list of schedd ads representing all the schedds in the pool.
     """
-    collectors = collectors or [
-        "cmssrv623.fnal.gov:9620",
-        "cmsgwms-collector-tier0.cern.ch:9620",
-        "cmssrv276.fnal.gov",
-        "cmsgwms-collector-itb.cern.ch",
-    ]
+    collectors = collectors or []
     schedd_query = classad.ExprTree("!isUndefined(CMSGWMS_Type)")
 
     schedd_ads = {}
