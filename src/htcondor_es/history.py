@@ -10,6 +10,7 @@ import multiprocessing
 
 import classad
 import htcondor
+import elasticsearch
 
 import htcondor_es.es
 import htcondor_es.amq
@@ -273,7 +274,15 @@ def process_histories(schedd_ads, starttime, pool, args, metadata=None):
                 send_email_alert(
                     args.email_alerts, "spider_cms history timeout warning", message
                 )
-
+            except elasticsearch.exceptions.TransportError:
+                message = (
+                    "Transport error while sending history data of %s; ignoring progress."
+                    % name
+                )
+                logging.error(message)
+                send_email_alert(
+                    args.email_alerts, "spider_cms history transport error warning", message
+                )
         else:
             timed_out = True
             break
