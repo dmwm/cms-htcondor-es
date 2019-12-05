@@ -24,10 +24,13 @@ TIMEOUT_MINS = 11
 
 def get_schedds_from_file(args=None, collectors_file=None):
     schedds = []
+    names = set()
     try:
         pools = json.load(collectors_file)
         for pool in pools:
-            schedds.extend( get_schedds(args, collectors=pools[pool], pool_name=pool))
+            _pool_schedds = get_schedds(args, collectors=pools[pool], pool_name=pool)
+            schedds.extend([s for s in _pool_schedds if s.get("Name") not in names])
+            names.update([s.get("Name") for s in _pool_schedds])
         
     except (IOError, json.JSONDecodeError):
         schedds = get_schedds(args)
