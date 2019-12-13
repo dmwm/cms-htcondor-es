@@ -6,6 +6,7 @@ import json
 import time
 import logging
 import datetime
+import traceback
 import multiprocessing
 
 import classad
@@ -76,6 +77,8 @@ def process_schedd(
                     schedd_ad["Name"],
                     str(e),
                 )
+                exc = traceback.format_exc()
+                message += '\n{}'.format(exc)
                 logging.warning(message)
                 if not sent_warnings:
                     send_email_alert(
@@ -146,13 +149,18 @@ def process_schedd(
                 break
 
     except RuntimeError:
-        logging.error("Failed to query schedd for job history: %s", schedd_ad["Name"])
+        message = "Failed to query schedd for job history: %s" % schedd_ad["Name"]
+        exc = traceback.format_exc()
+        message += '\n{}'.format(exc)
+        logging.error(message)
 
     except Exception as exn:
         message = "Failure when processing schedd history query on %s: %s" % (
             schedd_ad["Name"],
             str(exn),
         )
+        exc = traceback.format_exc()
+        message += '\n{}'.format(exc)
         logging.exception(message)
         send_email_alert(
             args.email_alerts, "spider_cms schedd history query error", message
@@ -270,6 +278,8 @@ def process_histories(schedd_ads, starttime, pool, args, metadata=None):
             except multiprocessing.TimeoutError:
                 # This implies that the checkpoint hasn't been updated
                 message = "Schedd %s history timed out; ignoring progress." % name
+                exc = traceback.format_exc()
+                message += '\n{}'.format(exc)
                 logging.error(message)
                 send_email_alert(
                     args.email_alerts, "spider_cms history timeout warning", message
@@ -279,6 +289,8 @@ def process_histories(schedd_ads, starttime, pool, args, metadata=None):
                     "Transport error while sending history data of %s; ignoring progress."
                     % name
                 )
+                exc = traceback.format_exc()
+                message += '\n{}'.format(exc)
                 logging.error(message)
                 send_email_alert(
                     args.email_alerts, "spider_cms history transport error warning", message
