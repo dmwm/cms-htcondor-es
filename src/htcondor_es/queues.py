@@ -317,6 +317,16 @@ def process_queues(schedd_ads, starttime, pool, args, metadata=None):
             )
             futures.append(("UPLOADER_AMQ", future))
 
+        if args.feed_vm and not args.read_only:
+            data_bunch = [
+                (id_, convert_dates_to_millisecs(dict_ad)) for id_, dict_ad in bunch
+            ]
+            future = upload_pool.apply_async(
+                htcondor_es.vm.post_ads,
+                args=(args.vm_url, data_bunch, metadata)
+            )
+            futures.append(("UPLOADER_VM", future))
+
         logging.info("Starting new uploader, %d items in queue" % output_queue.qsize())
 
     listener.join()

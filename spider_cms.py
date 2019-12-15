@@ -98,6 +98,9 @@ def main():
     parser.add_argument(
         "--feed_amq", action="store_true", dest="feed_amq", help="Feed to CERN AMQ"
     )
+    parser.add_argument(
+        "--feed_vm", action="store_true", dest="feed_vm", help="Feed to CMS Monitoring VictoriaMetrics"
+    )
 
     parser.add_argument(
         "--schedd_filter",
@@ -209,6 +212,14 @@ def main():
             "Needs to start with 'cms' "
             "[default: %(default)s]"
         ),
+    )
+    parser.add_argument(
+        "--vm_url",
+        default="http://cms-monitoring.cern.ch:30422",
+        type=str,
+        dest="vm_url",
+        help="CMS Monitoring VM url to be used "
+        "[default: %(default)s]",
     )
     parser.add_argument(
         "--log_dir",
