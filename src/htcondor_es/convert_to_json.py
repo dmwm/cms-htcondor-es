@@ -565,7 +565,7 @@ universe = {
 postjob_status_decode = {
     "NOT RUN": "postProc",
     "TRANSFERRING": "transferring",
-    "COOLOFF": "toretry",
+    "COOLOFF": "toRetry",
     "FAILED": "failed",
     "FINISHED": "finished",
 }
