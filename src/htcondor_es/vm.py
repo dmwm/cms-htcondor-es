@@ -17,7 +17,7 @@ def filter_attrs(ads, attrs=None):
     # default mode
     return doc
 
-def post_ads(url, ads, metadata=None, attrs=None):
+def post_ads(url, ads, metadata=None, vm_attrs=None):
     "Post classAds docs into VM url"
     if not len(ads):
         logging.warning("No new documents found")
@@ -25,7 +25,7 @@ def post_ads(url, ads, metadata=None, attrs=None):
 
     starttime = time.time()
     failed = []
-    data = [filter_attrs(ad, attrs) for _, ad in ads]
+    data = [filter_attrs(ad, vm_attrs) for _, ad in ads]
     req = requests.post(url, data)
     if req.status_code != 200:
         failed = data

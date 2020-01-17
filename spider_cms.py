@@ -101,6 +101,13 @@ def main():
     parser.add_argument(
         "--feed_vm", action="store_true", dest="feed_vm", help="Feed to CMS Monitoring VictoriaMetrics"
     )
+    parser.add_argument(
+        "--vm_attrs",
+        default="",
+        type=str,
+        dest="vm_attrs",
+        help="Comma separated list of attributes to store in VM"
+    )
 
     parser.add_argument(
         "--schedd_filter",

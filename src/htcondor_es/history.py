@@ -118,7 +118,8 @@ def process_schedd(
                             (id_, convert_dates_to_millisecs(dict_ad))
                             for id_, dict_ad in ad_list
                         ]
-                        htcondor_es.vm.post_ads(args.vm_url, data, metadata=metadata)
+                        vm_attrs = [a.strip() for a in args.vm_attrs.split(',')]
+                        htcondor_es.vm.post_ads(args.vm_url, data, metadata=metadata, vm_attrs=vm_attrs)
 
                 logging.debug(
                     "...posting %d ads from %s (process_schedd)",

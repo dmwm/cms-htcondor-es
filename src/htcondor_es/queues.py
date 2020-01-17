@@ -322,9 +322,10 @@ def process_queues(schedd_ads, starttime, pool, args, metadata=None):
             data_bunch = [
                 (id_, convert_dates_to_millisecs(dict_ad)) for id_, dict_ad in bunch
             ]
+            vm_attrs = [a.strip() for a in args.vm_attrs.split(',')]
             future = upload_pool.apply_async(
                 htcondor_es.vm.post_ads,
-                args=(args.vm_url, data_bunch, metadata)
+                args=(args.vm_url, data_bunch, metadata, vm_attrs)
             )
             futures.append(("UPLOADER_VM", future))
 
