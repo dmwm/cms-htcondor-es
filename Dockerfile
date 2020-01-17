@@ -1,6 +1,13 @@
-FROM cern/cc7-base
-ADD . /cms-htcondor-es
-RUN yum install -y git python36-virtualenv
-RUN virtualenv-3 -p python36 /cms-htcondor-es/venv
-RUN source /cms-htcondor-es/venv/bin/activate && pip install -r /cms-htcondor-es/requirements.txt
-
+FROM cern/cc7-base:20190724
+COPY ./requirements.txt /cms-htcondor-es/requirements.txt
+RUN yum install -y git python36 python36-virtualenv python36-pip && \
+ln -fs /usr/bin/python3 /usr/bin/python && \
+ln -fs /usr/bin/pip3.6 /usr/bin/pip &&\
+pip install -r /cms-htcondor-es/requirements.txt
+COPY . /cms-htcondor-es
+RUN useradd --uid 1414 -ms /bin/bash spider &&\
+chown -R spider /cms-htcondor-es
+USER spider
+ENV PYTHONPATH "${PYTHONPATH}:/cms-htcondor-es/src"
+WORKDIR /cms-htcondor-es
+ENTRYPOINT ["/usr/bin/python", "/cms-htcondor-es/spider_cms.py"]
