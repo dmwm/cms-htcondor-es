@@ -14,6 +14,7 @@ import htcondor
 import elasticsearch
 
 import htcondor_es.es
+import htcondor_es.vm
 import htcondor_es.amq
 from htcondor_es.utils import send_email_alert, time_remaining, TIMEOUT_MINS
 from htcondor_es.convert_to_json import convert_to_json
