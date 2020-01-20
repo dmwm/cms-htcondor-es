@@ -577,7 +577,7 @@ _launch_time = int(time.time())
 aff_mgr = None
 try:
     aff_mgr = AffiliationManager(
-        recreate_older_days=10,
+        recreate=False,
         dir_file=os.getenv(
             "AFFILIATION_DIR_LOCATION",
             AffiliationManager._AffiliationManager__DEFAULT_DIR_PATH,

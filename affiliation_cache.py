@@ -1,3 +1,18 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Author: Christian Ariza <christian.ariza AT gmail [DOT] com>
+# This script uses the AffiliationManager class to create or update
+# the affiliation cache file (an indexed structure of username/login
+# and affiliation institution and country from cric data)
+# How to run:
+#       python affiliation_cache.py
+# This will create a file in the users' home called .affiliation_dir.json,
+# if the file already exists it will overwrite it if and only if it's older
+# than one day. You can specify the location and the recreation period using
+# the optional parameters:
+#       python affiliation_cache.py --output /htcondor_es/aff_dir.json --days 3
+# Thiis script can be setup as a daily cronjob and use the parameters to modify
+# how often the script is updated. 
 import os
 import argparse
 import traceback
@@ -21,7 +36,7 @@ def generate_affiliation_cache(output_file, days=1):
         print("There was an error creating the affiliation manager")
 
 
-if __name__ == "main":
+if __name__ == "__main__":
     output_file = os.getenv(
         "AFFILIATION_DIR_LOCATION",
         AffiliationManager._AffiliationManager__DEFAULT_DIR_PATH,
