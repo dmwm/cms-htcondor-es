@@ -9,5 +9,6 @@ RUN useradd --uid 1414 -ms /bin/bash spider &&\
 chown -R spider /cms-htcondor-es
 USER spider
 ENV PYTHONPATH "${PYTHONPATH}:/cms-htcondor-es/src"
+ENV REQUESTS_CA_BUNDLE "/etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt"
 WORKDIR /cms-htcondor-es
 ENTRYPOINT ["/usr/bin/python", "/cms-htcondor-es/spider_cms.py"]
