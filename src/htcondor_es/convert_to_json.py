@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import os
 import re
 import json
 import time
@@ -575,7 +576,13 @@ _launch_time = int(time.time())
 # Initialize aff_mgr
 aff_mgr = None
 try:
-    aff_mgr = AffiliationManager(recreate=False)
+    aff_mgr = AffiliationManager(
+        recreate=False,
+        dir_file=os.getenv(
+            "AFFILIATION_DIR_LOCATION",
+            AffiliationManager._AffiliationManager__DEFAULT_DIR_PATH,
+        ),
+    )
 except AffiliationManagerException as e:
     # If its not possible to create the affiliation manager
     # Log it
