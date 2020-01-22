@@ -22,9 +22,3 @@ do
         echo "Unable to create $ofile in $i attempt"
     fi
 done
-if [ -f $ofile ]; then
-    echo "Create k8s affliations configmap"
-    kubectl create configmap affiliations \
-        --from-file=$ofile --save-config --dry-run -o yaml | \
-        kubectl apply --validate=false -f -
-fi
