@@ -938,7 +938,7 @@ def convert_to_json(
         if "CompletionDate" not in result:
             result["CompletionDate"] = result.get("EnteredCurrentStatus")
         if "CommittedTime" not in result or result.get("CommittedTime", 0) == 0:
-            result["CommittedTime"] = result.get("RemoteWallClockTime", 0)
+            result["CommittedTime"] = result.get("RemoteWallClockTime")
     elif 'CRAB_Id' in result: #If is an analysis or HC test task. 
         result["CRAB_PostJobStatus"] = _status
 
