@@ -452,6 +452,7 @@ running_fields = set(
         "AffiliationCountry",
         "BenchmarkJobDB12",
         "Campaign",
+        "CMS_CampaignType",
         "CMS_JobType",
         "CMS_JobRetryCount",
         "CMS_Pool",
@@ -675,6 +676,7 @@ def convert_to_json(
             "/", 1
         )[-1]
         result["Campaign"] = guessCampaign(ad, analysis)
+        result["CMS_CampaignType"] = guess_campaign_type(ad, analysis)
         result["TaskType"] = (
             result.get("CMS_TaskType",
             guessTaskType(ad) if not analysis else result["CMS_JobType"])
@@ -1035,7 +1037,28 @@ def guessCampaign(ad, analysis):
             return m.groups()[0] + "Reprocessing"
 
     return camp
-
+    
+def guess_campaign_type(ad, analysis):
+    """
+        Based on the request name return a campaign type.
+        The campaign type is based on the classification defined at
+        https://its.cern.ch/jira/browse/CMSMONIT-174#comment-3050384
+    """
+    camp = ad.get("WMAgent_RequestName", "UNKNOWN")
+    if analysis:
+        return "Analysis"
+    elif re.match(r".*RunIISummer19UL.*", camp):
+        return "MC Ultralegacy"
+    elif re.match(r".*UltraLegacy.*", camp):
+        return "Data Ultralegacy"
+    elif re.match(r".*Phase2.*", camp):
+        return "Phase2 requests"
+    elif re.match(r".*Run3.*", camp):
+        return "Run3 requests"
+    elif re.match(r".*RunII(Summer|Fall|Autumn)1[5-8].*", camp):
+        return "Run2 requests"
+    else:
+        return "UNKNOWN"
 
 def guessWorkflow(ad, analysis):
     prep = ad.get("WMAgent_RequestName", "UNKNOWN")
