@@ -3,7 +3,7 @@ services:
   spider-worker:
     build: .
     image: spider-worker
-    user: 1500:1500
+    user: 1414:1414
     volumes:
       - shared_spider:/cms_shared
     depends_on:

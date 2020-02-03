@@ -637,7 +637,7 @@ _cmssw_version = re.compile(r"CMSSW_((\d*)_(\d*)_.*)")
 
 
 def convert_to_json(
-    ad, cms=True, return_dict=False, reduce_data=False, pool_name="Unknown"
+    ad, cms=True, return_dict=False, reduce_data=False, pool_name="Unknown", start_time=None
 ):
     if ad.get("TaskType") == "ROOT":
         return None

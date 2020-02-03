@@ -10,5 +10,3 @@ username
 password
 venv
 *.pyc
-
-*.pyc
