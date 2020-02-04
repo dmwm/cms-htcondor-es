@@ -91,7 +91,7 @@ def get_server_handle(args=None):
 class ElasticInterface(object):
     """Interface to elasticsearch"""
 
-    def __init__(self, hostname="es-cms.cern.ch", port=9203):
+    def __init__(self, hostname="localhost", port=9203):
         domain = socket.getfqdn().split(".", 1)[-1]
         if domain == "cern.ch":
             passwd = ""
