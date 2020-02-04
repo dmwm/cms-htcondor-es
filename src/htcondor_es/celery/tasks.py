@@ -6,7 +6,11 @@ import htcondor
 from celery import group
 from itertools import zip_longest, islice
 import collections
-from htcondor_es.convert_to_json import convert_to_json, unique_doc_id
+from htcondor_es.convert_to_json import (
+    convert_to_json,
+    unique_doc_id,
+    convert_dates_to_millisecs,
+)
 from htcondor_es.utils import (
     get_schedds,
     set_up_logging,
@@ -28,21 +32,28 @@ def query_schedd(
     chunk_size=50,
     bunch=20000,
 ):
+    pool_name = schedd_ad.get("CMS_Pool", "Unknown")
     if not start_time:
         start_time = time.time()
     _completed_since = start_time - (TIMEOUT_MINS + 1) * 60
-    query = (
-        "JobStatus < 3 || JobStatus > 4 "
-        " || EnteredCurrentStatus >= %(completed_since)d"
-        " || CRAB_PostJobLastUpdate >= %(completed_since)d"
-        % {"completed_since": _completed_since}
-    )
+    query = """
+         (JobStatus < 3 || JobStatus > 4 
+         || EnteredCurrentStatus >= %(completed_since)d
+         || CRAB_PostJobLastUpdate >= %(completed_since)d
+         ) && (CMS_Type != "DONOTMONIT")
+         """ % {
+        "completed_since": _completed_since
+    }
     schedd = htcondor.Schedd(schedd_ad)
     query_iter = schedd.xquery(requirements=query) if not dry_run else []
     responses = []
     for docs_bunch in grouper(query_iter, bunch):
         process_and_send = group(
-            process_docs.s(list(filter(None, X)), reduce_data=not keep_full_queue_data)
+            process_docs.s(
+                list(filter(None, X)),
+                reduce_data=not keep_full_queue_data,
+                pool_name=pool_name,
+            )
             for X in grouper(docs_bunch, chunk_size)
         )
         responses.append(process_and_send.apply_async())
@@ -50,13 +61,17 @@ def query_schedd(
 
 
 @app.task
-def process_docs(docs, reduce_data=True):
+def process_docs(docs, reduce_data=True, pool_name="UNKNOWN"):
     converted_docs = []
     for doc in docs:
         try:
-            c_doc = convert_to_json(doc, return_dict=True, reduce_data=reduce_data)
+            c_doc = convert_to_json(
+                doc, return_dict=True, reduce_data=reduce_data, pool_name=pool_name
+            )
             if c_doc:
-                converted_docs.append((unique_doc_id(c_doc), c_doc))
+                converted_docs.append(
+                    (unique_doc_id(c_doc), convert_dates_to_millisecs(c_doc))
+                )
         except Exception as e:
             traceback.print_exc()
             continue

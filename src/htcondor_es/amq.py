@@ -43,6 +43,7 @@ def post_ads(ads, metadata=None):
 
     metadata = metadata or {}
     interface = get_amq_interface()
+    print(interface)
     list_data = []
     for id_, ad in ads:
         notif, _, _ = interface.make_notification(

@@ -11,6 +11,7 @@ import datetime
 import zlib
 import base64
 import htcondor
+import traceback
 from htcondor_es.AffiliationManager import (
     AffiliationManager,
     AffiliationManagerException,
@@ -594,6 +595,7 @@ except AffiliationManagerException as e:
     # If its not possible to create the affiliation manager
     # Log it
     logging.error("There were an error creating the affiliation manager, %s", e)
+    traceback.print_exc()
     # Continue execution without affiliation.
 
 
@@ -637,7 +639,12 @@ _cmssw_version = re.compile(r"CMSSW_((\d*)_(\d*)_.*)")
 
 
 def convert_to_json(
-    ad, cms=True, return_dict=False, reduce_data=False, pool_name="Unknown", start_time=None
+    ad,
+    cms=True,
+    return_dict=False,
+    reduce_data=False,
+    pool_name="Unknown",
+    start_time=None,
 ):
     if ad.get("TaskType") == "ROOT":
         return None
@@ -946,7 +953,7 @@ def convert_to_json(
         if "CompletionDate" not in result:
             result["CompletionDate"] = result.get("EnteredCurrentStatus")
         if "CommittedTime" not in result or result.get("CommittedTime", 0) == 0:
-            result["CommittedTime"] = result.get("RemoteWallClockTime")
+            result["CommittedTime"] = result.get("RemoteWallClockTime", 0)
     elif "CRAB_Id" in result:  # If is an analysis or HC test task.
         result["CRAB_PostJobStatus"] = _status
 
