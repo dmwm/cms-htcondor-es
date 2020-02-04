@@ -186,7 +186,7 @@ def main():
 
     parser.add_argument(
         "--es_hostname",
-        default="es-cms.cern.ch",
+        default="localhost",
         type=str,
         dest="es_hostname",
         help="Hostname of the elasticsearch instance to be used "
