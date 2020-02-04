@@ -233,13 +233,7 @@ def main():
     )
     parser.add_argument(
         "--collectors",
-        default=[
-        "cmssrv623.fnal.gov:9620",
-        "cmsgwms-collector-tier0.cern.ch:9620",
-        "cmssrv276.fnal.gov",
-        "cmsgwms-collector-itb.cern.ch",
-        "vocms0840.cern.ch"
-        ],
+        default=[],
         action="append",
         dest="collectors",
         help="Collectors' addresses",
