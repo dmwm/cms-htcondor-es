@@ -11,10 +11,6 @@ import datetime
 import zlib
 import base64
 import htcondor
-from htcondor_es.AffiliationManager import (
-    AffiliationManager,
-    AffiliationManagerException,
-)
 
 string_vals = set(
     [
@@ -573,22 +569,6 @@ postjob_status_decode = {
 
 _launch_time = int(time.time())
 
-# Initialize aff_mgr
-aff_mgr = None
-try:
-    aff_mgr = AffiliationManager(
-        recreate=False,
-        dir_file=os.getenv(
-            "AFFILIATION_DIR_LOCATION",
-            AffiliationManager._AffiliationManager__DEFAULT_DIR_PATH,
-        ),
-    )
-except AffiliationManagerException as e:
-    # If its not possible to create the affiliation manager
-    # Log it
-    logging.error("There were an error creating the affiliation manager, %s", e)
-    # Continue execution without affiliation.
-
 
 def make_list_from_string_field(ad, key, split_re=r"[\s,]+\s*", default=None):
     default = default or ["UNKNOWN"]
@@ -902,18 +882,6 @@ def convert_to_json(
         result["CPUModel"] = str(ad["MachineAttrCPUModel0"])
         result["CPUModelName"] = str(ad["MachineAttrCPUModel0"])
         result["Processor"] = str(ad["MachineAttrCPUModel0"])
-
-    # Affiliation data:
-    if aff_mgr:
-        _aff = None
-        if "CRAB_UserHN" in result:
-            _aff = aff_mgr.getAffiliation(login=result["CRAB_UserHN"])
-        elif "x509userproxysubject" in result:
-            _aff = aff_mgr.getAffiliation(dn=result["x509userproxysubject"])
-
-        if _aff is not None:
-            result["AffiliationInstitute"] = _aff["institute"]
-            result["AffiliationCountry"] = _aff["country"]
 
     # We will use the CRAB_PostJobStatus as the actual status.
     # If is an analysis task and is not completed
