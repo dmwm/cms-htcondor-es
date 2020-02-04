@@ -14,7 +14,6 @@ import htcondor
 import elasticsearch
 
 import htcondor_es.es
-import htcondor_es.amq
 from htcondor_es.utils import send_email_alert, time_remaining, TIMEOUT_MINS
 from htcondor_es.convert_to_json import convert_to_json
 from htcondor_es.convert_to_json import convert_dates_to_millisecs
@@ -42,9 +41,7 @@ def process_schedd(
     metadata = metadata or {}
     schedd = htcondor.Schedd(schedd_ad)
     _q = ("""
-        ( EnteredCurrentStatus >= %(last_completion)d 
-        || CRAB_PostJobLastUpdate >= %(last_completion)d )
-        && (CMS_Type != "DONOTMONIT")
+        ( EnteredCurrentStatus >= %(last_completion)d )
         """
     )
     history_query = classad.ExprTree(_q % {"last_completion": last_completion})
@@ -106,13 +103,6 @@ def process_schedd(
                         htcondor_es.es.post_ads(
                             es.handle, idx, ad_list, metadata=metadata
                         )
-                    if args.feed_amq:
-                        data_for_amq = [
-                            (id_, convert_dates_to_millisecs(dict_ad))
-                            for id_, dict_ad in ad_list
-                        ]
-                        htcondor_es.amq.post_ads(data_for_amq, metadata=metadata)
-
                 logging.debug(
                     "...posting %d ads from %s (process_schedd)",
                     len(ad_list),
@@ -177,12 +167,6 @@ def process_schedd(
             if not args.read_only:
                 if args.feed_es:
                     htcondor_es.es.post_ads(es.handle, idx, ad_list, metadata=metadata)
-                if args.feed_amq:
-                    data_for_amq = [
-                        (id_, convert_dates_to_millisecs(dict_ad))
-                        for id_, dict_ad in ad_list
-                    ]
-                    htcondor_es.amq.post_ads(data_for_amq, metadata=metadata)
 
     total_time = (time.time() - my_start) / 60.0
     total_upload /= 60.0
