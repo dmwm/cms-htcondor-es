@@ -95,9 +95,6 @@ def main():
         dest="feed_es_for_queues",
         help="Feed queue data also to Elasticsearch",
     )
-    parser.add_argument(
-        "--feed_amq", action="store_true", dest="feed_amq", help="Feed to CERN AMQ"
-    )
 
     parser.add_argument(
         "--schedd_filter",
@@ -145,13 +142,6 @@ def main():
         action="store_true",
         dest="keep_full_queue_data",
         help="Drop all but some fields for running jobs.",
-    )
-    parser.add_argument(
-        "--amq_bunch_size",
-        default=5000,
-        type=int,
-        dest="amq_bunch_size",
-        help=("Send docs to AMQ in bunches of this number " "[default: %(default)d]"),
     )
     parser.add_argument(
         "--es_bunch_size",

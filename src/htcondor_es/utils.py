@@ -121,7 +121,6 @@ def set_up_logging(args):
     logger.setLevel(log_level)
 
     if log_level <= logging.INFO:
-        logging.getLogger("CMSMonitoring.StompAMQ").setLevel(log_level + 10)
         logging.getLogger("stomp.py").setLevel(log_level + 10)
 
     try:

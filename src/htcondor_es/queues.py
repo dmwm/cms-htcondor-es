@@ -12,7 +12,6 @@ import multiprocessing
 import htcondor
 
 import htcondor_es.es
-import htcondor_es.amq
 from htcondor_es.utils import send_email_alert, time_remaining, TIMEOUT_MINS
 from htcondor_es.convert_to_json import convert_to_json
 from htcondor_es.convert_to_json import convert_dates_to_millisecs
@@ -40,7 +39,6 @@ class ListenAndBunch(multiprocessing.Process):
         super(ListenAndBunch, self).__init__()
         self.input_queue = input_queue
         self.output_queue = output_queue
-        logging.warning("Bunching records for AMQP in sizes of %d", bunch_size)
         self.bunch_size = bunch_size
         self.report_every = report_every
         self.n_expected = n_expected
@@ -259,7 +257,6 @@ def process_queues(schedd_ads, starttime, pool, args, metadata=None):
         output_queue=output_queue,
         n_expected=len(schedd_ads),
         starttime=starttime,
-        bunch_size=args.amq_bunch_size,
     )
     futures = []
 
@@ -270,12 +267,6 @@ def process_queues(schedd_ads, starttime, pool, args, metadata=None):
             query_schedd_queue, args=(starttime, schedd_ad, input_queue, args)
         )
         futures.append((schedd_ad["Name"], future))
-
-    def _callback_amq(result):
-        sent, received, elapsed = result
-        logging.info(
-            "Uploaded %d/%d docs to StompAMQ in %d seconds", sent, received, elapsed
-        )
 
     total_processed = 0
     while True:
@@ -306,17 +297,6 @@ def process_queues(schedd_ads, starttime, pool, args, metadata=None):
             )
             futures.append(("UPLOADER_ES", future))
 
-        if args.feed_amq and not args.read_only:
-            amq_bunch = [
-                (id_, convert_dates_to_millisecs(dict_ad)) for id_, dict_ad in bunch
-            ]
-            future = upload_pool.apply_async(
-                htcondor_es.amq.post_ads,
-                args=(amq_bunch, metadata),
-                callback=_callback_amq,
-            )
-            futures.append(("UPLOADER_AMQ", future))
-
         logging.info("Starting new uploader, %d items in queue" % output_queue.qsize())
 
     listener.join()
@@ -329,10 +309,7 @@ def process_queues(schedd_ads, starttime, pool, args, metadata=None):
         if time_remaining(starttime, positive=False) > -20:
             try:
                 count = future.get(time_remaining(starttime) + 10)
-                if name == "UPLOADER_AMQ":
-                    total_sent += count[0]
-                    total_upload_time += count[2]
-                elif name == "UPLOADER_ES":
+                if name == "UPLOADER_ES":
                     total_sent += count
                 else:
                     try:
