@@ -1281,7 +1281,7 @@ def bulk_convert_ad_data(ad, result):
         except:
             continue
         if isinstance(value, classad.Value):
-            if value == classad.Value.Error:
+            if value is classad.Value.Error:
                 continue
             else:
                 value = None
