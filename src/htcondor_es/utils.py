@@ -42,7 +42,6 @@ def get_schedds(args=None, collectors=None, pool_name="Unknown"):
     Return a list of schedd ads representing all the schedds in the pool.
     """
     collectors = collectors or []
-    schedd_query = classad.ExprTree("!isUndefined(CMSGWMS_Type)")
 
     schedd_ads = {}
     for host in collectors:
@@ -50,7 +49,6 @@ def get_schedds(args=None, collectors=None, pool_name="Unknown"):
         try:
             schedds = coll.query(
                 htcondor.AdTypes.Schedd,
-                schedd_query,
                 projection=["MyAddress", "ScheddIpAddr", "Name"],
             )
         except IOError as e:
