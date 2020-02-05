@@ -8,7 +8,7 @@ This version has some major changes:
        history queries. 
     - The history checkpoint for the schedds is stored in Redis instead of a json file.
     - Parallelism is managed by celery
-""" 
+"""
 import os
 import argparse
 import time
@@ -36,7 +36,7 @@ def main_driver(args):
             start_time=start_time,
             keep_full_queue_data=args.keep_full_queue_data,
             bunch=args.amq_bunch_size,
-            query_type=_type
+            query_type=_type,
         )
         for _type in (["queue", "history"] if not args.skip_history else ["queue"])
         for sched in schedd_ads

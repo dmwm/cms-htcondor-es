@@ -34,13 +34,14 @@ QUERY_QUEUES = """
          || EnteredCurrentStatus >= %(completed_since)d
          || CRAB_PostJobLastUpdate >= %(completed_since)d
          ) && (CMS_Type != "DONOTMONIT")
-         """ 
+         """
 QUERY_HISTORY = """
         ( EnteredCurrentStatus >= %(last_completion)d 
         || CRAB_PostJobLastUpdate >= %(last_completion)d )
         && (CMS_Type != "DONOTMONIT")
         """
 __REDIS_CONN = None
+
 
 @app.task(max_retries=3)
 def query_schedd(
@@ -60,18 +61,26 @@ def query_schedd(
     hist_time = start_time
     if query_type == "queue":
         _completed_since = start_time - (TIMEOUT_MINS + 1) * 60
-        query = QUERY_QUEUES % { 
-            "completed_since": _completed_since
-        }
+        query = QUERY_QUEUES % {"completed_since": _completed_since}
         query_iter = schedd.xquery(requirements=query) if not dry_run else []
     elif query_type == "history":
-        last_completion = getRedisConnection().get(schedd_ad["name"]) or  (start_time - 3600)
-        history_query = classad.ExprTree(QUERY_HISTORY % {"last_completion": last_completion})
+        last_completion = getRedisConnection().get(schedd_ad["name"]) or (
+            start_time - 3600
+        )
+        history_query = classad.ExprTree(
+            QUERY_HISTORY % {"last_completion": last_completion}
+        )
         query_iter = schedd.history(history_query, [], 10000)
-        hist_time =  time.time()
-    responses = send_data(query_iter, chunk_size, bunch, pool_name, keep_full_queue_data=keep_full_queue_data)
+        hist_time = time.time()
+    responses = send_data(
+        query_iter,
+        chunk_size,
+        bunch,
+        pool_name,
+        keep_full_queue_data=keep_full_queue_data,
+    )
     if query_type == "history":
-        getRedisConnection().set(schedd_ad["name"], hist_time)  
+        getRedisConnection().set(schedd_ad["name"], hist_time)
     return (schedd_ad["name"], responses)
 
 
@@ -109,7 +118,8 @@ def consume(iterator, n=None):
     else:
         # advance to the empty slice starting at position n
         next(islice(iterator, n, n), None)
-        
+
+
 def send_data(query_iter, chunk_size, bunch, pool_name, keep_full_queue_data=False):
     responses = []
     for docs_bunch in grouper(query_iter, bunch):
@@ -124,9 +134,11 @@ def send_data(query_iter, chunk_size, bunch, pool_name, keep_full_queue_data=Fal
         responses.append(process_and_send.apply_async())
     return responses
 
+
 def getRedisConnection():
     global __REDIS_CONN
     if not __REDIS_CONN:
-        __REDIS_CONN = redis.Redis.from_url(os.getenv("SPIDER_CHECKPOINT", "redis://localhost/1"))
+        __REDIS_CONN = redis.Redis.from_url(
+            os.getenv("SPIDER_CHECKPOINT", "redis://localhost/1")
+        )
     return __REDIS_CONN
-        
