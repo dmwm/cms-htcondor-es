@@ -1,4 +1,14 @@
-# coding=utf8
+# -*- coding: utf-8 -*-
+# Author: Christian Ariza <christian.ariza AT gmail [DOT] com>
+"""
+Celery version of the cms htcondor_es spider. 
+This version has some major changes:
+    - Celery based
+    - The same function is used for either the queues and 
+       history queries. 
+    - The history checkpoint for the schedds is stored in Redis instead of a json file.
+    - Parallelism is managed by celery
+""" 
 import os
 import argparse
 import time
@@ -9,8 +19,6 @@ from htcondor_es.utils import get_schedds, get_schedds_from_file
 
 
 def main_driver(args):
-    os.environ["CMS_HTCONDOR_BROKER"] = "cms-test-mb.cern.ch"
-    os.environ["CMS_HTCONDOR_PRODUCER"] = "condor-test"
     schedd_ads = []
     start_time = time.time()
     if args.collectors_file:
@@ -28,7 +36,9 @@ def main_driver(args):
             start_time=start_time,
             keep_full_queue_data=args.keep_full_queue_data,
             bunch=args.amq_bunch_size,
+            query_type=_type
         )
+        for _type in (["queue", "history"] if not args.skip_history else ["queue"])
         for sched in schedd_ads
     ).apply_async()
     groups = res.get()

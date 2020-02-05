@@ -12,21 +12,33 @@ services:
     restart: 'no'
     environment: &env
       - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - SPIDER_CHECKPOINT=redis://redis_checkpoint:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - SPIDER_CHECKPOINT=redis://redis_checkpoint:6379/0
       - AFFILIATION_DIR_LOCATION=/cms_shared/affiliation_dir.json
-      - COLLECTORS_FILE_LOCATION=/cms_shared/collectors.json
+      - COLLECTORS_FILE_LOCATION=/cms_secrets/collectors.json
       - PYTHONPATH=/cms-htcondor-es/src:$$PYTHONPATH
       - CMS_HTCONDOR_PRODUCER=condor-test
       - CMS_HTCONDOR_TOPIC=/topic/cms.jobmon.condor
       - CMS_HTCONDOR_BROKER=cms-test-mb.cern.ch
       - C_FORCE_ROOT="true"
       - CELERY_TEST="true"
-      - CMS_AMQ_USERNAME_FILE=/cms-htcondor-es/username
-      - CMS_AMQ_PASSWORD_FILE=/cms-htcondor-es/password
+      - CMS_AMQ_USERNAME_FILE=/cms_secrets/username
+      - CMS_AMQ_PASSWORD_FILE=/cms_secrets/password
       - REQUESTS_CA_BUNDLE=/etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt
-
     entrypoint: ['celery', "-A", "htcondor_es.celery.celery", "worker"]
+    secrets: &secrets
+      - source: amq_username
+        target: /cms_secrets/username
+        uid: '1414'
+      - source: amq_password
+        target: /cms_secrets/password
+        uid: '1414'
+      - source: collectors
+        target: /cms_secrets/collectors.json
+        uid: '1414'
+    depends_on:
+      - redis_checkpoint
+      - redis
   spider-app:
     image: spider-worker
     user: 1414:1414
@@ -34,13 +46,15 @@ services:
         - spider-worker
     volumes:
       - shared_spider:/cms_shared
-    secrets:
-      - source: collectors
-        target: /cms_shared/collectors.json
+    secrets: *secrets
+      
     restart: 'no'
-
     environment: *env
-    entrypoint: ["python","/cms-htcondor-es/tests/celery_test.py"]
+    # entrypoint: ["python","/cms-htcondor-es/tests/celery_test.py"]
+    entrypoint: ["python","/cms-htcondor-es/celery_spider_cms.py"]
+    depends_on:
+      - spider-worker
+   
 
   redis:
     image: redis:alpine
@@ -60,6 +74,8 @@ services:
     command: ["flower", "--broker=redis://redis:6379/0", "--port=8888"]  
     ports:  
       - 8888:8888
+    depends_on:
+      - spider-worker
 volumes:
   shared_spider:
     driver_opts:
@@ -69,3 +85,7 @@ volumes:
 secrets:
   collectors:
     file: ./etc/collectors.json
+  amq_username:
+    file: ./username
+  amq_password:
+    file: ./password

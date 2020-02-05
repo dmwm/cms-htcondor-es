@@ -1,6 +1,8 @@
 import os
 import time
 import logging
+import traceback
+
 from CMSMonitoring.StompAMQ import StompAMQ
 
 _amq_interface = None
@@ -21,6 +23,7 @@ def get_amq_interface():
                     username_file, password_file
                 )
             )
+            traceback.print_exc()
             return []
         _amq_interface = StompAMQ(
             username=username,
