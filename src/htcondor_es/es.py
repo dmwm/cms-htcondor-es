@@ -1,5 +1,5 @@
 #!/usr/bin/python
-
+import os
 import re
 import json
 import time
@@ -76,32 +76,39 @@ _es_handle = None
 def get_server_handle(args=None):
     global _es_handle
     if not _es_handle:
-        if not args:
-            logging.error(
-                "Call get_server_handle with args first to create ES interface instance"
-            )
-            return _es_handle
-        _es_handle = ElasticInterface(hostname=args.es_hostname, port=args.es_port)
+        _es_handle = (
+            ElasticInterface(hostname=args.es_hostname, port=args.es_port)
+            if args
+            else ElasticInterface()
+        )
     return _es_handle
 
 
 class ElasticInterface(object):
     """Interface to elasticsearch"""
 
-    def __init__(self, hostname="es-cms.cern.ch", port=9203):
-        domain = socket.getfqdn().split(".", 1)[-1]
-        if domain == "cern.ch":
+    def __init__(self, hostname=None, port=None):
+        """
+        Init the ES interface. 
+        It will use the CMS_ES_CONF_FILE to obtain the credentials,
+        and the default host and port (that can be overwrited by parameter)
+        """
+        es_conf_file = os.getenv("CMS_ES_CONF_FILE", None)
+        if es_conf_file:
             passwd = ""
             username = ""
-            regex = re.compile("^([A-Za-z]+):\s(.*)")
-            for line in open("es.conf"):
-                m = regex.match(line)
-                if m:
-                    key, val = m.groups()
-                    if key == "User":
-                        username = val
-                    elif key == "Pass":
-                        passwd = val
+            try:
+                with open(es_conf_file) as conf_file:
+                    conf = json.load(conf_file)
+                    hostname = hostname or conf.get("hostname", "localhost")
+                    port = port or conf.get("port", 9203)
+                    username = conf.get("username", "")
+                    passwd = conf.get("password", "")
+            except (json.JSONDecodeError, IOError) as exc:
+                logging.error(
+                    f"Error while reading ES conf file {es_conf_file} {str(exc)}"
+                )
+                pass
             self.handle = elasticsearch.Elasticsearch(
                 [
                     {
@@ -143,7 +150,6 @@ class ElasticInterface(object):
 
         with open("last_mappings.json", "w") as jsonfile:
             json.dump(json.loads(body), jsonfile, indent=2, sort_keys=True)
-
         result = self.handle.indices.create(  # pylint: disable = unexpected-keyword-arg
             index=idx, body=body, ignore=400
         )
@@ -168,11 +174,9 @@ def get_index(timestamp, template="cms", update_es=True):
     if update_es:
         if idx in _index_cache:
             return idx
-
         _es_handle = get_server_handle()
         _es_handle.make_mapping(idx, template=template)
         _index_cache.add(idx)
-
     return idx
 
 
@@ -182,10 +186,8 @@ def make_es_body(ads, metadata=None):
     for id_, ad in ads:
         if metadata:
             ad.setdefault("metadata", {}).update(metadata)
-
         body += json.dumps({"index": {"_id": id_}}) + "\n"
         body += json.dumps(ad) + "\n"
-
     return body
 
 
@@ -217,5 +219,4 @@ def post_ads_nohandle(idx, ads, args, metadata=None):
     res = es.bulk(body=body, index=idx, request_timeout=60)
     if res.get("errors"):
         return parse_errors(res)
-
     return len(ads)

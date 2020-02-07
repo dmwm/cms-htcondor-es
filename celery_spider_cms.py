@@ -10,15 +10,18 @@ This version has some major changes:
     - Parallelism is managed by celery
 """
 import os
+import logging
 import argparse
 import time
 import traceback
 from celery import group
 from htcondor_es.celery.tasks import query_schedd
+from htcondor_es.celery.celery import app
 from htcondor_es.utils import get_schedds, get_schedds_from_file
 
 
 def main_driver(args):
+    print(app.conf.humanize(with_defaults=False))
     schedd_ads = []
     start_time = time.time()
     if args.collectors_file:
@@ -28,7 +31,11 @@ def main_driver(args):
         )  # sending a file through postprocessing will cause problems.
     else:
         schedd_ads = get_schedds(args, collectors=args.collectors)
-
+    _types = []
+    if not args.skip_history:
+        _types.append('history')
+    if not args.skip_queues:
+        _types.append('queue')
     res = group(
         query_schedd.s(
             sched,
@@ -37,12 +44,19 @@ def main_driver(args):
             keep_full_queue_data=args.keep_full_queue_data,
             bunch=args.amq_bunch_size,
             query_type=_type,
+            es_index_template=args.es_index_template,
+            feed_es=args.feed_es,
         )
-        for _type in (["queue", "history"] if not args.skip_history else ["queue"])
+        for _type in _types
         for sched in schedd_ads
-    ).apply_async()
-    groups = res.get()
-    print([g.collect() for g in groups])
+    ).apply_async(serializer="pickle")
+    # Use the get to wait for results
+    # We could also chain it to a chord to process the responses
+    # for logging pourposes.
+    # The propagate false will prevent it to raise 
+    # an exception if any of the schedds query failed. 
+    groups = res.get(propagate=False)
+    print([g for g in groups.collect()])
 
 
 def main():
@@ -66,6 +80,12 @@ def main():
         action="store_true",
         dest="skip_history",
         help="Skip processing the history. (Only do queues.)",
+    )
+    parser.add_argument(
+        "--skip_queues",
+        action="store_true",
+        dest="skip_queues",
+        help="Skip processing the queues. (Only do history.)",
     )
     parser.add_argument(
         "--read_only",
@@ -129,6 +149,23 @@ def main():
         type=argparse.FileType("r"),
         dest="collectors_file",
         help="FIle defining the pools and collectors",
+    )
+    parser.add_argument(
+        "--es_index_template",
+        default="cms-test-k8s",
+        type=str,
+        dest="es_index_template",
+        help=(
+            "Trunk of index pattern. "
+            "Needs to start with 'cms' "
+            "[default: %(default)s]"
+        ),
+    )
+    parser.add_argument(
+        "--feed_es",
+        action="store_true",
+        dest="feed_es",
+        help="Send data also to the es-cms ES instance",
     )
     args = parser.parse_args()
 
