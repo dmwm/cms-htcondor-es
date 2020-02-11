@@ -51,7 +51,7 @@ __REDIS_CONN = None
 
 
 # ---Tasks----
-@app.task(max_retries=3)
+@app.task(max_retries=3, serializer="pickle")
 def query_schedd(
     schedd_ad,
     start_time=None,
@@ -111,7 +111,7 @@ def query_schedd(
     return (schedd_ad["name"], responses)
 
 
-@app.task
+@app.task(serializer="pickle")
 def process_docs(
     docs,
     reduce_data=True,
@@ -185,7 +185,7 @@ def post_ads_es(es_docs, es_index, metadata=None):
             es_indexes[_idx].append(job)
         for _idx in es_indexes:
             htcondor_es.es.post_ads(
-                es.handle, _idx, es_indexes[_idx], metadata=metadata,
+                es.handle, _idx, es_indexes[_idx], metadata=metadata
             )
     except Exception as e:
         traceback.print_exc()
