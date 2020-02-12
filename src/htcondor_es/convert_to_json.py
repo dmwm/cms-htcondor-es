@@ -1047,7 +1047,7 @@ def guess_campaign_type(ad, analysis):
     camp = ad.get("WMAgent_RequestName", "UNKNOWN")
     if analysis:
         return "Analysis"
-    elif re.match(r".*RunIISummer19UL.*", camp):
+    elif re.match(r".*(RunIISummer19UL|_UL[0-9]+).*", camp):
         return "MC Ultralegacy"
     elif re.match(r".*UltraLegacy.*", camp):
         return "Data Ultralegacy"
