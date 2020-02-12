@@ -15,31 +15,24 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
       - SPIDER_CHECKPOINT=redis://redis_checkpoint:6379/0
       - AFFILIATION_DIR_LOCATION=/cms_shared/affiliation_dir.json
-      - COLLECTORS_FILE_LOCATION=/cms_secrets/collectors.json
+      - COLLECTORS_FILE_LOCATION=/run/secrets/collectors.json
       - PYTHONPATH=/cms-htcondor-es/src:$$PYTHONPATH
       - CMS_HTCONDOR_PRODUCER=condor-test
       - CMS_HTCONDOR_TOPIC=/topic/cms.jobmon.condor
       - CMS_HTCONDOR_BROKER=cms-test-mb.cern.ch
       - C_FORCE_ROOT="true"
       - CELERY_TEST="true"
-      - CMS_AMQ_USERNAME_FILE=/cms_secrets/username
-      - CMS_AMQ_PASSWORD_FILE=/cms_secrets/password
-      - CMS_ES_CONF_FILE=/cms_secrets/es.conf
+      - CMS_AMQ_USERNAME_FILE=/run/secrets/amq-username
+      - CMS_AMQ_PASSWORD_FILE=/run/secrets/amq-password
+      - CMS_ES_CONF_FILE=/run/secrets/es-conf
       - REQUESTS_CA_BUNDLE=/etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt
     entrypoint: ['celery', "-A", "htcondor_es.celery.celery", "worker"]
     secrets: &secrets
-      - source: amq_username
-        target: /cms_secrets/username
-        uid: '1414'
-      - source: amq_password
-        target: /cms_secrets/password
-        uid: '1414'
-      - source: es_conf
-        target: /cms_secrets/es.conf
-        uid: '1414'
+      - amq-username
+      - amq-password
+      - es-conf
       - source: collectors
-        target: /cms_secrets/collectors.json
-        uid: '1414'
+        target: collectors.json
     depends_on:
       - redis_checkpoint
       - redis
@@ -73,7 +66,7 @@ services:
     volumes:
       - $HOME/tmp/redis_cp_data:/data
   
-  flower:  
+  spider_flower:  
     image: mher/flower
     command: ["flower", "--broker=redis://redis:6379/0", "--port=8888"]  
     ports:  
@@ -90,9 +83,9 @@ volumes:
 secrets:
   collectors:
     file: ./etc/collectors.json
-  amq_username:
+  amq-username:
     file: ./username
-  amq_password:
+  amq-password:
     file: ./password
-  es_conf:
+  es-conf:
     file: ./es.conf
