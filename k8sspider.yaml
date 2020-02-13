@@ -1,0 +1,374 @@
+# K8S definition of the htcondor spider.
+# We need 3 services (2 redis and flower) and 1 extra deployment for the spider workers.
+## IMPORTANT: Before running this manifest you need to create the referenced secrets.
+##  es-conf, collectors, amq-username, and amq-password
+
+apiVersion: v1
+items:
+## SERVICES
+# REDIS
+- apiVersion: v1
+  kind: Service
+  metadata:
+    
+    labels:
+      io.kompose.service: redis
+    name: redis
+  spec:
+    ports:
+    - name: "6379"
+      port: 6379
+      targetPort: 6379
+    selector:
+      app: redis
+  status:
+    loadBalancer: {}
+# REDIS-CHECKPOINT
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      io.kompose.service: redis-checkpoint
+    name: redis-checkpoint
+  spec:
+    ports:
+    - name: "6379"
+      port: 6379
+      targetPort: 6379
+    selector:
+      app: redis-checkpoint
+  status:
+    loadBalancer: {}
+# FLOWER
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      io.kompose.service: spider-flower
+    name: spider-flower
+  spec:
+    ports:
+    - name: "8888"
+      port: 8888
+      targetPort: 8888
+    selector:
+      app: spider-flower
+    type: NodePort
+  status:
+    loadBalancer: {}
+## DEPLOYMENTS
+# REDIS
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: redis
+    labels:
+      app: redis
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: redis
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          app: redis
+      spec:
+        containers:
+        - image: redis:alpine
+          name: redis
+          ports:
+          - containerPort: 6379
+          resources: 
+            requests:
+              cpu: 200m
+              memory: 1Gi
+            limits:
+              cpu: 500m
+              memory: 4Gi
+          volumeMounts:
+          - mountPath: /data
+            name: redis-claim0
+        restartPolicy: Always
+        volumes:
+        - name: redis-claim0
+          emptyDir: {}
+  status: {}
+
+# REDIS-CHECKPOINT
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: redis-checkpoint
+    labels:
+      app: redis-checkpoint
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: redis-checkpoint
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          app: redis-checkpoint
+      spec:
+        containers:
+        - command:
+          - redis-server
+          - --appendonly
+          - "yes"
+          image: redis:alpine
+          name: redis-checkpoint
+          ports:
+          - containerPort: 6379
+          resources: 
+            requests:
+              cpu: 500m
+              memory: 500Mi
+            limits:
+              cpu: 1000m
+              memory: 4Gi
+          volumeMounts:
+          - mountPath: /data
+            name: redis-checkpoint-claim0
+        restartPolicy: Always
+        volumes:
+        - name: redis-checkpoint-claim0
+          emptyDir: {}
+  status: {}
+# FLOWER
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: spider-flower
+    labels:
+      app: spider-flower
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: spider-flower
+    strategy: {}
+    template:
+      metadata:
+        labels:
+          app: spider-flower
+      spec:
+        containers:
+        - args:
+          - flower
+          - --broker=redis://$(REDIS_SERVICE_HOST):$(REDIS_SERVICE_PORT_6379)/0
+          - --port=8888
+          image: mher/flower
+          name: spider-flower
+          ports:
+          - containerPort: 8888
+          resources: {}
+        restartPolicy: Always
+  status: {}
+# SPIDER WORKER
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: spider-worker
+    labels:
+      app: spider-worker
+  spec:
+    replicas: 4
+    selector:
+      matchLabels:
+        app: spider-worker
+    strategy: {}
+    template:
+      metadata:
+        labels:
+          app: spider-worker
+      spec:
+        containers:
+        - name: spider-worker
+          image: cronosnull/cms_htcondor_es:0.2
+          args:
+          - celery
+          - -A
+          - htcondor_es.celery.celery
+          - worker
+          resources:
+            requests:
+               cpu: 500m
+               memory: 200Mi
+            limits:
+              cpu: 2000m
+              memory: 1Gi
+          env: &spider_env
+          - name: AFFILIATION_DIR_LOCATION
+            value: /cms_shared/affiliation_dir.json
+          - name: CELERY_BROKER_URL
+            value: redis://$(REDIS_SERVICE_HOST):$(REDIS_SERVICE_PORT_6379)/0
+          - name: CELERY_RESULT_BACKEND
+            value: redis://$(REDIS_SERVICE_HOST):$(REDIS_SERVICE_PORT_6379)/1
+          - name: CELERY_TEST
+            value: '"true"'
+          - name: CMS_AMQ_PASSWORD_FILE
+            value: /cms_secrets/amq-password/amq-password
+          - name: CMS_AMQ_USERNAME_FILE
+            value: /cms_secrets/amq-username/amq-username
+          - name: CMS_ES_CONF_FILE
+            value: /cms_secrets/es-conf/es-conf
+          - name: CMS_HTCONDOR_BROKER
+            value: cms-test-mb.cern.ch
+          - name: CMS_HTCONDOR_PRODUCER
+            value: condor-test
+          - name: CMS_HTCONDOR_TOPIC
+            value: /topic/cms.jobmon.condor
+          - name: COLLECTORS_FILE_LOCATION
+            value: /cms_secrets/collectors/collectors
+          - name: C_FORCE_ROOT
+            value: '"true"'
+          - name: PYTHONPATH
+            value: /cms-htcondor-es/src:$PYTHONPATH
+          - name: REQUESTS_CA_BUNDLE
+            value: /etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt
+          - name: SPIDER_CHECKPOINT
+            value: redis://$(REDIS_CHECKPOINT_SERVICE_HOST):$(REDIS_CHECKPOINT_SERVICE_PORT)/0
+          volumeMounts:  &spider_mounts
+          - mountPath: /cms_secrets/amq-username
+            name: amq-username
+          - mountPath: /cms_secrets/amq-password
+            name: amq-password
+          - mountPath: /cms_secrets/es-conf
+            name: es-conf
+          - mountPath: /cms_secrets/collectors
+            name: collectors
+          - mountPath: /cms_shared
+            name: shared-spider
+        securityContext:
+          fsGroup: 1414
+        volumes:  &spider_volumes
+        - name: amq-username
+          secret:
+            items:
+            - key: amq-username
+              path: amq-username
+            secretName: amq-username
+        - name: amq-password
+          secret:
+            items:
+            - key: amq-password
+              path: amq-password
+            secretName: amq-password
+        - name: es-conf
+          secret:
+            items:
+            - key: es-conf
+              path: es-conf
+            secretName: es-conf
+        - name: collectors
+          secret:
+            items:
+            - key: collectors
+              path: collectors
+            secretName: collectors
+        - name: shared-spider
+          emptyDir: {}
+## ACCOUNTS
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: spider-account
+
+- kind: RoleBinding
+  apiVersion: rbac.authorization.k8s.io/v1
+  metadata:
+    name: spider-account
+  subjects:
+  - kind: ServiceAccount
+    name: spider-account
+  roleRef:
+    kind: ClusterRole
+    name: edit
+    apiGroup: rbac.authorization.k8s.io
+## CRONS
+- apiVersion: batch/v1beta1
+  kind: CronJob
+  metadata:
+    name: cron-spider-queues
+  spec:
+    schedule: "*/12 * * * *"
+    jobTemplate:
+      spec:
+        template:
+          spec:
+            serviceAccountName: spider-account
+            containers:
+            - name: cms-htcondor-es
+              image: cronosnull/cms_htcondor_es:0.2
+              args:
+              - python
+              - /cms-htcondor-es/celery_spider_cms.py
+              - --feed_es
+              env: *spider_env
+              volumeMounts: *spider_mounts
+              
+            restartPolicy: Never
+            volumes: *spider_volumes
+- apiVersion: batch/v1beta1
+  kind: CronJob
+  metadata:
+    name: cron-spider-affiliation
+  spec:
+    schedule: "00 3 * * *"
+    jobTemplate:
+      spec:
+        template:
+          spec:
+            serviceAccountName: spider-account
+            containers:
+            - name: cms-htcondor-es
+              image: cronosnull/cms_htcondor_es:0.2
+              args:
+              - /bin/sh
+              - -c
+              - echo "run k8s_affiliation_cache.sh"; /cms-htcondor-es/k8s_affiliation_cache.sh $AFFILIATION_DIR_LOCATION; echo "ls -al /etc/affiliations"; ls -al AFFILIATION_DIR_LOCATION
+              tty: true
+              stdin: true
+              lifecycle:
+                postStart:
+                  exec:
+                    command:
+                    - bash
+                    - -c
+                    - sudo chmod 0777 $AFFILIATION_DIR_LOCATION; sudo chown spider:spider $AFFILIATION_DIR_LOCATION; ls -al $AFFILIATION_DIR_LOCATION
+              env: *spider_env
+              volumeMounts: *spider_mounts              
+            restartPolicy: Never
+            volumes: *spider_volumes
+## CLAIMS
+# - apiVersion: v1
+  # kind: PersistentVolumeClaim
+  # metadata:
+    # name: redis-claim0
+  # spec:
+    # accessModes:
+    # - ReadWriteOnce
+    # resources:
+      # requests:
+        # storage: 4Gi
+  # status: {}
+
+# - apiVersion: v1
+  # kind: PersistentVolumeClaim
+  # metadata:
+    # name: redis-checkpoint-claim0
+  # spec:
+    # accessModes:
+    # - ReadWriteOnce
+    # resources:
+      # requests:
+        # storage: 4Gi
+  # status: {}
+kind: List
+metadata: {}
