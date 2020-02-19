@@ -136,21 +136,24 @@ def query_schedd_queue(starttime, schedd_ad, queue, args):
     # Query for a snapshot of the jobs running/idle/held,
     # but only the completed that had changed in the last period of time.
     _completed_since = starttime - (TIMEOUT_MINS + 1) * 60
-    query = ("""
+    query = """
          (JobStatus < 3 || JobStatus > 4 
          || EnteredCurrentStatus >= %(completed_since)d
          || CRAB_PostJobLastUpdate >= %(completed_since)d
          ) && (CMS_Type != "DONOTMONIT")
-         """
-        % {"completed_since": _completed_since}
-    )
+         """ % {
+        "completed_since": _completed_since
+    }
     try:
         query_iter = schedd.xquery(requirements=query) if not args.dry_run else []
         for job_ad in query_iter:
             dict_ad = None
             try:
                 dict_ad = convert_to_json(
-                    job_ad, return_dict=True, reduce_data=not args.keep_full_queue_data, pool_name=pool_name
+                    job_ad,
+                    return_dict=True,
+                    reduce_data=not args.keep_full_queue_data,
+                    pool_name=pool_name,
                 )
             except Exception as e:
                 message = "Failure when converting document on %s queue: %s" % (

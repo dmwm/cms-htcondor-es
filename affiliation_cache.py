@@ -12,7 +12,7 @@
 # the optional parameters:
 #       python affiliation_cache.py --output /htcondor_es/aff_dir.json --days 3
 # Thiis script can be setup as a daily cronjob and use the parameters to modify
-# how often the script is updated. 
+# how often the script is updated.
 import os
 import argparse
 import traceback
@@ -28,9 +28,7 @@ def generate_affiliation_cache(output_file, days=1):
     """
     try:
 
-        AffiliationManager(
-            recreate_older_days=days, dir_file=output_file,
-        )
+        AffiliationManager(recreate_older_days=days, dir_file=output_file)
     except AffiliationManagerException as e:
         traceback.print_exc()
         print("There was an error creating the affiliation manager")

@@ -22,6 +22,7 @@ import htcondor
 
 TIMEOUT_MINS = 11
 
+
 def get_schedds_from_file(args=None, collectors_file=None):
     schedds = []
     names = set()
@@ -31,11 +32,11 @@ def get_schedds_from_file(args=None, collectors_file=None):
             _pool_schedds = get_schedds(args, collectors=pools[pool], pool_name=pool)
             schedds.extend([s for s in _pool_schedds if s.get("Name") not in names])
             names.update([s.get("Name") for s in _pool_schedds])
-        
+
     except (IOError, json.JSONDecodeError):
         schedds = get_schedds(args)
     return schedds
-    
+
 
 def get_schedds(args=None, collectors=None, pool_name="Unknown"):
     """

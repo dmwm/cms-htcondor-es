@@ -452,6 +452,7 @@ running_fields = set(
         "AffiliationCountry",
         "BenchmarkJobDB12",
         "Campaign",
+        "CMS_CampaignType",
         "CMS_JobType",
         "CMS_JobRetryCount",
         "CMS_Pool",
@@ -675,9 +676,9 @@ def convert_to_json(
             "/", 1
         )[-1]
         result["Campaign"] = guessCampaign(ad, analysis)
-        result["TaskType"] = (
-            result.get("CMS_TaskType",
-            guessTaskType(ad) if not analysis else result["CMS_JobType"])
+        result["CMS_CampaignType"] = guess_campaign_type(ad, analysis)
+        result["TaskType"] = result.get(
+            "CMS_TaskType", guessTaskType(ad) if not analysis else result["CMS_JobType"]
         )
         result["Workflow"] = guessWorkflow(ad, analysis)
     now = time.time()
@@ -938,8 +939,8 @@ def convert_to_json(
         if "CompletionDate" not in result:
             result["CompletionDate"] = result.get("EnteredCurrentStatus")
         if "CommittedTime" not in result or result.get("CommittedTime", 0) == 0:
-            result["CommittedTime"] = result.get("RemoteWallClockTime", 0)
-    elif 'CRAB_Id' in result: #If is an analysis or HC test task. 
+            result["CommittedTime"] = result.get("RemoteWallClockTime")
+    elif "CRAB_Id" in result:  # If is an analysis or HC test task.
         result["CRAB_PostJobStatus"] = _status
 
     if reduce_data:
@@ -1035,6 +1036,29 @@ def guessCampaign(ad, analysis):
             return m.groups()[0] + "Reprocessing"
 
     return camp
+
+
+def guess_campaign_type(ad, analysis):
+    """
+        Based on the request name return a campaign type.
+        The campaign type is based on the classification defined at
+        https://its.cern.ch/jira/browse/CMSMONIT-174#comment-3050384
+    """
+    camp = ad.get("WMAgent_RequestName", "UNKNOWN")
+    if analysis:
+        return "Analysis"
+    elif re.match(r".*(RunIISummer19UL|_UL[0-9]+).*", camp):
+        return "MC Ultralegacy"
+    elif re.match(r".*UltraLegacy.*", camp):
+        return "Data Ultralegacy"
+    elif re.match(r".*Phase2.*", camp):
+        return "Phase2 requests"
+    elif re.match(r".*Run3.*", camp):
+        return "Run3 requests"
+    elif re.match(r".*RunII(Summer|Fall|Autumn|Winter)1[5-9].*", camp):
+        return "Run2 requests"
+    else:
+        return "UNKNOWN"
 
 
 def guessWorkflow(ad, analysis):
