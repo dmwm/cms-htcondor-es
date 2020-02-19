@@ -41,12 +41,11 @@ def process_schedd(
 
     metadata = metadata or {}
     schedd = htcondor.Schedd(schedd_ad)
-    _q = ("""
+    _q = """
         ( EnteredCurrentStatus >= %(last_completion)d 
         || CRAB_PostJobLastUpdate >= %(last_completion)d )
         && (CMS_Type != "DONOTMONIT")
         """
-    )
     history_query = classad.ExprTree(_q % {"last_completion": last_completion})
     logging.info(
         "Querying %s for history: %s.  " "%.1f minutes of ads",
@@ -78,7 +77,7 @@ def process_schedd(
                     str(e),
                 )
                 exc = traceback.format_exc()
-                message += '\n{}'.format(exc)
+                message += "\n{}".format(exc)
                 logging.warning(message)
                 if not sent_warnings:
                     send_email_alert(
@@ -151,7 +150,7 @@ def process_schedd(
     except RuntimeError:
         message = "Failed to query schedd for job history: %s" % schedd_ad["Name"]
         exc = traceback.format_exc()
-        message += '\n{}'.format(exc)
+        message += "\n{}".format(exc)
         logging.error(message)
 
     except Exception as exn:
@@ -160,7 +159,7 @@ def process_schedd(
             str(exn),
         )
         exc = traceback.format_exc()
-        message += '\n{}'.format(exc)
+        message += "\n{}".format(exc)
         logging.exception(message)
         send_email_alert(
             args.email_alerts, "spider_cms schedd history query error", message
@@ -261,7 +260,9 @@ def process_histories(schedd_ads, starttime, pool, args, metadata=None):
                 if job is None:  # Swallow poison pill
                     break
             except EOFError as error:
-                logging.warning("EOFError - Nothing to consume left in the queue %s", error)
+                logging.warning(
+                    "EOFError - Nothing to consume left in the queue %s", error
+                )
                 break
             update_checkpoint(*job)
 
@@ -279,7 +280,7 @@ def process_histories(schedd_ads, starttime, pool, args, metadata=None):
                 # This implies that the checkpoint hasn't been updated
                 message = "Schedd %s history timed out; ignoring progress." % name
                 exc = traceback.format_exc()
-                message += '\n{}'.format(exc)
+                message += "\n{}".format(exc)
                 logging.error(message)
                 send_email_alert(
                     args.email_alerts, "spider_cms history timeout warning", message
@@ -290,10 +291,12 @@ def process_histories(schedd_ads, starttime, pool, args, metadata=None):
                     % name
                 )
                 exc = traceback.format_exc()
-                message += '\n{}'.format(exc)
+                message += "\n{}".format(exc)
                 logging.error(message)
                 send_email_alert(
-                    args.email_alerts, "spider_cms history transport error warning", message
+                    args.email_alerts,
+                    "spider_cms history transport error warning",
+                    message,
                 )
         else:
             timed_out = True

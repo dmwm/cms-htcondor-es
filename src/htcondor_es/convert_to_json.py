@@ -677,9 +677,8 @@ def convert_to_json(
         )[-1]
         result["Campaign"] = guessCampaign(ad, analysis)
         result["CMS_CampaignType"] = guess_campaign_type(ad, analysis)
-        result["TaskType"] = (
-            result.get("CMS_TaskType",
-            guessTaskType(ad) if not analysis else result["CMS_JobType"])
+        result["TaskType"] = result.get(
+            "CMS_TaskType", guessTaskType(ad) if not analysis else result["CMS_JobType"]
         )
         result["Workflow"] = guessWorkflow(ad, analysis)
     now = time.time()
@@ -941,7 +940,7 @@ def convert_to_json(
             result["CompletionDate"] = result.get("EnteredCurrentStatus")
         if "CommittedTime" not in result or result.get("CommittedTime", 0) == 0:
             result["CommittedTime"] = result.get("RemoteWallClockTime")
-    elif 'CRAB_Id' in result: #If is an analysis or HC test task. 
+    elif "CRAB_Id" in result:  # If is an analysis or HC test task.
         result["CRAB_PostJobStatus"] = _status
 
     if reduce_data:
@@ -1037,7 +1036,8 @@ def guessCampaign(ad, analysis):
             return m.groups()[0] + "Reprocessing"
 
     return camp
-    
+
+
 def guess_campaign_type(ad, analysis):
     """
         Based on the request name return a campaign type.
@@ -1059,6 +1059,7 @@ def guess_campaign_type(ad, analysis):
         return "Run2 requests"
     else:
         return "UNKNOWN"
+
 
 def guessWorkflow(ad, analysis):
     prep = ad.get("WMAgent_RequestName", "UNKNOWN")
