@@ -1055,7 +1055,7 @@ def guess_campaign_type(ad, analysis):
         return "Phase2 requests"
     elif re.match(r".*Run3.*", camp):
         return "Run3 requests"
-    elif re.match(r".*RunII(Summer|Fall|Autumn)1[5-8].*", camp):
+    elif re.match(r".*RunII(Summer|Fall|Autumn|Winter)1[5-9].*", camp):
         return "Run2 requests"
     else:
         return "UNKNOWN"
