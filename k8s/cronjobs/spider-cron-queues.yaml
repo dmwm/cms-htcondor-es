@@ -48,44 +48,45 @@ spec:
                 value: /etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt
               - name: SPIDER_CHECKPOINT
                 value: redis://$(REDIS_CHECKPOINT_SERVICE_HOST):$(REDIS_CHECKPOINT_SERVICE_PORT)/0
-        volumeMounts:  &spider_mounts
-          - mountPath: /cms_secrets/amq-username
-            name: amq-username
-          - mountPath: /cms_secrets/amq-password
-            name: amq-password
-          - mountPath: /cms_secrets/es-conf
-            name: es-conf
-          - mountPath: /cms_secrets/collectors
-            name: collectors
-          - mountPath: /cms_shared
-            name: shared-spider            
+            volumeMounts:  &spider_mounts
+              - mountPath: /cms_secrets/amq-username
+                name: amq-username
+              - mountPath: /cms_secrets/amq-password
+                name: amq-password
+              - mountPath: /cms_secrets/es-conf
+                name: es-conf
+              - mountPath: /cms_secrets/collectors
+                name: collectors
+              - mountPath: /cms_shared
+                name: shared-spider            
           restartPolicy: Never
           securityContext:
-        fsGroup: 1414
-      volumes:  &spider_volumes
-        - name: amq-username
-          secret:
-            items:
-            - key: amq-username
-              path: amq-username
-            secretName: amq-username
-        - name: amq-password
-          secret:
-            items:
-            - key: amq-password
-              path: amq-password
-            secretName: amq-password
-        - name: es-conf
-          secret:
-            items:
-            - key: es-conf
-              path: es-conf
-            secretName: es-conf
-        - name: collectors
-          secret:
-            items:
-            - key: collectors
-              path: collectors
-            secretName: collectors
-        - name: shared-spider
-          emptyDir: {}
+              fsGroup: 1414
+          volumes:  &spider_volumes
+            - name: amq-username
+              secret:
+                items:
+                - key: amq-username
+                  path: amq-username
+                secretName: amq-username
+            - name: amq-password
+              secret:
+                items:
+                - key: amq-password
+                  path: amq-password
+                secretName: amq-password
+            - name: es-conf
+              secret:
+                items:
+                - key: es-conf
+                  path: es-conf
+                secretName: es-conf
+            - name: collectors
+              secret:
+                items:
+                - key: collectors
+                  path: collectors
+                secretName: collectors
+            - name: shared-spider
+              emptyDir: {}
+
