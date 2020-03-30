@@ -502,6 +502,7 @@ running_fields = set(
         "JobPrio",
         "JobCurrentStartDate",
         "JobLastStartDate",
+        "JobUniverse",
         "KEvents",
         "MegaEvents",
         "MemoryMB",
