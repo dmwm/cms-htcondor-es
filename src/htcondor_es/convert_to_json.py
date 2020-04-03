@@ -953,7 +953,12 @@ def convert_to_json(
     # Not to be merged (The value was fixed upstream,
     # this change is only needed while old tasks
     # are still being processed
-    _wmtool = result.get("CMS_WMTool", "UNKNOWN")
+    _wmtool = result.get(
+        "CMS_WMTool",
+        "UNKNOWN"
+        if result.get("CMS_SubmissionTool") != "InstitutionalSchedd"
+        else "User",
+    )
     result["CMS_WMTool"] = "User" if _wmtool.lower() == "user" else _wmtool
     if reduce_data:
         result = drop_fields_for_running_jobs(result)
