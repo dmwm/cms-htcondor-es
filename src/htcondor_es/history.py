@@ -64,7 +64,7 @@ def process_schedd(
             es = htcondor_es.es.get_server_handle(args)
     try:
         if not args.dry_run:
-            history_iter = schedd.history(history_query, [], 10000)
+            history_iter = schedd.history(history_query, [], match=-1)
         else:
             history_iter = []
 
