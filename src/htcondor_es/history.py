@@ -46,7 +46,7 @@ def process_schedd(
         || CRAB_PostJobLastUpdate >= %(last_completion)d )
         && (CMS_Type != "DONOTMONIT")
         """
-    history_query = classad.ExprTree(_q % {"last_completion": last_completion})
+    history_query = classad.ExprTree(_q % {"last_completion": last_completion - 720})
     logging.info(
         "Querying %s for history: %s.  " "%.1f minutes of ads",
         schedd_ad["Name"],
