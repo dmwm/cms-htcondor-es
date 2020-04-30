@@ -28,25 +28,24 @@ def make_mappings():
         props[name] = {"type": "long"}
     for name in filter_name(htcondor_es.convert_to_json.string_vals):
         if name in htcondor_es.convert_to_json.no_idx:
-            props[name] = {"type": "text", "index": "no"}
+            props[name] = {"type": "text", "index": "false"}
         elif name in htcondor_es.convert_to_json.no_analysis:
-            props[name] = {"type": "text", "index": "not_analyzed"}
+            props[name] = {"type": "keyword"}
         # else:
         #     props[name] = {"type": "keyword"} #, "analyzer": "analyzer_keyword"}
     for name in filter_name(htcondor_es.convert_to_json.date_vals):
         props[name] = {"type": "date", "format": "epoch_second"}
     for name in filter_name(htcondor_es.convert_to_json.bool_vals):
         props[name] = {"type": "boolean"}
-    props["Args"]["index"] = "no"
-    props["Cmd"]["index"] = "no"
-    props["StartdPrincipal"]["index"] = "no"
-    props["StartdIpAddr"]["index"] = "no"
+    props["Args"]["index"] = "false"
+    props["Cmd"]["index"] = "false"
+    props["StartdPrincipal"]["index"] = "false"
+    props["StartdIpAddr"]["index"] = "false"
     # props["x509UserProxyFQAN"]["analyzer"] = "standard"
     # props["x509userproxysubject"]["analyzer"] = "standard"
     props["metadata"] = {
         "properties": {"spider_runtime": {"type": "date", "format": "epoch_millis"}}
     }
-    props["ChirpCMSSW_SiteIO"] = {"type": "nested"}
 
     dynamic_string_template = {
         "strings_as_keywords": {
@@ -55,9 +54,7 @@ def make_mappings():
         }
     }
 
-    mappings = {
-        "job": {"dynamic_templates": [dynamic_string_template], "properties": props}
-    }
+    mappings = {"dynamic_templates": [dynamic_string_template], "properties": props}
     return mappings
 
 
@@ -124,30 +121,24 @@ class ElasticInterface(object):
         idx_clt = elasticsearch.client.IndicesClient(self.handle)
         mappings = make_mappings()
         custom_mappings = {
-            "CMSPrimaryDataTier": mappings["job"]["properties"]["CMSPrimaryDataTier"],
-            "CMSPrimaryPrimaryDataset": mappings["job"]["properties"][
+            "CMSPrimaryDataTier": mappings["properties"]["CMSPrimaryDataTier"],
+            "CMSPrimaryPrimaryDataset": mappings["properties"][
                 "CMSPrimaryPrimaryDataset"
             ],
-            "CMSPrimaryProcessedDataset": mappings["job"]["properties"][
+            "CMSPrimaryProcessedDataset": mappings["properties"][
                 "CMSPrimaryProcessedDataset"
             ],
         }
         logging.info(
             idx_clt.put_mapping(  # pylint: disable = unexpected-keyword-arg
-                doc_type="job",
-                index=idx,
-                body=json.dumps({"properties": custom_mappings}),
-                ignore=400,
+                index=idx, body=json.dumps({"properties": custom_mappings}), ignore=400
             )
         )
 
     def make_mapping(self, idx, template="cms"):
         idx_clt = elasticsearch.client.IndicesClient(self.handle)
         mappings = make_mappings()
-        # print idx_clt.put_mapping(doc_type="job", index=idx, body=json.dumps({"properties": mappings}), ignore=400)
         settings = make_settings()
-        # print idx_clt.put_settings(index=idx, body=json.dumps(settings), ignore=400)
-
         body = json.dumps({"mappings": mappings, "settings": {"index": settings}})
 
         with open("last_mappings.json", "w") as jsonfile:
@@ -215,7 +206,7 @@ def parse_errors(result):
 
 def post_ads(es, idx, ads, metadata=None):
     body = make_es_body(ads, metadata)
-    res = es.bulk(body=body, doc_type="job", index=idx, request_timeout=60)
+    res = es.bulk(body=body, index=idx, request_timeout=60)
     if res.get("errors"):
         return parse_errors(res)
 
@@ -223,7 +214,7 @@ def post_ads(es, idx, ads, metadata=None):
 def post_ads_nohandle(idx, ads, args, metadata=None):
     es = get_server_handle(args).handle
     body = make_es_body(ads, metadata)
-    res = es.bulk(body=body, doc_type="job", index=idx, request_timeout=60)
+    res = es.bulk(body=body, index=idx, request_timeout=60)
     if res.get("errors"):
         return parse_errors(res)
 

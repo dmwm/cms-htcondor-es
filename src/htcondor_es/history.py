@@ -46,7 +46,7 @@ def process_schedd(
         || CRAB_PostJobLastUpdate >= %(last_completion)d )
         && (CMS_Type != "DONOTMONIT")
         """
-    history_query = classad.ExprTree(_q % {"last_completion": last_completion})
+    history_query = classad.ExprTree(_q % {"last_completion": last_completion - 720})
     logging.info(
         "Querying %s for history: %s.  " "%.1f minutes of ads",
         schedd_ad["Name"],
@@ -58,12 +58,13 @@ def process_schedd(
     total_upload = 0
     sent_warnings = False
     timed_out = False
+    error = False
     if not args.read_only:
         if args.feed_es:
             es = htcondor_es.es.get_server_handle(args)
     try:
         if not args.dry_run:
-            history_iter = schedd.history(history_query, [], 10000)
+            history_iter = schedd.history(history_query, [], match=-1)
         else:
             history_iter = []
 
@@ -146,12 +147,31 @@ def process_schedd(
                     % args.max_documents_to_process
                 )
                 break
-
+        # Post the remaining ads
+        for idx, ad_list in list(buffered_ads.items()):
+            if ad_list:
+                logging.debug(
+                    "...posting remaining %d ads from %s " "(process_schedd)",
+                    len(ad_list),
+                    schedd_ad["Name"],
+                )
+                if not args.read_only:
+                    if args.feed_es:
+                        htcondor_es.es.post_ads(
+                            es.handle, idx, ad_list, metadata=metadata
+                        )
+                    if args.feed_amq:
+                        data_for_amq = [
+                            (id_, convert_dates_to_millisecs(dict_ad))
+                            for id_, dict_ad in ad_list
+                        ]
+                        htcondor_es.amq.post_ads(data_for_amq, metadata=metadata)
     except RuntimeError:
         message = "Failed to query schedd for job history: %s" % schedd_ad["Name"]
         exc = traceback.format_exc()
         message += "\n{}".format(exc)
         logging.error(message)
+        error = True
 
     except Exception as exn:
         message = "Failure when processing schedd history query on %s: %s" % (
@@ -164,24 +184,7 @@ def process_schedd(
         send_email_alert(
             args.email_alerts, "spider_cms schedd history query error", message
         )
-
-    # Post the remaining ads
-    for idx, ad_list in list(buffered_ads.items()):
-        if ad_list:
-            logging.debug(
-                "...posting remaining %d ads from %s " "(process_schedd)",
-                len(ad_list),
-                schedd_ad["Name"],
-            )
-            if not args.read_only:
-                if args.feed_es:
-                    htcondor_es.es.post_ads(es.handle, idx, ad_list, metadata=metadata)
-                if args.feed_amq:
-                    data_for_amq = [
-                        (id_, convert_dates_to_millisecs(dict_ad))
-                        for id_, dict_ad in ad_list
-                    ]
-                    htcondor_es.amq.post_ads(data_for_amq, metadata=metadata)
+        error = True
 
     total_time = (time.time() - my_start) / 60.0
     total_upload /= 60.0
@@ -200,7 +203,7 @@ def process_schedd(
 
     # If we got to this point without a timeout, all these jobs have
     # been processed and uploaded, so we can update the checkpoint
-    if not timed_out:
+    if not timed_out and not error:
         checkpoint_queue.put((schedd_ad["Name"], last_completion))
 
     return last_completion
