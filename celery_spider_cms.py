@@ -15,7 +15,7 @@ import argparse
 import time
 import traceback
 from celery import group
-from htcondor_es.celery.tasks import query_schedd
+from htcondor_es.celery.tasks import query_schedd, create_affiliation_dir
 from htcondor_es.celery.celery import app
 from htcondor_es.utils import get_schedds, get_schedds_from_file
 
@@ -33,30 +33,35 @@ def main_driver(args):
         schedd_ads = get_schedds(args, collectors=args.collectors)
     _types = []
     if not args.skip_history:
-        _types.append('history')
+        _types.append("history")
     if not args.skip_queues:
-        _types.append('queue')
-    res = group(
-        query_schedd.s(
-            sched,
-            dry_run=args.dry_run,
-            start_time=start_time,
-            keep_full_queue_data=args.keep_full_queue_data,
-            bunch=args.amq_bunch_size,
-            query_type=_type,
-            es_index_template=args.es_index_template,
-            feed_es=args.feed_es,
+        _types.append("queue")
+    res = (
+        create_affiliation_dir.si()
+        | group(
+            query_schedd.si(
+                sched,
+                dry_run=args.dry_run,
+                start_time=start_time,
+                keep_full_queue_data=args.keep_full_queue_data,
+                chunk_size=args.query_queue_batch_size,
+                bunch=args.amq_bunch_size,
+                query_type=_type,
+                es_index_template=args.es_index_template,
+                feed_es=args.feed_es,
+            )
+            for _type in _types
+            for sched in schedd_ads
         )
-        for _type in _types
-        for sched in schedd_ads
     ).apply_async(serializer="pickle")
     # Use the get to wait for results
     # We could also chain it to a chord to process the responses
     # for logging pourposes.
-    # The propagate false will prevent it to raise 
-    # an exception if any of the schedds query failed. 
+    # The propagate false will prevent it to raise
+    # an exception if any of the schedds query failed.
     groups = res.get(propagate=False)
-    print([g for g in groups.collect()])
+
+    print([g for g in groups])
 
 
 def main():
@@ -128,7 +133,7 @@ def main():
 
     parser.add_argument(
         "--query_queue_batch_size",
-        default=50,
+        default=500,
         type=int,
         dest="query_queue_batch_size",
         help=(

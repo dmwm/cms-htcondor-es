@@ -191,6 +191,20 @@ def post_ads_es(es_docs, es_index, metadata=None):
         traceback.print_exc()
 
 
+@app.task()
+def create_affiliation_dir(days=1):
+    try:
+        output_file = os.getenv(
+            "AFFILIATION_DIR_LOCATION",
+            AffiliationManager._AffiliationManager__DEFAULT_DIR_PATH,
+        )
+        AffiliationManager(recreate_older_days=days, dir_file=output_file)
+    except AffiliationManagerException as ex:
+        logging.warning("Error creating the AffiliationManager %s", str(ex))
+        traceback.print_exc()
+        pass
+
+
 # ---Utils---
 def grouper(iterable, n, fillvalue=None):
     """Collect data into fixed-length chunks or blocks
@@ -239,7 +253,7 @@ def send_data(
     responses = []
     for docs_bunch in grouper(query_iter, bunch):
         process_and_send = group(
-            process_docs.s(
+            process_docs.si(
                 list(filter(None, X)),
                 reduce_data=not keep_full_queue_data,
                 pool_name=pool_name,
@@ -248,7 +262,7 @@ def send_data(
             )
             for X in grouper(docs_bunch, chunk_size)
         )
-        responses.append(process_and_send.apply_async())
+        responses.append(process_and_send.apply_async(serializer="pickle"))
     return responses
 
 
@@ -266,23 +280,3 @@ def getRedisConnection():
             os.getenv("SPIDER_CHECKPOINT", "redis://localhost/1")
         )
     return __REDIS_CONN
-
-
-# ---- Signals----
-@celeryd_init.connect
-def configure_workers(sender=None, conf=None, **kwargs):
-    """
-    Setup the worker before starting to use them for tasks.
-    In this case it will check that the affiliation dir file exists
-    (or create it otherwise)
-    """
-    try:
-        output_file = os.getenv(
-            "AFFILIATION_DIR_LOCATION",
-            AffiliationManager._AffiliationManager__DEFAULT_DIR_PATH,
-        )
-        AffiliationManager(recreate_older_days=60, dir_file=output_file)
-    except AffiliationManagerException as ex:
-        logging.warning("Error creating the AffiliationManager %s", str(ex))
-        traceback.print_exc()
-        pass
