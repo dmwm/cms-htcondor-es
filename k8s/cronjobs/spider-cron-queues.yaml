@@ -12,7 +12,7 @@ spec:
           serviceAccountName: spider-account
           containers:
           - name: cms-htcondor-es
-            image: cronosnull/cms_htcondor_es:0.2
+            image: cronosnull/cms_htcondor_es:0.3
             args:
             - python
             - /cms-htcondor-es/celery_spider_cms.py
@@ -88,5 +88,6 @@ spec:
                   path: collectors
                 secretName: collectors
             - name: shared-spider
-              emptyDir: {}
+              persistentVolumeClaim:
+                claimName: affilations-cephfs-claim
 

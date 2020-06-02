@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: spider-worker
-        image: cronosnull/cms_htcondor_es:0.2
+        image: cronosnull/cms_htcondor_es:0.3
         args:
         - celery
         - -A
@@ -27,7 +27,7 @@ spec:
         - worker
         resources:
           requests:
-             cpu: 500m
+             cpu: 100m
              memory: 200Mi
           limits:
             cpu: 2000m
@@ -102,4 +102,5 @@ spec:
             path: collectors
           secretName: collectors
       - name: shared-spider
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: affilations-cephfs-claim
