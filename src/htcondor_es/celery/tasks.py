@@ -51,7 +51,7 @@ __REDIS_CONN = None
 
 
 # ---Tasks----
-@app.task(max_retries=3, autoretry_for=(RuntimeError,) serializer="pickle")
+@app.task(max_retries=3, autoretry_for=(RuntimeError,), serializer="pickle")
 def query_schedd(
     schedd_ad,
     start_time=None,
