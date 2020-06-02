@@ -20,6 +20,7 @@ spec:
       containers:
       - name: spider-worker
         image: cronosnull/cms_htcondor_es:0.3
+        imagePullPolicy: Always
         args:
         - celery
         - -A

@@ -13,6 +13,7 @@ spec:
           containers:
           - name: cms-htcondor-es
             image: cronosnull/cms_htcondor_es:0.3
+            imagePullPolicy: Always
             args:
             - python
             - /cms-htcondor-es/celery_spider_cms.py
