@@ -25,6 +25,12 @@ spec:
         name: spider-flower
         ports:
         - containerPort: 8888
-        resources: {}
+        resources:
+          requests:
+             cpu: 100m
+             memory: 500Mi
+          limits:
+            cpu: 300m
+            memory: 1Gi
       restartPolicy: Always
 status: {}

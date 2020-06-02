@@ -28,10 +28,10 @@ spec:
         resources:
           requests:
              cpu: 100m
-             memory: 200Mi
+             memory: 500Mi
           limits:
             cpu: 2000m
-            memory: 1Gi
+            memory: 2Gi
         env: &spider_env
         - name: AFFILIATION_DIR_LOCATION
           value: /cms_shared/affiliation_dir.json
