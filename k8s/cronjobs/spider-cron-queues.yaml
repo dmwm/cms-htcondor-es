@@ -56,9 +56,7 @@ spec:
               - mountPath: /cms_secrets/es-conf
                 name: es-conf
               - mountPath: /cms_secrets/collectors
-                name: collectors
-              - mountPath: /cms_shared
-                name: shared-spider            
+                name: collectors        
           restartPolicy: Never
           securityContext:
               fsGroup: 1414
@@ -87,7 +85,4 @@ spec:
                 - key: collectors
                   path: collectors
                 secretName: collectors
-            - name: shared-spider
-              persistentVolumeClaim:
-                claimName: affilations-cephfs-claim
 

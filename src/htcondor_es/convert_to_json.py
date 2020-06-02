@@ -583,20 +583,24 @@ postjob_status_decode = {
 
 # Initialize aff_mgr
 aff_mgr = None
-try:
-    aff_mgr = AffiliationManager(
-        recreate=False,
-        dir_file=os.getenv(
-            "AFFILIATION_DIR_LOCATION",
-            AffiliationManager._AffiliationManager__DEFAULT_DIR_PATH,
-        ),
-    )
-except AffiliationManagerException as e:
-    # If its not possible to create the affiliation manager
-    # Log it
-    logging.error("There were an error creating the affiliation manager, %s", e)
-    traceback.print_exc()
-    # Continue execution without affiliation.
+
+
+def __generate_aff_mgr():
+    global aff_mgr
+    try:
+        aff_mgr = AffiliationManager(
+            recreate=False,
+            dir_file=os.getenv(
+                "AFFILIATION_DIR_LOCATION",
+                AffiliationManager._AffiliationManager__DEFAULT_DIR_PATH,
+            ),
+        )
+    except AffiliationManagerException as e:
+        # If its not possible to create the affiliation manager
+        # Log it
+        logging.error("There were an error creating the affiliation manager, %s", e)
+        traceback.print_exc()
+        # Continue execution without affiliation.
 
 
 def make_list_from_string_field(ad, key, split_re=r"[\s,]+\s*", default=None):
@@ -646,6 +650,8 @@ def convert_to_json(
     pool_name="Unknown",
     start_time=None,
 ):
+    if not aff_mgr:
+        __generate_aff_mgr()
     if ad.get("TaskType") == "ROOT":
         return None
     _launch_time = int(start_time or time.time())
