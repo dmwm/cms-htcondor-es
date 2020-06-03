@@ -18,6 +18,8 @@ spec:
             - python
             - /cms-htcondor-es/celery_spider_cms.py
             - --feed_es
+            - --query_queue_batch_size
+            - "5000"
             env: &spider_env
               - name: AFFILIATION_DIR_LOCATION
                 value: /cms_shared/affiliation_dir.json

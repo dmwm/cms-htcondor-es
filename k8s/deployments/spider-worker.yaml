@@ -28,11 +28,11 @@ spec:
         - worker
         resources:
           requests:
-             cpu: 100m
+             cpu: 300m
              memory: 500Mi
           limits:
-            cpu: 2000m
-            memory: 2Gi
+            cpu: 1000m
+            memory: 1Gi
         env: &spider_env
         - name: AFFILIATION_DIR_LOCATION
           value: /cms_shared/affiliation_dir.json
@@ -103,5 +103,6 @@ spec:
             path: collectors
           secretName: collectors
       - name: shared-spider
-        persistentVolumeClaim:
-          claimName: affilations-cephfs-claim
+        emptyDir: {}
+        #PROD#persistentVolumeClaim:
+        #PROD#  claimName: affilations-cephfs-claim

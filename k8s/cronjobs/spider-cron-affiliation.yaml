@@ -46,8 +46,9 @@ spec:
                 name: shared-spider
           volumes:
             - name: shared-spider
-              persistentVolumeClaim:
-                claimName: affilations-cephfs-claim
+              emptyDir: {}
+        #PROD#persistentVolumeClaim:
+        #PROD#  claimName: affilations-cephfs-claim
           restartPolicy: Never
           securityContext:
             fsGroup: 1414

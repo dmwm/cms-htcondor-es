@@ -20,14 +20,14 @@ spec:
         app: redis
     spec:
       containers:
-      - image: redis:alpine
+      - image: redis:5.0.9-32bit
         name: redis
         ports:
         - containerPort: 6379
         resources: 
           requests:
             cpu: 200m
-            memory: 1Gi
+            memory: 3Gi
           limits:
             cpu: 500m
             memory: 4Gi
@@ -37,6 +37,7 @@ spec:
       restartPolicy: Always
       volumes:
       - name: redis-claim0
-        persistentVolumeClaim:
-          claimName: redis-cephfs-claim
+        emptyDir: {}
+        #PROD#persistentVolumeClaim:
+        #PROD#  claimName: redis-cephfs-claim
 status: {}

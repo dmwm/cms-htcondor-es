@@ -10,7 +10,6 @@ import time
 import htcondor
 import classad
 from celery import group
-from celery.signals import celeryd_init
 from itertools import zip_longest, islice
 import collections
 from htcondor_es.convert_to_json import (
@@ -191,7 +190,7 @@ def post_ads_es(es_docs, es_index, metadata=None):
         traceback.print_exc()
 
 
-@app.task()
+@app.task(ignore_result=True)
 def create_affiliation_dir(days=1):
     try:
         output_file = os.getenv(
