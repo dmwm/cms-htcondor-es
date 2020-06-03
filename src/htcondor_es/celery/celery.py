@@ -21,7 +21,7 @@ app.conf.worker_max_tasks_per_child = 100
 # By default celery will the number of cpus as CELERYD_CONCURRENCY
 if os.getenv("CELERY_TEST", None):
     app.conf.worker_concurrency = 1  # Just one worker by container.
-app.conf.timezone = "Europe/Zurich"
 app.conf.accept_content = ["pickle", "json"]
 app.conf.task_serializer = "pickle"
+app.conf.task_compression = "gzip"
 app.conf.result_serializer = "pickle"
