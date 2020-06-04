@@ -224,7 +224,7 @@ def grouper(iterable, n, fillvalue=None):
     """
     # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * n
-    return filter(None, zip_longest(*args, fillvalue=fillvalue))
+    return zip_longest(*args, fillvalue=fillvalue)
 
 
 def consume(iterator, n=None):
@@ -266,8 +266,8 @@ def send_data(
     responses = []
     total_tasks = 0
     for docs_bunch in grouper(query_iter, bunch):
-        process_and_send = group(
-            process_docs.si(
+        process_and_send = [
+            process_docs(
                 list(filter(None, X)),
                 reduce_data=not keep_full_queue_data,
                 pool_name=pool_name,
@@ -276,9 +276,9 @@ def send_data(
                 metadata=metadata,
             )
             for X in grouper(docs_bunch, chunk_size)
-        )
-        total_tasks += len(process_and_send.tasks)
-        responses.append(process_and_send.apply_async(serializer="pickle"))
+        ]
+        total_tasks += len(list(filter(None,docs_bunch)))
+        #responses.append(process_and_send.apply_async(serializer="pickle"))
     return total_tasks
 
 

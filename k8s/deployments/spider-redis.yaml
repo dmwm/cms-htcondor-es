@@ -26,11 +26,11 @@ spec:
         - containerPort: 6379
         resources: 
           requests:
-            cpu: 200m
-            memory: 4Gi
+            cpu: 150m
+            memory: 2Gi
           limits:
             cpu: 500m
-            memory: 8Gi
+            memory: 4Gi
         volumeMounts:
         - mountPath: /data
           name: redis-claim0

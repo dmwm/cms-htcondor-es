@@ -49,7 +49,7 @@ services:
     restart: 'no'
     environment: *env
     # entrypoint: ["python","/cms-htcondor-es/tests/celery_test.py"]
-    entrypoint: ["python","/cms-htcondor-es/celery_spider_cms.py","--feed_es","--query_queue_batch_size","5000"]
+    entrypoint: ["python","/cms-htcondor-es/celery_spider_cms.py","--feed_es","--query_queue_batch_size","1000", "--amq_bunch_size", "500"]
     depends_on:
       - spider-worker
    

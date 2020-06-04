@@ -30,7 +30,7 @@ spec:
         - "celery,es_post,convert"
         resources:
           requests:
-             cpu: 600m
+             cpu: 300m
              memory: 500Mi
           limits:
             cpu: 1000m
