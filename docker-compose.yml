@@ -27,7 +27,7 @@ services:
       - CMS_ES_CONF_FILE=/run/secrets/es-conf
       - REQUESTS_CA_BUNDLE=/etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt
       - LOGLEVEL=DEBUG
-    entrypoint: ['celery', "-A", "htcondor_es.celery.celery", "worker"]
+    entrypoint: ['celery', "-A", "htcondor_es.celery.celery", "worker","-Q","celery,es_post,convert"]
     secrets: &secrets
       - amq-username
       - amq-password
@@ -49,7 +49,7 @@ services:
     restart: 'no'
     environment: *env
     # entrypoint: ["python","/cms-htcondor-es/tests/celery_test.py"]
-    entrypoint: ["python","/cms-htcondor-es/celery_spider_cms.py","--feed_es"]
+    entrypoint: ["python","/cms-htcondor-es/celery_spider_cms.py","--feed_es","--query_queue_batch_size","5000"]
     depends_on:
       - spider-worker
    

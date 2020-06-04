@@ -60,7 +60,7 @@ def main_driver(args):
     # for logging pourposes.
     # The propagate false will prevent it to raise
     # an exception if any of the schedds query failed.
-    groups = res.collect(propagate=False)
+    groups = res.get(propagate=False)
     logging.debug(groups)
     print(time.time() - start_time)
 

@@ -110,14 +110,20 @@ def query_schedd(
         keep_full_queue_data=keep_full_queue_data,
         feed_es=feed_es,
         es_index=es_index_template,
-        metadata={"spider_source": f"condor_{query_type}"}
+        metadata={"spider_source": f"condor_{query_type}"},
     )
     if query_type == "history":
         getRedisConnection().set(schedd_ad["name"], hist_time)
     return (schedd_ad["name"], n_tasks)
 
 
-@app.task(ignore_result=True)
+@app.task(
+    ignore_result=True,
+    queue="convert",
+    acks_late=True,
+    max_retries=3,
+    autoretry_for=(OSError,),
+)
 def process_docs(
     docs,
     reduce_data=True,
@@ -169,7 +175,7 @@ def process_docs(
     return post_ads(converted_docs) if converted_docs else []
 
 
-@app.task(ignore_result=True)
+@app.task(ignore_result=True, queue="es_post")
 def post_ads_es(es_docs, es_index, metadata=None):
     """
     Send the messages to ES.
