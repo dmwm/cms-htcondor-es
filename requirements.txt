@@ -3,4 +3,4 @@ elasticsearch>=7.0.0,<8.0.0
 CMSMonitoring==0.4.2
 #git+https://github.com/cronosnull/CMSMonitoring.git@python3#egg=CMSMonitoring
 requests==2.22.0
-celery[redis]
+celery[redis]==4.4.2

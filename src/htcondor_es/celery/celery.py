@@ -9,7 +9,7 @@ import os
 app = Celery(
     "spider_celery",
     broker=os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0"),
-    backend=os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/0"),
+    backend=os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/1"),
     include=["htcondor_es.celery.tasks"],
 )
 # We have tasks with very different duration, in particular the
@@ -21,7 +21,6 @@ app.conf.worker_max_tasks_per_child = 100
 # By default celery will the number of cpus as CELERYD_CONCURRENCY
 if os.getenv("CELERY_TEST", None):
     app.conf.worker_concurrency = 1  # Just one worker by container.
-app.conf.accept_content = ["pickle", "json"]
+app.conf.accept_content = ["pickle"]
 app.conf.task_serializer = "pickle"
-app.conf.task_compression = "gzip"
 app.conf.result_serializer = "pickle"

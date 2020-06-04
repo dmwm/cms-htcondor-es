@@ -28,7 +28,7 @@ spec:
         - worker
         resources:
           requests:
-             cpu: 300m
+             cpu: 600m
              memory: 500Mi
           limits:
             cpu: 1000m

@@ -19,9 +19,11 @@ from htcondor_es.celery.tasks import query_schedd, create_affiliation_dir
 from htcondor_es.celery.celery import app
 from htcondor_es.utils import get_schedds, get_schedds_from_file
 
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "ERROR"))
+
 
 def main_driver(args):
-    print(app.conf.humanize(with_defaults=False))
+    logging.debug(app.conf.humanize(with_defaults=False))
     schedd_ads = []
     start_time = time.time()
     if args.collectors_file:
@@ -36,23 +38,22 @@ def main_driver(args):
         _types.append("history")
     if not args.skip_queues:
         _types.append("queue")
-    res = (
-        create_affiliation_dir.si()
-        | group(
-            query_schedd.si(
-                sched,
-                dry_run=args.dry_run,
-                start_time=start_time,
-                keep_full_queue_data=args.keep_full_queue_data,
-                chunk_size=args.query_queue_batch_size,
-                bunch=args.amq_bunch_size,
-                query_type=_type,
-                es_index_template=args.es_index_template,
-                feed_es=args.feed_es,
-            )
-            for _type in _types
-            for sched in schedd_ads
+    aff_res = create_affiliation_dir.si().apply_async()
+    aff_res.get()
+    res = group(
+        query_schedd.si(
+            sched,
+            dry_run=args.dry_run,
+            start_time=start_time,
+            keep_full_queue_data=args.keep_full_queue_data,
+            chunk_size=args.query_queue_batch_size,
+            bunch=args.amq_bunch_size,
+            query_type=_type,
+            es_index_template=args.es_index_template,
+            feed_es=args.feed_es,
         )
+        for _type in _types
+        for sched in schedd_ads
     ).apply_async(serializer="pickle")
     # Use the get to wait for results
     # We could also chain it to a chord to process the responses
@@ -61,7 +62,13 @@ def main_driver(args):
     # an exception if any of the schedds query failed.
     groups = res.get(propagate=False)
 
-    print([g for g in groups])
+    _results = [
+        (g[0], [r.get(propagate=False) for r in g[1] if len(g[1])])
+        for g in groups
+        if len(g) > 1
+    ]
+    logging.debug(_results)
+    print(time.time() - start_time)
 
 
 def main():

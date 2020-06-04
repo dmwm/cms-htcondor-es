@@ -20,17 +20,17 @@ spec:
         app: redis
     spec:
       containers:
-      - image: redis:5.0.9-32bit
+      - image: redis:alpine
         name: redis
         ports:
         - containerPort: 6379
         resources: 
           requests:
             cpu: 200m
-            memory: 3Gi
+            memory: 4Gi
           limits:
             cpu: 500m
-            memory: 4Gi
+            memory: 8Gi
         volumeMounts:
         - mountPath: /data
           name: redis-claim0

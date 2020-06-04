@@ -50,7 +50,14 @@ __REDIS_CONN = None
 
 
 # ---Tasks----
-@app.task(max_retries=3, autoretry_for=(RuntimeError,), serializer="pickle")
+@app.task(
+    max_retries=3,
+    autoretry_for=(RuntimeError,),  # When a schedd cannot be contacted, retry.
+    serializer="pickle",
+    acks_late=True,
+    retry_backoff=True,
+    reject_on_worker_lost=True,  # If the worker is killed (e.g. by k8s) reasign the task
+)
 def query_schedd(
     schedd_ad,
     start_time=None,
@@ -104,6 +111,7 @@ def query_schedd(
         keep_full_queue_data=keep_full_queue_data,
         feed_es=feed_es,
         es_index=es_index_template,
+        metadata={"spider_source": f"condor_{query_type}"}
     )
     if query_type == "history":
         getRedisConnection().set(schedd_ad["name"], hist_time)
@@ -165,12 +173,12 @@ def process_docs(
 @app.task(ignore_result=True)
 def post_ads_es(es_docs, es_index, metadata=None):
     """
-    Send the messages to ES. 
+    Send the messages to ES.
     Determine the index and send the messages.
     params:
         es_docs: iterable with pairs (doc_id, doc)
         es_index: index prefix
-        metadata: dictionary with the metadata. 
+        metadata: dictionary with the metadata.
     """
     try:
         metadata = metadata or {}
@@ -179,7 +187,7 @@ def post_ads_es(es_docs, es_index, metadata=None):
         es_indexes = {}
         for job in es_docs:
             _idx = htcondor_es.es.get_index(job[1]["RecordTime"], es_index)
-            if not _idx in es_indexes:
+            if _idx not in es_indexes:
                 es_indexes[_idx] = []
             es_indexes[_idx].append(job)
         for _idx in es_indexes:
@@ -235,6 +243,7 @@ def send_data(
     keep_full_queue_data=False,
     feed_es=False,
     es_index="cms-test",
+    metadata=None,
 ):
     """
     Send the data to AMQ and, optionally, to ES.
@@ -258,6 +267,7 @@ def send_data(
                 pool_name=pool_name,
                 feed_es=feed_es,
                 es_index=es_index,
+                metadata=metadata,
             )
             for X in grouper(docs_bunch, chunk_size)
         )
