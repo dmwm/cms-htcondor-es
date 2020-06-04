@@ -3,7 +3,8 @@ COPY ./requirements.txt /cms-htcondor-es/requirements.txt
 RUN yum install -y git python36 python36-virtualenv python36-pip && \
 ln -fs /usr/bin/python3 /usr/bin/python && \
 ln -fs /usr/bin/pip3.6 /usr/bin/pip && \
-pip install -r /cms-htcondor-es/requirements.txt
+pip install -r /cms-htcondor-es/requirements.txt && \
+pip install flower
 ENV PYTHONPATH "${PYTHONPATH}:/cms-htcondor-es/src"
 ENV REQUESTS_CA_BUNDLE "/etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt"
 

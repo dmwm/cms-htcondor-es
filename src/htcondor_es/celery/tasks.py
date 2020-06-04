@@ -33,7 +33,7 @@ import traceback
 import logging
 import redis
 
-from .celery import app
+from htcondor_es.celery.celery import app
 
 QUERY_QUEUES = """
          (JobStatus < 3 || JobStatus > 4
@@ -53,7 +53,6 @@ __REDIS_CONN = None
 @app.task(
     max_retries=3,
     autoretry_for=(RuntimeError,),  # When a schedd cannot be contacted, retry.
-    serializer="pickle",
     acks_late=True,
     retry_backoff=True,
     reject_on_worker_lost=True,  # If the worker is killed (e.g. by k8s) reasign the task
@@ -103,7 +102,7 @@ def query_schedd(
         )
         hist_time = time.time()
         query_iter = schedd.history(history_query, [], 10000) if not dry_run else []
-    responses = send_data(
+    n_tasks = send_data(
         query_iter,
         chunk_size,
         bunch,
@@ -115,10 +114,10 @@ def query_schedd(
     )
     if query_type == "history":
         getRedisConnection().set(schedd_ad["name"], hist_time)
-    return (schedd_ad["name"], responses)
+    return (schedd_ad["name"], n_tasks)
 
 
-@app.task(serializer="pickle")
+@app.task(ignore_result=True)
 def process_docs(
     docs,
     reduce_data=True,
@@ -259,6 +258,7 @@ def send_data(
         es_index: index prefix.
     """
     responses = []
+    total_tasks = 0
     for docs_bunch in grouper(query_iter, bunch):
         process_and_send = group(
             process_docs.si(
@@ -271,8 +271,9 @@ def send_data(
             )
             for X in grouper(docs_bunch, chunk_size)
         )
+        total_tasks += len(process_and_send.tasks)
         responses.append(process_and_send.apply_async(serializer="pickle"))
-    return responses
+    return total_tasks
 
 
 def getRedisConnection():

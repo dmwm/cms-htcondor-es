@@ -54,20 +54,14 @@ def main_driver(args):
         )
         for _type in _types
         for sched in schedd_ads
-    ).apply_async(serializer="pickle")
+    ).apply_async()
     # Use the get to wait for results
     # We could also chain it to a chord to process the responses
     # for logging pourposes.
     # The propagate false will prevent it to raise
     # an exception if any of the schedds query failed.
-    groups = res.get(propagate=False)
-
-    _results = [
-        (g[0], [r.get(propagate=False) for r in g[1] if len(g[1])])
-        for g in groups
-        if len(g) > 1
-    ]
-    logging.debug(_results)
+    groups = res.collect(propagate=False)
+    logging.debug(groups)
     print(time.time() - start_time)
 
 
