@@ -26,6 +26,8 @@ spec:
         - -A
         - htcondor_es.celery.celery
         - worker
+        - -Q
+        - "celery,es_post,convert"
         resources:
           requests:
              cpu: 600m
