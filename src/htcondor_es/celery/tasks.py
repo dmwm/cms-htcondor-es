@@ -53,8 +53,8 @@ __REDIS_CONN = None
 @app.task(
     max_retries=3,
     autoretry_for=(RuntimeError,),  # When a schedd cannot be contacted, retry.
-    acks_late=True,
-    retry_backoff=True,
+    acks_late=True,  # Only ack the message when done
+    retry_backoff=True,  # Wait between retries
     reject_on_worker_lost=True,  # If the worker is killed (e.g. by k8s) reasign the task
 )
 def query_schedd(
@@ -178,7 +178,7 @@ def process_docs(
             continue
     if es_docs:
         post_ads_es.si(es_docs, es_index, metadata).apply_async()
-    return post_ads(converted_docs) if converted_docs else []
+    return post_ads(converted_docs, metadata=metadata) if converted_docs else []
 
 
 @app.task(ignore_result=True, queue="es_post")

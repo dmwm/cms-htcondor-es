@@ -20,6 +20,8 @@ from htcondor_es.celery.celery import app
 from htcondor_es.utils import get_schedds, get_schedds_from_file
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "ERROR"))
+__TYPE_HISTORY = "history"
+__TYPE_QUEUE = "queue"
 
 
 def main_driver(args):
@@ -35,9 +37,9 @@ def main_driver(args):
         schedd_ads = get_schedds(args, collectors=args.collectors)
     _types = []
     if not args.skip_history:
-        _types.append("history")
+        _types.append(__TYPE_HISTORY)
     if not args.skip_queues:
-        _types.append("queue")
+        _types.append(__TYPE_QUEUE)
     aff_res = create_affiliation_dir.si().apply_async()
     aff_res.get()
     res = group(
@@ -50,7 +52,7 @@ def main_driver(args):
             bunch=args.amq_bunch_size,
             query_type=_type,
             es_index_template=args.es_index_template,
-            feed_es=args.feed_es,
+            feed_es=args.feed_es and _type is __TYPE_HISTORY,
         )
         for _type in _types
         for sched in schedd_ads
