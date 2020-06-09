@@ -583,10 +583,13 @@ postjob_status_decode = {
 
 # Initialize aff_mgr
 aff_mgr = None
+__aff_err = False
 
 
 def __generate_aff_mgr():
-    global aff_mgr
+    global aff_mgr, __aff_err
+    if __aff_err:
+        return
     try:
         aff_mgr = AffiliationManager(
             recreate=False,
@@ -598,6 +601,7 @@ def __generate_aff_mgr():
     except AffiliationManagerException as e:
         # If its not possible to create the affiliation manager
         # Log it
+        __aff_err = True
         logging.error("There were an error creating the affiliation manager, %s", e)
         traceback.print_exc()
         # Continue execution without affiliation.
@@ -1352,10 +1356,18 @@ def bulk_convert_ad_data(ad, result):
                 try:
                     value = int(value)
                 except ValueError:
-                    logging.warning(
-                        "Failed to convert key %s with value %s to int for a date field"
-                        % (key, repr(value))
-                    )
+                    if repr(value) == "'GLIDEIN_MaxMemMBs'":
+                        _glidein_maxmem = ad.get("GLIDEIN_MaxMemMBs", None)
+                        value = (
+                            int(_glidein_maxmem)
+                            if _glidein_maxmem is not None
+                            else None
+                        )
+                    else:
+                        logging.warning(
+                            "Failed to convert key %s with value %s to int for a date field"
+                            % (key, repr(value))
+                        )
                     value = None
         # elif key in date_vals:
         #    value = datetime.datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
