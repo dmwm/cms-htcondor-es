@@ -54,7 +54,7 @@ __REDIS_CONN = None
     max_retries=3,
     autoretry_for=(RuntimeError,),  # When a schedd cannot be contacted, retry.
     acks_late=True,  # Only ack the message when done
-    retry_backoff=True,  # Wait between retries
+    retry_backoff=5,  # Wait between retries (5, 10,15)s
     reject_on_worker_lost=True,  # If the worker is killed (e.g. by k8s) reasign the task
 )
 def query_schedd(
