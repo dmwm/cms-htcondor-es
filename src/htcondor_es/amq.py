@@ -17,8 +17,8 @@ def get_amq_interface():
             username = open(username_file, "r").read().strip()
             password = open(password_file, "r").read().strip()
         except IOError:
-            print("ERROR: Provide username/password for CERN AMQ")
-            print(
+            logging.error("ERROR: Provide username/password for CERN AMQ")
+            logging.error(
                 "username_file {}\npassword_file {}".format(
                     username_file, password_file
                 )
@@ -46,7 +46,7 @@ def post_ads(ads, metadata=None):
 
     metadata = metadata or {}
     interface = get_amq_interface()
-    print(interface)
+    logging.debug(interface)
     list_data = []
     for id_, ad in ads:
         notif, _, _ = interface.make_notification(
