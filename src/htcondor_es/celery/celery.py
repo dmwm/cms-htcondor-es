@@ -15,7 +15,7 @@ app = Celery(
 # We have tasks with very different duration, in particular the
 # first tasks are short. Using a prefetch multiplier of 1 we can help to
 # load to be evenly distributed on the workers.
-app.conf.worker_prefetch_multiplier = 4
+app.conf.worker_prefetch_multiplier = 1
 # This setting will prevent memory leaks, by replacing the worker each 100 tasks.
 app.conf.worker_max_tasks_per_child = 1000
 # By default celery will the number of cpus as CELERYD_CONCURRENCY
