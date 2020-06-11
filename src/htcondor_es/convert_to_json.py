@@ -1336,6 +1336,8 @@ def bulk_convert_ad_data(ad, result):
         elif key in bool_vals:
             value = bool(value)
         elif key in int_vals:
+            if repr(value) == "'GLIDEIN_MaxMemMBs'":
+                value = ad.get("GLIDEIN_MaxMemMBs", "Unknown")
             try:
                 value = int(value)
             except ValueError:
@@ -1356,18 +1358,10 @@ def bulk_convert_ad_data(ad, result):
                 try:
                     value = int(value)
                 except ValueError:
-                    if repr(value) == "'GLIDEIN_MaxMemMBs'":
-                        _glidein_maxmem = ad.get("GLIDEIN_MaxMemMBs", None)
-                        value = (
-                            int(_glidein_maxmem)
-                            if _glidein_maxmem is not None
-                            else None
-                        )
-                    else:
-                        logging.warning(
-                            "Failed to convert key %s with value %s to int for a date field"
-                            % (key, repr(value))
-                        )
+                    logging.warning(
+                        "Failed to convert key %s with value %s to int for a date field"
+                        % (key, repr(value))
+                    )
                     value = None
         # elif key in date_vals:
         #    value = datetime.datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
