@@ -19,8 +19,7 @@ from htcondor_es.convert_to_json import (
 )
 from htcondor_es.utils import (
     get_schedds,
-    set_up_logging,
-    send_email_alert,
+    collect_metadata,
     TIMEOUT_MINS,
 )
 from htcondor_es.amq import post_ads
@@ -102,6 +101,7 @@ def query_schedd(
         )
         hist_time = time.time()
         query_iter = schedd.history(history_query, [], 10000) if not dry_run else []
+    _metadata = collect_metadata()
     n_tasks = send_data(
         query_iter,
         chunk_size,
@@ -110,7 +110,7 @@ def query_schedd(
         keep_full_queue_data=keep_full_queue_data,
         feed_es=feed_es,
         es_index=es_index_template,
-        metadata={"spider_source": f"condor_{query_type}"},
+        metadata={"spider_source": f"condor_{query_type}", **_metadata},
         start_time=start_time,
     )
     if query_type == "history":
