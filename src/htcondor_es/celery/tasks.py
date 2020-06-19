@@ -20,6 +20,7 @@ from htcondor_es.convert_to_json import (
 from htcondor_es.utils import (
     get_schedds,
     collect_metadata,
+    send_email_alert,
     TIMEOUT_MINS,
 )
 from htcondor_es.amq import post_ads
@@ -55,6 +56,7 @@ __REDIS_CONN = None
     acks_late=True,  # Only ack the message when done
     retry_backoff=5,  # Wait between retries (5, 10,15)s
     reject_on_worker_lost=True,  # If the worker is killed (e.g. by k8s) reasign the task
+    on_failure=log_failure,
 )
 def query_schedd(
     schedd_ad,
@@ -221,6 +223,16 @@ def create_affiliation_dir(days=1):
         logging.warning("Error creating the AffiliationManager %s", str(ex))
         traceback.print_exc()
         pass
+
+
+def log_failure(self, exc, task_id, args, kwargs, einfo):
+    """Send email message and log error.
+    (this only should be send if all retries failed)
+    """
+    message = f"failed to query {args}, {kwargs}"
+    logging.error(f"failed to query {args}, {kwargs}")
+    # TODO: Change email with parameters
+    send_email_alert("carizapo@cern.ch", "[Spider] Failed to query", message)
 
 
 # ---Utils---
