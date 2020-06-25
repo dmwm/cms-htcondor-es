@@ -49,6 +49,16 @@ QUERY_HISTORY = """
 __REDIS_CONN = None
 
 
+def log_failure(self, exc, task_id, args, kwargs, einfo):
+    """Send email message and log error.
+    (this only should be send if all retries failed)
+    """
+    message = f"failed to query {args}, {kwargs}"
+    logging.error(f"failed to query {args}, {kwargs}")
+    # TODO: Change email with parameters
+    send_email_alert("carizapo@cern.ch", "[Spider] Failed to query", message)
+
+
 # ---Tasks----
 @app.task(
     max_retries=3,
@@ -223,16 +233,6 @@ def create_affiliation_dir(days=1):
         logging.warning("Error creating the AffiliationManager %s", str(ex))
         traceback.print_exc()
         pass
-
-
-def log_failure(self, exc, task_id, args, kwargs, einfo):
-    """Send email message and log error.
-    (this only should be send if all retries failed)
-    """
-    message = f"failed to query {args}, {kwargs}"
-    logging.error(f"failed to query {args}, {kwargs}")
-    # TODO: Change email with parameters
-    send_email_alert("carizapo@cern.ch", "[Spider] Failed to query", message)
 
 
 # ---Utils---
