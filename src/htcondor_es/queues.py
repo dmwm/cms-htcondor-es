@@ -12,6 +12,7 @@ import multiprocessing
 import htcondor
 
 import htcondor_es.es
+import htcondor_es.vm
 import htcondor_es.amq
 from htcondor_es.utils import send_email_alert, time_remaining, TIMEOUT_MINS
 from htcondor_es.convert_to_json import convert_to_json
@@ -319,6 +320,17 @@ def process_queues(schedd_ads, starttime, pool, args, metadata=None):
                 callback=_callback_amq,
             )
             futures.append(("UPLOADER_AMQ", future))
+
+        if args.feed_vm and not args.read_only:
+            data_bunch = [
+                (id_, convert_dates_to_millisecs(dict_ad)) for id_, dict_ad in bunch
+            ]
+            vm_attrs = [a.strip() for a in args.vm_attrs.split(',')]
+            future = upload_pool.apply_async(
+                htcondor_es.vm.post_ads,
+                args=(args.vm_url, data_bunch, metadata, vm_attrs)
+            )
+            futures.append(("UPLOADER_VM", future))
 
         logging.info("Starting new uploader, %d items in queue" % output_queue.qsize())
 

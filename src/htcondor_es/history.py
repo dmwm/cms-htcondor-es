@@ -14,6 +14,7 @@ import htcondor
 import elasticsearch
 
 import htcondor_es.es
+import htcondor_es.vm
 import htcondor_es.amq
 from htcondor_es.utils import send_email_alert, time_remaining, TIMEOUT_MINS
 from htcondor_es.convert_to_json import convert_to_json
@@ -112,6 +113,13 @@ def process_schedd(
                             for id_, dict_ad in ad_list
                         ]
                         htcondor_es.amq.post_ads(data_for_amq, metadata=metadata)
+                    if args.feed_vm:
+                        data = [
+                            (id_, convert_dates_to_millisecs(dict_ad))
+                            for id_, dict_ad in ad_list
+                        ]
+                        vm_attrs = [a.strip() for a in args.vm_attrs.split(',')]
+                        htcondor_es.vm.post_ads(args.vm_url, data, metadata=metadata, vm_attrs=vm_attrs)
 
                 logging.debug(
                     "...posting %d ads from %s (process_schedd)",
