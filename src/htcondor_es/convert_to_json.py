@@ -11,6 +11,7 @@ import datetime
 import zlib
 import base64
 import htcondor
+import traceback
 from htcondor_es.AffiliationManager import (
     AffiliationManager,
     AffiliationManagerException,
@@ -579,23 +580,31 @@ postjob_status_decode = {
     "FINISHED": "finished",
 }
 
-_launch_time = int(time.time())
 
 # Initialize aff_mgr
 aff_mgr = None
-try:
-    aff_mgr = AffiliationManager(
-        recreate=False,
-        dir_file=os.getenv(
-            "AFFILIATION_DIR_LOCATION",
-            AffiliationManager._AffiliationManager__DEFAULT_DIR_PATH,
-        ),
-    )
-except AffiliationManagerException as e:
-    # If its not possible to create the affiliation manager
-    # Log it
-    logging.error("There were an error creating the affiliation manager, %s", e)
-    # Continue execution without affiliation.
+__aff_err = False
+
+
+def __generate_aff_mgr():
+    global aff_mgr, __aff_err
+    if __aff_err:
+        return
+    try:
+        aff_mgr = AffiliationManager(
+            recreate=False,
+            dir_file=os.getenv(
+                "AFFILIATION_DIR_LOCATION",
+                AffiliationManager._AffiliationManager__DEFAULT_DIR_PATH,
+            ),
+        )
+    except AffiliationManagerException as e:
+        # If its not possible to create the affiliation manager
+        # Log it
+        __aff_err = True
+        logging.error("There were an error creating the affiliation manager, %s", e)
+        traceback.print_exc()
+        # Continue execution without affiliation.
 
 
 def make_list_from_string_field(ad, key, split_re=r"[\s,]+\s*", default=None):
@@ -638,12 +647,20 @@ _cmssw_version = re.compile(r"CMSSW_((\d*)_(\d*)_.*)")
 
 
 def convert_to_json(
-    ad, cms=True, return_dict=False, reduce_data=False, pool_name="Unknown"
+    ad,
+    cms=True,
+    return_dict=False,
+    reduce_data=False,
+    pool_name="Unknown",
+    start_time=None,
 ):
+    if not aff_mgr:
+        __generate_aff_mgr()
     if ad.get("TaskType") == "ROOT":
         return None
+    _launch_time = int(start_time or time.time())
     result = {}
-    result["RecordTime"] = recordTime(ad)
+    result["RecordTime"] = recordTime(ad, launch_time=_launch_time)
     result["DataCollection"] = ad.get("CompletionDate", 0) or _launch_time
     result["DataCollectionDate"] = result["RecordTime"]
 
@@ -946,7 +963,7 @@ def convert_to_json(
         if "CompletionDate" not in result:
             result["CompletionDate"] = result.get("EnteredCurrentStatus")
         if "CommittedTime" not in result or result.get("CommittedTime", 0) == 0:
-            result["CommittedTime"] = result.get("RemoteWallClockTime")
+            result["CommittedTime"] = result.get("RemoteWallClockTime", 0)
     elif "CRAB_Id" in result:  # If is an analysis or HC test task.
         result["CRAB_PostJobStatus"] = _status
 
@@ -959,7 +976,7 @@ def convert_to_json(
         return json.dumps(result)
 
 
-def recordTime(ad):
+def recordTime(ad, launch_time=None):
     """
     RecordTime falls back to launch time as last-resort and for jobs in the queue
 
@@ -975,7 +992,7 @@ def recordTime(ad):
         elif ad.get("EnteredCurrentStatus", 0) > 0:
             return ad["EnteredCurrentStatus"]
 
-    return _launch_time
+    return launch_time or int(time.time())
 
 
 def guessTaskType(ad):
@@ -1319,6 +1336,8 @@ def bulk_convert_ad_data(ad, result):
         elif key in bool_vals:
             value = bool(value)
         elif key in int_vals:
+            if repr(value) == "'GLIDEIN_MaxMemMBs'":
+                value = ad.get("GLIDEIN_MaxMemMBs", "Unknown")
             try:
                 value = int(value)
             except ValueError:

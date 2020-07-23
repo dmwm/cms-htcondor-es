@@ -1,0 +1,92 @@
+version: "3.4"
+services:
+  spider-worker:
+    build: .
+    image: spider-worker
+    user: 1414:1414
+    volumes:
+      - shared_spider:/cms_shared
+    depends_on:
+      - redis
+      - redis_checkpoint
+    restart: 'no'
+    environment: &env
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - SPIDER_CHECKPOINT=redis://redis_checkpoint:6379/0
+      - AFFILIATION_DIR_LOCATION=/cms_shared/affiliation_dir.json
+      - COLLECTORS_FILE_LOCATION=/run/secrets/collectors.json
+      - PYTHONPATH=/cms-htcondor-es/src:$$PYTHONPATH
+      - CMS_HTCONDOR_PRODUCER=condor-test
+      - CMS_HTCONDOR_TOPIC=/topic/cms.jobmon.condor
+      - CMS_HTCONDOR_BROKER=cms-test-mb.cern.ch
+      - C_FORCE_ROOT="true"
+      - CELERY_TEST="true"
+      - CMS_AMQ_USERNAME_FILE=/run/secrets/amq-username
+      - CMS_AMQ_PASSWORD_FILE=/run/secrets/amq-password
+      - CMS_ES_CONF_FILE=/run/secrets/es-conf
+      - REQUESTS_CA_BUNDLE=/etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt
+      - LOGLEVEL=DEBUG
+    entrypoint: ['celery', "-A", "htcondor_es.celery.celery", "worker","-Q","celery,es_post,convert"]
+    secrets: &secrets
+      - amq-username
+      - amq-password
+      - es-conf
+      - source: collectors
+        target: collectors.json
+    depends_on:
+      - redis_checkpoint
+      - redis
+  spider-app:
+    image: spider-worker
+    user: 1414:1414
+    depends_on:
+        - spider-worker
+    volumes:
+      - shared_spider:/cms_shared
+    secrets: *secrets
+      
+    restart: 'no'
+    environment: *env
+    # entrypoint: ["python","/cms-htcondor-es/tests/celery_test.py"]
+    entrypoint: ["python","/cms-htcondor-es/celery_spider_cms.py","--feed_es","--query_queue_batch_size","1000", "--amq_bunch_size", "500"]
+    depends_on:
+      - spider-worker
+   
+
+  redis:
+    image: redis:alpine
+    restart: 'unless-stopped'
+    volumes:
+      - $HOME/tmp/redis_data:/data
+
+  redis_checkpoint:
+    image: redis:alpine
+    entrypoint: redis-server --appendonly yes
+    restart: always
+    volumes:
+      - $HOME/tmp/redis_cp_data:/data
+  
+  spider_flower:  
+    image: spider-worker
+    command: ["celery","flower","-A", "htcondor_es.celery.celery", "--broker=redis://redis:6379/0", "--port=8888"]  
+    ports:  
+      - 8888:8888
+    depends_on:
+      - spider-worker
+volumes:
+  shared_spider:
+    driver: local
+    driver_opts:
+      o: bind
+      device: $HOME/tmp/shared_spider
+      type: none
+secrets:
+  collectors:
+    file: ./etc/collectors.json
+  amq-username:
+    file: ./username
+  amq-password:
+    file: ./password
+  es-conf:
+    file: ./es.conf

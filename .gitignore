@@ -10,3 +10,5 @@ username
 password
 venv
 *.pyc
+
+.venv/

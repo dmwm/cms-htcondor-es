@@ -1,0 +1,19 @@
+## ACCOUNTS
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: spider
+  name: spider-account
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: spider
+  name: spider-account
+subjects:
+- kind: ServiceAccount
+  name: spider-account
+roleRef:
+  kind: ClusterRole
+  name: edit
+  apiGroup: rbac.authorization.k8s.io
