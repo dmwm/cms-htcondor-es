@@ -1064,6 +1064,8 @@ def guess_campaign_type(ad, analysis):
         return "Run3 requests"
     elif re.match(r".*RunII(Summer|Fall|Autumn|Winter)1[5-9].*", camp):
         return "Run2 requests"
+    elif "RVCMSSW" in camp:
+        return "RelVal"
     else:
         return "UNKNOWN"
 
