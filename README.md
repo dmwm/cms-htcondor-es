@@ -16,6 +16,8 @@ be reused for other HTCondor pools.
 
 The data can currently be accessed at [es-cms.cern.ch](https://es-cms.cern.ch/) and via CERN Monit at [monit-kibana.cern.ch](https://monit-kibana.cern.ch) (with index pattern `monit_prod_condor_raw_metric_v002*`). To be able to save visualizations on es-cms you need to access the rw version at [es-cms.cern.ch/kibana_rw](https://es-cms.cern.ch/kibana_rw) and be a member of the 'cms-comp-ops' CERN e-group.
 
+Aggregated data is managed by MONIT team and can be accessed at [es-monit.cern.ch](https://es-monit.cern.ch/) and via [monit-kibana-acc.cern.ch](https://monit-kibana-acc.cern.ch/) (with index pattern `monit_prod_condor_agg_metric-*`) . Code base of aggregated data can be found here : [MONIT Gitlab Repository](https://gitlab.cern.ch/monitoring/spark-cmsjm-aggregation/-/blob/master/src/main/scala/ch/cern/monitoring/CmsJMAggregationApplication.scala)
+
 Important Attributes
 --------------------
 
