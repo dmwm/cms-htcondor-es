@@ -950,6 +950,9 @@ def convert_to_json(
     elif "CRAB_Id" in result:  # If is an analysis or HC test task.
         result["CRAB_PostJobStatus"] = _status
 
+    # Set outliers
+    result = set_outliers(result)
+
     if reduce_data:
         result = drop_fields_for_running_jobs(result)
 
@@ -957,6 +960,15 @@ def convert_to_json(
         return result
     else:
         return json.dumps(result)
+
+
+def set_outliers(result):
+    """Filter and set appropriate flags for outliers"""
+    if ("CpuEff" in result) and (result["CpuEff"] >= 100.0):
+        result["CpuEffOutlier"] = 1
+    else:
+        result["CpuEffOutlier"] = 0
+    return result
 
 
 def recordTime(ad):
