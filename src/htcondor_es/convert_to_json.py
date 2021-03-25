@@ -960,13 +960,26 @@ def convert_to_json(
         else "User",
     )
     result["CMS_WMTool"] = "User" if _wmtool.lower() == "user" else _wmtool
+
     if reduce_data:
         result = drop_fields_for_running_jobs(result)
+
+    # Set outliers
+    result = set_outliers(result)
 
     if return_dict:
         return result
     else:
         return json.dumps(result)
+
+
+def set_outliers(result):
+    """Filter and set appropriate flags for outliers"""
+    if ("CpuEff" in result) and (result["CpuEff"] >= 100.0):
+        result["CpuEffOutlier"] = 1
+    else:
+        result["CpuEffOutlier"] = 0
+    return result
 
 
 def recordTime(ad):
@@ -1064,7 +1077,7 @@ def guess_campaign_type(ad, analysis):
     camp = ad.get("WMAgent_RequestName", "UNKNOWN")
     if analysis:
         return "Analysis"
-    elif re.match(r".*(RunIISummer19UL|_UL[0-9]+).*", camp):
+    elif re.match(r".*(RunIISummer(1|2)[0-9]UL|_UL[0-9]+).*", camp):
         return "MC Ultralegacy"
     elif re.match(r".*UltraLegacy.*", camp):
         return "Data Ultralegacy"
@@ -1072,7 +1085,9 @@ def guess_campaign_type(ad, analysis):
         return "Phase2 requests"
     elif re.match(r".*Run3.*", camp):
         return "Run3 requests"
-    elif re.match(r".*RunII(Summer|Fall|Autumn|Winter)1[5-9].*", camp):
+    elif "RVCMSSW" in camp:
+        return "RelVal"
+    elif re.match(r".*(RunII|(Summer|Fall|Autumn|Winter|Spring)(1[5-9]|20)).*", camp): # [!] Should be after UL
         return "Run2 requests"
     else:
         return "UNKNOWN"

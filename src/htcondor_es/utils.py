@@ -20,7 +20,7 @@ import json
 import classad
 import htcondor
 
-TIMEOUT_MINS = 11
+TIMEOUT_MINS = 60
 
 
 def get_schedds_from_file(args=None, collectors_file=None):
