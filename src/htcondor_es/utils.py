@@ -23,6 +23,7 @@ import htcondor
 TIMEOUT_MINS = 60
 
 
+
 def get_schedds_from_file(args=None, collectors_file=None):
     schedds = []
     names = set()

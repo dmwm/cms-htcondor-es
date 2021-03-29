@@ -961,6 +961,9 @@ def convert_to_json(
     )
     result["CMS_WMTool"] = "User" if _wmtool.lower() == "user" else _wmtool
 
+    # Set outliers
+    result = set_outliers(result)
+
     if reduce_data:
         result = drop_fields_for_running_jobs(result)
 
@@ -1138,7 +1141,7 @@ def jobFailed(ad):
 
 def commonExitCode(ad):
     """
-    Consolidate the exit code values of JobExitCode, 
+    Consolidate the exit code values of JobExitCode,
     the  chirped CRAB and WMCore values, and
     the original condor exit code.
     JobExitCode and Chirp_CRAB3_Job_ExitCode
