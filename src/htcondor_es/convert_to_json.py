@@ -949,12 +949,26 @@ def convert_to_json(
             result["CommittedTime"] = result.get("RemoteWallClockTime")
     elif "CRAB_Id" in result:  # If is an analysis or HC test task.
         result["CRAB_PostJobStatus"] = _status
+    # Normalize wmtool value, this is a temporary change
+    # Not to be merged (The value was fixed upstream,
+    # this change is only needed while old tasks
+    # are still being processed
+    _wmtool = result.get(
+        "CMS_WMTool",
+        "UNKNOWN"
+        if result.get("CMS_SubmissionTool") != "InstitutionalSchedd"
+        else "User",
+    )
+    result["CMS_WMTool"] = "User" if _wmtool.lower() == "user" else _wmtool
 
     # Set outliers
     result = set_outliers(result)
 
     if reduce_data:
         result = drop_fields_for_running_jobs(result)
+
+    # Set outliers
+    result = set_outliers(result)
 
     if return_dict:
         return result
@@ -1074,10 +1088,10 @@ def guess_campaign_type(ad, analysis):
         return "Phase2 requests"
     elif re.match(r".*Run3.*", camp):
         return "Run3 requests"
-    elif re.match(r".*RunII(Summer|Fall|Autumn|Winter)1[5-9].*", camp):
-        return "Run2 requests"
     elif "RVCMSSW" in camp:
         return "RelVal"
+    elif re.match(r".*(RunII|(Summer|Fall|Autumn|Winter|Spring)(1[5-9]|20)).*", camp): # [!] Should be after UL
+        return "Run2 requests"
     else:
         return "UNKNOWN"
 
