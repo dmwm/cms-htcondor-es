@@ -85,6 +85,9 @@ string_vals = set(
         "MATCH_EXP_JOB_GLIDEIN_SiteWMS_JobId",
         "MATCH_EXP_JOB_GLIDEIN_SiteWMS_Queue",
         "MATCH_EXP_JOB_GLIDEIN_SiteWMS_Slot",
+        "MachineAttrCUDACapability0",
+        "MachineAttrCUDADeviceName0",
+        "MachineAttrCUDADriverVersion0",
         "Owner",
         "Rank",
         "RemoteHost",
@@ -155,6 +158,9 @@ int_vals = set(
         "LocalUserCpu",
         "MachineAttrCpus0",
         "MachineAttrSlotWeight0",
+        "MachineAttrCUDAComputeUnits0",
+        "MachineAttrCUDACoresPerCU0",
+        "MachineAttrCUDAGlobalMemoryMb0",
         "MATCH_EXP_JOB_GLIDEIN_Job_Max_Time",
         "MATCH_EXP_JOB_GLIDEIN_MaxMemMBs",
         "MATCH_EXP_JOB_GLIDEIN_Max_Walltime",
@@ -443,6 +449,7 @@ bool_vals = set(
         "HasBeenRouted",
         "HasBeenOverflowRouted",
         "HasBeenTimingTuned",
+        "MachineAttrCUDAECCEnabled0",
     ]
 )
 
@@ -472,6 +479,7 @@ running_fields = set(
         "Country",
         "CpuBadput",
         "CpuEff",
+        "CpuEffOutlier",
         "CpuEventRate",
         "CpuTimeHr",
         "CpuTimePerEvent",
@@ -516,6 +524,7 @@ running_fields = set(
         "RemoteHost",
         "RequestCpus",
         "RequestMemory",
+        "RequestMemory_Eval",
         "ScheddName",
         "Site",
         "Status",
@@ -961,9 +970,6 @@ def convert_to_json(
     )
     result["CMS_WMTool"] = "User" if _wmtool.lower() == "user" else _wmtool
 
-    # Set outliers
-    result = set_outliers(result)
-
     if reduce_data:
         result = drop_fields_for_running_jobs(result)
 
@@ -1381,6 +1387,16 @@ def bulk_convert_ad_data(ad, result):
         if _wmcore_exe_exmsg.match(key):
             value = str(decode_and_decompress(value))
         result[key] = value
+    evaluate_fields(result, ad)
+
+
+def evaluate_fields(result, ad):
+    """Evaluates RequestMemory expression in ClassAd"""
+    if "RequestMemory" in ad:
+        try:
+            result["RequestMemory_Eval"] = ad.eval("RequestMemory")
+        except Exception as e:
+            logging.error("Could not evaluate RequestMemory exp, error: %s" % (str(e)))
 
 
 def decode_and_decompress(value):
