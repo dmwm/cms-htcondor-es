@@ -8,10 +8,11 @@ import errno
 import json
 import requests
 from datetime import datetime, timedelta
+import logging
 
 
 class AffiliationManager:
-    __DEFAULT_URL = "https://cms-cric-dev.cern.ch/api/accounts/user/query/?json"
+    __DEFAULT_URL = "https://cms-cric.cern.ch/api/accounts/user/query/?json"
     __DEFAULT_DIR_PATH = Path.home().joinpath(".affiliation_dir.json")
 
     def __init__(
@@ -38,6 +39,9 @@ class AffiliationManager:
                 recreate = True
 
         try:
+            logging.debug(
+                f"AFFILIATION MANAGER RECREATE {recreate},  recreate_older_days is {recreate_older_days} and {self.path.is_file()} AND { datetime.now() - timedelta(days=recreate_older_days) if recreate_older_days else 'None'}  AND {self.path}  AND {datetime.fromtimestamp(self.path.stat().st_mtime) if self.path.is_file() else 'NO FILE'}"
+            )
             self.__dir = self.loadOrCreateDirectory(recreate)
             self.__dn_dir = {
                 person["dn"]: person for person in list(self.__dir.values())
@@ -89,7 +93,13 @@ class AffiliationManager:
             if _tmp_dir:
                 with open(self.path, "w") as _dir_file:
                     json.dump(_tmp_dir, _dir_file)
-        elif self.path.is_file():
+                return _tmp_dir
+            else:
+                logging.error(
+                    f"The response from the service was empty {str(_tmp_dir)}"
+                )
+
+        if not _tmp_dir and self.path.is_file():
             with open(self.path, "r") as dir_file:
                 _tmp_dir = json.load(dir_file)
         else:

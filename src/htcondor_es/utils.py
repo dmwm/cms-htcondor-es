@@ -20,8 +20,7 @@ import json
 import classad
 import htcondor
 
-TIMEOUT_MINS = 60
-
+TIMEOUT_MINS = 11
 
 
 def get_schedds_from_file(args=None, collectors_file=None):
@@ -34,7 +33,8 @@ def get_schedds_from_file(args=None, collectors_file=None):
             schedds.extend([s for s in _pool_schedds if s.get("Name") not in names])
             names.update([s.get("Name") for s in _pool_schedds])
 
-    except (IOError, json.JSONDecodeError):
+    except (IOError, json.JSONDecodeError) as e:
+        logging.warning(f"There was a problem opening the collectors file {e}")
         schedds = get_schedds(args)
     return schedds
 

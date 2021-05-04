@@ -1,6 +1,8 @@
 import os
 import time
 import logging
+import traceback
+
 from CMSMonitoring.StompAMQ import StompAMQ
 
 _amq_interface = None
@@ -10,18 +12,26 @@ def get_amq_interface():
     global _amq_interface
     if not _amq_interface:
         try:
-            username = open("username", "r").read().strip()
-            password = open("password", "r").read().strip()
+            username_file = os.getenv("CMS_AMQ_USERNAME_FILE", "username")
+            password_file = os.getenv("CMS_AMQ_PASSWORD_FILE", "password")
+            username = open(username_file, "r").read().strip()
+            password = open(password_file, "r").read().strip()
         except IOError:
-            print("ERROR: Provide username/password for CERN AMQ")
+            logging.error("ERROR: Provide username/password for CERN AMQ")
+            logging.error(
+                "username_file {}\npassword_file {}".format(
+                    username_file, password_file
+                )
+            )
+            traceback.print_exc()
             return []
         _amq_interface = StompAMQ(
             username=username,
             password=password,
-            producer=os.getenv("CMS_HTCONDOR_PRODUCER", "condor"),
-            topic=os.getenv("CMS_HTCONDOR_TOPIC", "/topic/cms.jobmon.condor"),
+            producer=os.getenv("CMS_HTCONDOR_PRODUCER"), # do not set default value 
+            topic=os.getenv("CMS_HTCONDOR_TOPIC"), # do not set default value
             host_and_ports=[
-                (os.getenv("CMS_HTCONDOR_BROKER", "cms-mb.cern.ch"), 61313)
+                (os.getenv("CMS_HTCONDOR_BROKER"), 61313) # check whether 61313, or 61323
             ],
             validation_schema="JobMonitoring.json",
         )
@@ -36,6 +46,7 @@ def post_ads(ads, metadata=None):
 
     metadata = metadata or {}
     interface = get_amq_interface()
+    logging.debug(interface)
     list_data = []
     for id_, ad in ads:
         notif, _, _ = interface.make_notification(
