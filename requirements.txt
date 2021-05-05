@@ -4,4 +4,4 @@ CMSMonitoring==0.4.2
 #git+https://github.com/cronosnull/CMSMonitoring.git@python3#egg=CMSMonitoring
 requests==2.25.0
 celery[redis]==4.4.7
-flower
+flower==0.9.7
