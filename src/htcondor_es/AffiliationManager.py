@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 
 
 class AffiliationManager:
-    __DEFAULT_URL = "https://cms-cric-dev.cern.ch/api/accounts/user/query/?json"
+    __DEFAULT_URL = "https://cms-cric.cern.ch/api/accounts/user/query/?json"
     __DEFAULT_DIR_PATH = Path.home().joinpath(".affiliation_dir.json")
 
     def __init__(
