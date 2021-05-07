@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 # Author: Christian Ariza <christian.ariza AT gmail [DOT] com>
 """
-Celery version of the cms htcondor_es spider. 
+Celery version of the cms htcondor_es spider.
 This version has some major changes:
     - Celery based
-    - The same function is used for either the queues and 
-       history queries. 
+    - The same function is used for either the queues and
+       history queries.
     - The history checkpoint for the schedds is stored in Redis instead of a json file.
     - Parallelism is managed by celery
 """
@@ -13,13 +13,12 @@ import os
 import logging
 import argparse
 import time
-import traceback
 from celery import group
 from htcondor_es.celery.tasks import query_schedd, create_affiliation_dir
 from htcondor_es.celery.celery import app
 from htcondor_es.utils import get_schedds, get_schedds_from_file
 
-logging.basicConfig(level=os.environ.get("LOGLEVEL", "WARNING").upper())
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "DEBUG").upper())
 __TYPE_HISTORY = "history"
 __TYPE_QUEUE = "queue"
 
@@ -66,7 +65,12 @@ def main_driver(args):
     logging.debug(_query_res)
     if res.failed():
         logging.warning("At least one of the schedd queries failed")
-    print(time.time() - start_time)
+    duration = time.time() - start_time
+    logging.info("Duration of whole process: {} seconds".format(round(duration, 2)))
+    if duration > 60*10:  # if duration is greater than 10 minutes
+        logging.warning("Duration exceeded 10 minutes!")
+    if duration > 60*12:  # if duration is greater than 12 minutes
+        logging.error("ATTENTION: Duration exceeded 12 minutes!")
 
 
 def main():
@@ -187,3 +191,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

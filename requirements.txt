@@ -1,7 +1,8 @@
-htcondor==8.7.9
+wheel
+htcondor==9.0.0
 elasticsearch>=7.0.0,<8.0.0
 CMSMonitoring==0.4.2
 #git+https://github.com/cronosnull/CMSMonitoring.git@python3#egg=CMSMonitoring
-requests==2.25.0
-celery[redis]==4.4.7
-flower==0.9.7
+requests
+celery[redis]==5.0.5
+https://github.com/mher/flower/zipball/master#egg=flower # flower dev version

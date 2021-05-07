@@ -1,17 +1,17 @@
 #!/usr/bin/python
 
+import base64
+import calendar
+import datetime
+import json
+import logging
 import os
 import re
-import json
 import time
-import classad
-import calendar
-import logging
-import datetime
 import zlib
-import base64
-import htcondor
-import traceback
+
+import classad
+from celery.utils.log import get_task_logger
 from htcondor_es.AffiliationManager import (
     AffiliationManager,
     AffiliationManagerException,
@@ -589,6 +589,7 @@ postjob_status_decode = {
     "FINISHED": "finished",
 }
 
+clogger = get_task_logger(__name__)  # Celery logger
 
 # Initialize aff_mgr
 aff_mgr = None
@@ -611,8 +612,8 @@ def __generate_aff_mgr():
         # If its not possible to create the affiliation manager
         # Log it
         __aff_err = True
-        logging.error("There were an error creating the affiliation manager, %s", e)
-        traceback.print_exc()
+        logging.error("There were an error creating the affiliation manager, %s", str(e))
+        clogger.error("There were an error creating the affiliation manager, %s", str(e))
         # Continue execution without affiliation.
 
 
@@ -708,8 +709,8 @@ def convert_to_json(
         result["WMAgent_TaskType"] = ad.get("WMAgent_SubTaskName", "/UNKNOWN").rsplit(
             "/", 1
         )[-1]
-        result["Campaign"] = guessCampaign(ad, analysis)
         result["CMS_CampaignType"] = guess_campaign_type(ad, analysis)
+        result["Campaign"] = guessCampaign(ad, analysis, result["CMS_CampaignType"])
         result["TaskType"] = result.get(
             "CMS_TaskType", guessTaskType(ad) if not analysis else result["CMS_JobType"]
         )
@@ -718,8 +719,7 @@ def convert_to_json(
     if ad.get("JobStatus") == 2 and (ad.get("EnteredCurrentStatus", now + 1) < now):
         ad["RemoteWallClockTime"] = int(now - ad["EnteredCurrentStatus"])
         ad["CommittedTime"] = ad["RemoteWallClockTime"]
-    result["WallClockHr"] = ad.get("RemoteWallClockTime", 0) / 3600.0
-
+    result["WallClockHr"] = ad.get("RemoteWallClockTime", 0) / 3
     result["PilotRestLifeTimeMins"] = -1
     if analysis and ad.get("JobStatus") == 2 and "LastMatchTime" in ad:
         try:
@@ -1070,7 +1070,7 @@ def guessTaskType(ad):
         return "Unknown"
 
 
-def guessCampaign(ad, analysis):
+def guessCampaign(ad, analysis, cms_campaign_type):
     # Guess the campaign from the request name.
     camp = ad.get("WMAgent_RequestName", "UNKNOWN")
     m = _camp_re.match(camp)
@@ -1090,8 +1090,9 @@ def guessCampaign(ad, analysis):
         m = _rereco_re.match(camp)
         if m and ("DataProcessing" in ad.get("WMAgent_SubTaskName", "")):
             return m.groups()[0] + "Reprocessing"
-
-    return camp
+    clogger.warning("Campaign will be CMS_CampaignType. camp:{}".format(camp))
+    logging.warning("Campaign will be CMS_CampaignType. camp:{}".format(camp))
+    return cms_campaign_type
 
 
 def guess_campaign_type(ad, analysis):
@@ -1164,7 +1165,7 @@ def jobFailed(ad):
 
 def commonExitCode(ad):
     """
-    Consolidate the exit code values of JobExitCode, 
+    Consolidate the exit code values of JobExitCode,
     the  chirped CRAB and WMCore values, and
     the original condor exit code.
     JobExitCode and Chirp_CRAB3_Job_ExitCode
@@ -1362,8 +1363,9 @@ def bulk_convert_ad_data(ad, result):
             value = ad.eval(key)
         except:
             continue
-        if isinstance(value, classad.Value):
-            if value == classad.Value.Error:
+        if isinstance(value, classad.classad.Value):
+            # This should be use after ad.eval(value)
+            if value is classad.classad.Value.Error:
                 continue
             else:
                 value = None
@@ -1380,6 +1382,10 @@ def bulk_convert_ad_data(ad, result):
                         "Failed to convert key %s with value %s to int"
                         % (key, repr(value))
                     )
+                    clogger.warning(
+                        "Failed to convert key %s with value %s to int"
+                        % (key, repr(value))
+                    )
                     continue
         elif key in string_vals:
             value = str(value)
@@ -1391,6 +1397,10 @@ def bulk_convert_ad_data(ad, result):
                     value = int(value)
                 except ValueError:
                     logging.warning(
+                        "Failed to convert key %s with value %s to int for a date field"
+                        % (key, repr(value))
+                    )
+                    clogger.warning(
                         "Failed to convert key %s with value %s to int for a date field"
                         % (key, repr(value))
                     )
@@ -1414,6 +1424,7 @@ def evaluate_fields(result, ad):
             result["RequestMemory_Eval"] = ad.eval("RequestMemory")
         except Exception as e:
             logging.error("Could not evaluate RequestMemory exp, error: %s" % (str(e)))
+            clogger.error("Could not evaluate RequestMemory exp, error: %s" % (str(e)))
 
 
 def decode_and_decompress(value):
@@ -1421,6 +1432,7 @@ def decode_and_decompress(value):
         value = str(zlib.decompress(base64.b64decode(value)))
     except (TypeError, zlib.error):
         logging.warning("Failed to decode and decompress value: %s" % (repr(value)))
+        clogger.warning("Failed to decode and decompress value: %s" % (repr(value)))
 
     return value
 
@@ -1483,3 +1495,4 @@ def get_formatted_CRAB_Id(CRAB_Id):
     except TypeError:
         pass
     return formatted
+

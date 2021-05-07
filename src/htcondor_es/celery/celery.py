@@ -24,3 +24,10 @@ if os.getenv("CELERY_TEST", None):
 app.conf.accept_content = ["pickle"]
 app.conf.task_serializer = "pickle"
 app.conf.result_serializer = "pickle"
+# IMPORTANT: If worker lost, cronjobs waits this amount of time. Default is 1h, caused problems
+# -- Test case: In the middle of queue processing (i.e. 2 minutes after cronjob start), redeploy spider-worker(s)
+# --- In flower, you'll se some active tasks and these active jobs will be seen in active workers
+# --- However, when you check workers in k8s, some of the active ones in flower will not be listed in k8s
+# --- So, cronjob will hang 60 minutes and finish with completed status.
+# --- More importantly, prospected cronjobs will not run and it results lost of data
+app.conf.broker_transport_options = {'visibility_timeout': 600}

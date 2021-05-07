@@ -4,36 +4,36 @@
 i.e. the task a spider celery worker knows.
 """
 
-import os
-import re
-import time
-import htcondor
-import classad
-from celery import group
-from itertools import zip_longest, islice
 import collections
+import logging
+import os
+import time
+from itertools import zip_longest, islice
+
+import classad
+import htcondor
+import htcondor_es.es
+import redis
+import traceback
+from celery.utils.log import get_task_logger
+
+# Local htcondor_es
+from htcondor_es.AffiliationManager import (
+    AffiliationManager,
+    AffiliationManagerException,
+)
+from htcondor_es.amq import post_ads
+from htcondor_es.celery.celery import app
 from htcondor_es.convert_to_json import (
     convert_to_json,
     unique_doc_id,
     convert_dates_to_millisecs,
 )
 from htcondor_es.utils import (
-    get_schedds,
     collect_metadata,
     send_email_alert,
     TIMEOUT_MINS,
 )
-from htcondor_es.amq import post_ads
-import htcondor_es.es
-from htcondor_es.AffiliationManager import (
-    AffiliationManager,
-    AffiliationManagerException,
-)
-import traceback
-import logging
-import redis
-
-from htcondor_es.celery.celery import app
 
 QUERY_QUEUES = """
          (JobStatus < 3 || JobStatus > 4
@@ -48,13 +48,15 @@ QUERY_HISTORY = """
         """
 __REDIS_CONN = None
 
+logger = get_task_logger(__name__)
+
 
 def log_failure(self, exc, task_id, args, kwargs, einfo):
     """Send email message and log error.
     (this only should be send if all retries failed)
     """
-    message = f"failed to query {args}, {kwargs}"
-    logging.error(f"failed to query {args}, {kwargs}")
+    message = f"failed to query {args}, {kwargs}, {exc}, task_id: {task_id}, einfo: {einfo}"
+    logger.error(f"failed to query {args}, {kwargs}")
     # TODO: Change email with parameters
     send_email_alert("ceyhun.uzunoglu@cern.ch", "[Spider] Failed to query", message)
 
@@ -67,6 +69,8 @@ def log_failure(self, exc, task_id, args, kwargs, einfo):
     retry_backoff=5,  # Wait between retries (5, 10,15)s
     reject_on_worker_lost=True,  # If the worker is killed (e.g. by k8s) reasign the task
     on_failure=log_failure,
+    task_reject_on_worker_lost=True,
+    soft_time_limit=300,  # 5 min
 )
 def query_schedd(
     schedd_ad,
@@ -106,7 +110,7 @@ def query_schedd(
         query_iter = schedd.xquery(requirements=query) if not dry_run else []
     elif query_type == "history":
         last_completion = float(
-            getRedisConnection().get(schedd_ad["name"]) or (start_time - 3600)
+            get_redis_connection().get(schedd_ad["name"]) or (start_time - 3600)
         )
         history_query = classad.ExprTree(
             QUERY_HISTORY % {"last_completion": last_completion}
@@ -126,8 +130,8 @@ def query_schedd(
         start_time=start_time,
     )
     if query_type == "history":
-        getRedisConnection().set(schedd_ad["name"], hist_time)
-    return (schedd_ad["name"], n_tasks)
+        get_redis_connection().set(schedd_ad["name"], hist_time)
+    return schedd_ad["name"], n_tasks
 
 
 @app.task(
@@ -186,7 +190,8 @@ def process_docs(
             ):
                 es_docs.append((unique_doc_id(c_doc), c_doc))
         except Exception as e:
-            traceback.print_exc()
+            logging.error("[LOGGING - test]Error on convert_to_json: {} {}".format(str(e), str(traceback.format_exc())))
+            logger.error("Error on convert_to_json: {}".format(str(e)))
             continue
     if es_docs:
         post_ads_es.si(es_docs, es_index, metadata).apply_async()
@@ -218,7 +223,8 @@ def post_ads_es(es_docs, es_index, metadata=None):
                 es.handle, _idx, es_indexes[_idx], metadata=metadata
             )
     except Exception as e:
-        traceback.print_exc()
+        logging.error("[LOGGING - test] Error on post_ads_es: {}".format(str(e)))
+        logger.error("Error on post_ads_es: {}".format(str(e)))
 
 
 @app.task(ignore_result=True)
@@ -229,9 +235,9 @@ def create_affiliation_dir(days=1):
             AffiliationManager._AffiliationManager__DEFAULT_DIR_PATH,
         )
         AffiliationManager(recreate_older_days=days, dir_file=output_file)
-    except AffiliationManagerException as ex:
-        logging.warning("Error creating the AffiliationManager %s", str(ex))
-        traceback.print_exc()
+    except Exception as e:
+        logging.error("[LOGGING - test] Error on create_affiliation_dir: {}".format(str(e)))
+        logger.error("Error on create_affiliation_dir: {}".format(str(e)))
         pass
 
 
@@ -302,7 +308,7 @@ def send_data(
     return total_tasks
 
 
-def getRedisConnection():
+def get_redis_connection():
     """
     A singleton-like method to mantain the redis connection.
     The redis object will mantain a connection pool and
@@ -316,3 +322,4 @@ def getRedisConnection():
             os.getenv("SPIDER_CHECKPOINT", "redis://localhost/1")
         )
     return __REDIS_CONN
+
