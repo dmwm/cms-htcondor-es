@@ -691,8 +691,8 @@ def convert_to_json(
         result["WMAgent_TaskType"] = ad.get("WMAgent_SubTaskName", "/UNKNOWN").rsplit(
             "/", 1
         )[-1]
-        result["Campaign"] = guessCampaign(ad, analysis)
         result["CMS_CampaignType"] = guess_campaign_type(ad, analysis)
+        result["Campaign"] = guessCampaign(ad, analysis, result["CMS_CampaignType"])
         result["TaskType"] = result.get(
             "CMS_TaskType", guessTaskType(ad) if not analysis else result["CMS_JobType"]
         )
@@ -1053,7 +1053,7 @@ def guessTaskType(ad):
         return "Unknown"
 
 
-def guessCampaign(ad, analysis):
+def guessCampaign(ad, analysis, cms_campaign_type):
     # Guess the campaign from the request name.
     camp = ad.get("WMAgent_RequestName", "UNKNOWN")
     m = _camp_re.match(camp)
@@ -1073,8 +1073,9 @@ def guessCampaign(ad, analysis):
         m = _rereco_re.match(camp)
         if m and ("DataProcessing" in ad.get("WMAgent_SubTaskName", "")):
             return m.groups()[0] + "Reprocessing"
-
-    return camp
+    # [Temp solution] If Campaign not found, return CMS_CampaignType
+    logging.info("Campaign will be CMS_CampaignType. camp:{}".format(camp))
+    return cms_campaign_type
 
 
 def guess_campaign_type(ad, analysis):
@@ -1466,3 +1467,4 @@ def get_formatted_CRAB_Id(CRAB_Id):
     except TypeError:
         pass
     return formatted
+
