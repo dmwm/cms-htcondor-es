@@ -107,7 +107,7 @@ def query_schedd(
     if query_type == "queue":
         _completed_since = start_time - (TIMEOUT_MINS + 1) * 60
         query = QUERY_QUEUES % {"completed_since": _completed_since}
-        query_iter = schedd.xquery(requirements=query) if not dry_run else []
+        query_iter = schedd.xquery(constraint=query) if not dry_run else []
     elif query_type == "history":
         last_completion = float(
             get_redis_connection().get(schedd_ad["name"]) or (start_time - 3600)
