@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import base64
 import calendar
@@ -12,6 +13,7 @@ import zlib
 
 import classad
 from celery.utils.log import get_task_logger
+
 from htcondor_es.AffiliationManager import (
     AffiliationManager,
     AffiliationManagerException,
@@ -593,28 +595,19 @@ clogger = get_task_logger(__name__)  # Celery logger
 
 # Initialize aff_mgr
 aff_mgr = None
-__aff_err = False
-
-
-def __generate_aff_mgr():
-    global aff_mgr, __aff_err
-    if __aff_err:
-        return
-    try:
-        aff_mgr = AffiliationManager(
-            recreate=False,
-            dir_file=os.getenv(
-                "AFFILIATION_DIR_LOCATION",
-                AffiliationManager._AffiliationManager__DEFAULT_DIR_PATH,
-            ),
-        )
-    except AffiliationManagerException as e:
-        # If its not possible to create the affiliation manager
-        # Log it
-        __aff_err = True
-        logging.error("There were an error creating the affiliation manager, %s", str(e))
-        clogger.error("There were an error creating the affiliation manager, %s", str(e))
-        # Continue execution without affiliation.
+try:
+    aff_mgr = AffiliationManager(
+        recreate=False,
+        dir_file=os.getenv(
+            "AFFILIATION_DIR_LOCATION",
+            AffiliationManager._AffiliationManager__DEFAULT_DIR_PATH,
+        ),
+    )
+except AffiliationManagerException as e:
+    # If its not possible to create the affiliation manager
+    # Log it
+    logging.error("There were an error creating the affiliation manager, %s", e)
+    # Continue execution without affiliation.
 
 
 def make_list_from_string_field(ad, key, split_re=r"[\s,]+\s*", default=None):
@@ -664,8 +657,6 @@ def convert_to_json(
     pool_name="Unknown",
     start_time=None,
 ):
-    if not aff_mgr:
-        __generate_aff_mgr()
     if ad.get("TaskType") == "ROOT":
         return None
     _launch_time = int(start_time or time.time())
@@ -737,19 +728,19 @@ def convert_to_json(
         if m:
             try:
                 ad["RequestCpus"] = int(m.groups()[0])
-            except:
+            except Exception as _:
                 pass
         elif m2:
             try:
                 ad["RequestCpus"] = int(m2.groups()[0])
-            except:
+            except Exception as _:
                 pass
         elif "xcount" in ad:
             ad["RequestCpus"] = ad["xcount"]
     ad.setdefault("RequestCpus", 1)
     try:
         ad["RequestCpus"] = int(ad.eval("RequestCpus"))
-    except:
+    except Exception as _:
         ad["RequestCpus"] = 1.0
     result["RequestCpus"] = ad["RequestCpus"]
 
@@ -897,7 +888,7 @@ def convert_to_json(
             result["CommittedCoreHr"] * result["BenchmarkJobHS06"]
         )
         result["HS06CpuTimeHr"] = result["CpuTimeHr"] * result["BenchmarkJobHS06"]
-    except:
+    except Exception as _:
         result.pop("MachineAttrMJF_JOB_HS06_JOB0", None)
     if ("MachineAttrDIRACBenchmark0" in ad) and classad.ExprTree(
         "MachineAttrDIRACBenchmark0 isnt undefined"
@@ -1090,8 +1081,9 @@ def guessCampaign(ad, analysis, cms_campaign_type):
         m = _rereco_re.match(camp)
         if m and ("DataProcessing" in ad.get("WMAgent_SubTaskName", "")):
             return m.groups()[0] + "Reprocessing"
-    clogger.warning("Campaign will be CMS_CampaignType. camp:{}".format(camp))
-    logging.warning("Campaign will be CMS_CampaignType. camp:{}".format(camp))
+    print("Campaign will be CMS_CampaignType. camp:{}".format(camp))
+    # clogger.warning("Campaign will be CMS_CampaignType. camp:{}".format(camp))
+    # logging.warning("Campaign will be CMS_CampaignType. camp:{}".format(camp))
     return cms_campaign_type
 
 
@@ -1104,7 +1096,7 @@ def guess_campaign_type(ad, analysis):
     camp = ad.get("WMAgent_RequestName", "UNKNOWN")
     if analysis:
         return "Analysis"
-    elif re.match(r".*(RunIISummer(1|2)[0-9]UL|_UL[0-9]+).*", camp):
+    elif re.match(r'.*(RunIISummer(1|2)[0-9]UL|_UL[0-9]+).*', camp):
         return "MC Ultralegacy"
     elif re.match(r".*UltraLegacy.*", camp):
         return "Data Ultralegacy"
@@ -1114,7 +1106,7 @@ def guess_campaign_type(ad, analysis):
         return "Run3 requests"
     elif "RVCMSSW" in camp:
         return "RelVal"
-    elif re.match(r".*(RunII|(Summer|Fall|Autumn|Winter|Spring)(1[5-9]|20)).*", camp): # [!] Should be after UL
+    elif re.match(r".*(RunII|(Summer|Fall|Autumn|Winter|Spring)(1[5-9]|20)).*", camp):  # [!] Should be after UL
         return "Run2 requests"
     else:
         return "UNKNOWN"
@@ -1196,16 +1188,16 @@ def errorType(ad):
 
     exitcode = commonExitCode(ad)
 
-    if (exitcode >= 10000 and exitcode <= 19999) or exitcode == 50513:
+    if (10000 <= exitcode <= 19999) or exitcode == 50513:
         return "Environment"
 
-    if exitcode >= 60000 and exitcode <= 69999:
-        if exitcode >= 69000:  ## Not yet in classads?
+    if 60000 <= exitcode <= 69999:
+        if exitcode >= 69000:  # Not yet in classads?
             return "Publication"
         else:
             return "StageOut"
 
-    if exitcode >= 80000 and exitcode <= 89999:
+    if 80000 <= exitcode <= 89999:
         return "JobWrapper"
 
     if exitcode in [8020, 8028]:
@@ -1215,11 +1207,11 @@ def errorType(ad):
         return "FileRead"
 
     if exitcode in [8030, 8031, 8032, 9000] or (
-        exitcode >= 50660 and exitcode <= 50669
+        50660 <= exitcode <= 50669
     ):
         return "OutOfBounds"
 
-    if (exitcode >= 7000 and exitcode <= 9000) or exitcode == 139:
+    if (7000 <= exitcode <= 9000) or exitcode == 139:
         return "Executable"
 
     return "Other"
@@ -1262,11 +1254,12 @@ def handle_chirp_info(ad, result):
             try:
                 readbytes = result.pop(keybase + "_ReadBytes")
                 readtimems = result.pop(keybase + "_ReadTimeMS")
-                siteio = {}
-                siteio["SiteName"] = sitename
-                siteio["ChirpString"] = chirpstring
-                siteio["ReadBytes"] = readbytes
-                siteio["ReadTimeMS"] = readtimems
+                siteio = {
+                    "SiteName": sitename,
+                    "ChirpString": chirpstring,
+                    "ReadBytes": readbytes,
+                    "ReadTimeMS": readtimems
+                }
                 result.setdefault("ChirpCMSSW_SiteIO", []).append(siteio)
 
             except KeyError:
@@ -1355,14 +1348,16 @@ def bulk_convert_ad_data(ad, result):
     """
     _keys = set(ad.keys()) - ignore
     for key in _keys:
-        if key.startswith("HasBeen") and not key in bool_vals:
+        if key.startswith("HasBeen") and (key not in bool_vals):
             continue
         if key == "DESIRED_SITES":
             key = "DESIRED_Sites"
+
         try:
             value = ad.eval(key)
-        except:
+        except Exception as _:
             continue
+
         if isinstance(value, classad.classad.Value):
             # This should be use after ad.eval(value)
             if value is classad.classad.Value.Error:
@@ -1378,11 +1373,15 @@ def bulk_convert_ad_data(ad, result):
                 if value == "Unknown":
                     value = None
                 else:
-                    logging.warning(
-                        "Failed to convert key %s with value %s to int"
-                        % (key, repr(value))
-                    )
-                    clogger.warning(
+                    # logging.warning(
+                    #     "Failed to convert key %s with value %s to int"
+                    #     % (key, repr(value))
+                    # )
+                    # clogger.warning(
+                    #     "Failed to convert key %s with value %s to int"
+                    #     % (key, repr(value))
+                    # )
+                    print(
                         "Failed to convert key %s with value %s to int"
                         % (key, repr(value))
                     )
@@ -1396,11 +1395,15 @@ def bulk_convert_ad_data(ad, result):
                 try:
                     value = int(value)
                 except ValueError:
-                    logging.warning(
-                        "Failed to convert key %s with value %s to int for a date field"
-                        % (key, repr(value))
-                    )
-                    clogger.warning(
+                    # logging.warning(
+                    #     "Failed to convert key %s with value %s to int for a date field"
+                    #     % (key, repr(value))
+                    # )
+                    # clogger.warning(
+                    #     "Failed to convert key %s with value %s to int for a date field"
+                    #     % (key, repr(value))
+                    # )
+                    print(
                         "Failed to convert key %s with value %s to int for a date field"
                         % (key, repr(value))
                     )
@@ -1408,7 +1411,7 @@ def bulk_convert_ad_data(ad, result):
         # elif key in date_vals:
         #    value = datetime.datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
         if key.startswith("MATCH_EXP_JOB_"):
-            key = key[len("MATCH_EXP_JOB_") :]
+            key = key[len("MATCH_EXP_JOB_"):]
         if key.endswith("_RAW"):
             key = key[: -len("_RAW")]
         if _wmcore_exe_exmsg.match(key):
@@ -1422,17 +1425,19 @@ def evaluate_fields(result, ad):
     if "RequestMemory" in ad:
         try:
             result["RequestMemory_Eval"] = ad.eval("RequestMemory")
-        except Exception as e:
-            logging.error("Could not evaluate RequestMemory exp, error: %s" % (str(e)))
-            clogger.error("Could not evaluate RequestMemory exp, error: %s" % (str(e)))
+        except Exception as exp:
+            # logging.error("Could not evaluate RequestMemory exp, error: %s" % (str(exp)))
+            # clogger.error("Could not evaluate RequestMemory exp, error: %s" % (str(exp)))
+            print("Could not evaluate RequestMemory exp, error: %s" % (str(exp)))
 
 
 def decode_and_decompress(value):
     try:
         value = str(zlib.decompress(base64.b64decode(value)))
     except (TypeError, zlib.error):
-        logging.warning("Failed to decode and decompress value: %s" % (repr(value)))
-        clogger.warning("Failed to decode and decompress value: %s" % (repr(value)))
+        # logging.warning("Failed to decode and decompress value: %s" % (repr(value)))
+        # clogger.warning("Failed to decode and decompress value: %s" % (repr(value)))
+        print("Failed to decode and decompress value: %s" % (repr(value)))
 
     return value
 
@@ -1495,4 +1500,3 @@ def get_formatted_CRAB_Id(CRAB_Id):
     except TypeError:
         pass
     return formatted
-

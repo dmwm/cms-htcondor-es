@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # Author: Christian Ariza <christian.ariza AT gmail [DOT] com>
 # pylint: disable=line-too-long
+
 import os
 from pathlib import Path
 import errno
@@ -121,7 +122,7 @@ class AffiliationManager:
 
 class AffiliationManagerException(Exception):
     """
-    Exception wrapper for problems that prevents us to obtain the affiliation info. 
+    Exception wrapper for problems that prevents us to obtain the affiliation info.
     """
 
     pass

@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Author: Christian Ariza <christian.ariza AT gmail [DOT] com>
+
 import os
 import time
 import logging
@@ -28,7 +32,7 @@ def get_amq_interface():
         _amq_interface = StompAMQ(
             username=username,
             password=password,
-            producer=os.getenv("CMS_HTCONDOR_PRODUCER"), # do not set default value 
+            producer=os.getenv("CMS_HTCONDOR_PRODUCER"), # do not set default value
             topic=os.getenv("CMS_HTCONDOR_TOPIC"), # do not set default value
             host_and_ports=[
                 (os.getenv("CMS_HTCONDOR_BROKER"), 61313) # check whether 61313, or 61323

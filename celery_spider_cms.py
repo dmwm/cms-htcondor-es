@@ -1,46 +1,104 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Author: Christian Ariza <christian.ariza AT gmail [DOT] com>
+# Authors: Christian Ariza <christian.ariza AT gmail [DOT] com>, Ceyhun Uzunoglu <cuzunogl AT gmail [DOT] com>
+
 """
 Celery version of the cms htcondor_es spider.
 This version has some major changes:
     - Celery based
-    - The same function is used for either the queues and
-       history queries.
+    - The same function is used for either the queues and history queries.
     - The history checkpoint for the schedds is stored in Redis instead of a json file.
     - Parallelism is managed by celery
+Used in `spider-cron-queues` CronJob which runs in each 12 minutes.
+
+Note:
+    ``COLLECTORS_FILE_LOCATION`` should be set in k8s pods. Currently, it is provided by the secret ``collectors``.
+        Collectors file is necessary to get schedds information from htcondor.
+        Usage in k8s:
+            In Kubernetes, this environment variable set the collectors file location. Used in:
+            https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/cronjobs/spider-cron-queues.yaml
+            https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/deployments/spider-worker.yaml
+        Deployment of ``collectors`` secret:
+            https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/deploy.sh
+
+Attributes:
+    __TYPE_HISTORY (str): Used to set type is history. History results send to es-cms directly.
+        Used with ``--skip_history`` parameter
+    __TYPE_QUEUE (str): Used to set type is queue.
+        Used with ``--skip_queue`` parameter
+
+Examples:
+    In ``spider-cron-queues`` production:
+        $ python /cms-htcondor-es/celery_spider_cms.py \
+            --feed_es \
+            --query_queue_batch_size "500" \
+            --amq_bunch_size "500"
+            # --es_index_template "cms-test-k8s" # default
+            # --schedd_filter "" # default, No filter
+            # --collectors_file is set by `COLLECTORS_FILE_LOCATION` in argument defaults
 """
-import os
-import logging
+
 import argparse
+import os
 import time
+
 from celery import group
+
 from htcondor_es.celery.tasks import query_schedd, create_affiliation_dir
-from htcondor_es.celery.celery import app
 from htcondor_es.utils import get_schedds, get_schedds_from_file
 
-logging.basicConfig(level=os.environ.get("LOGLEVEL", "DEBUG").upper())
 __TYPE_HISTORY = "history"
 __TYPE_QUEUE = "queue"
 
 
 def main_driver(args):
-    logging.debug(app.conf.humanize(with_defaults=False))
-    schedd_ads = []
+    """Gets schedds and calls celery `query_schedd` task for each schedd.
+
+    Submission of tasks to queue entailed with `group`[1] primitive of celery. `group` accepts list of tasks and
+    they are applied in parallel. Details of current task submission:
+        - `query_schedd.si()` creates a signature of `query_schedd` task. This signature will be passed to workers.
+        - `query_schedd` task signature is created for each types(queue, history) of each schedd.
+            -- `htcondor_es.utils.get_schedds_from_file` describes the schedd format.
+        - All task signatures of all types of all schedds are given to `group` primitive to run in parallel.
+        - `query_schedd` task is the initial task, it calls `process_docs` and `post_ads_es` with indirect calls.
+            -- Indirect calls means, for example, it runs `send_data` but `send_data` calls `process_docs` task.
+        - `propagate=False` important. Because, if it is not given, default value is True which raise exception
+            if any schedd query fails. This means that the rest of the schedds in queue will also be terminated.
+    References:
+        [1]: https://docs.celeryproject.org/en/stable/userguide/canvas.html#the-primitives
+
+    Args:
+        args (argparse.Namespace): Please see main function argument definitions
+    """
     start_time = time.time()
+    """int: Used for `start_time` of `query_schedd` task. And used in calculation of task duration.
+    Please see src.htcondor_es.celery.tasks.query_schedd function for usage of `start_time`.
+    """
+
     if args.collectors_file:
         schedd_ads = get_schedds_from_file(args, collectors_file=args.collectors_file)
-        del (
-            args.collectors_file
-        )  # sending a file through postprocessing will cause problems.
+        """list: Htcondor schedds to query. `collectors_file`, which is defined by `COLLECTORS_FILE_LOCATION` in k8s,
+        used to get schedds information.
+
+        Please see what `htcondor_es.utils.get_schedds_from_file` function returns.
+        """
+        del args.collectors_file  # sending a file through postprocessing will cause problems.
     else:
         schedd_ads = get_schedds(args, collectors=args.collectors)
+        """list: Htcondor schedds to query. Not used in current k8s deployment because collectors_file is given."""
+
+    #: list: Includes query types: history, queue.
     _types = []
     if not args.skip_history:
         _types.append(__TYPE_HISTORY)
     if not args.skip_queues:
         _types.append(__TYPE_QUEUE)
+
+    #: celery.result.AsyncResult: Async function to update affiliations. `get()` waits for the results.
     aff_res = create_affiliation_dir.si().apply_async()
     aff_res.get()
+
+    #: celery.result.GroupResult: Async function for group call for query_schedd task
     res = group(
         query_schedd.si(
             sched,
@@ -56,27 +114,28 @@ def main_driver(args):
         for _type in _types
         for sched in schedd_ads
     ).apply_async()
-    # Use the get to wait for results
-    # We could also chain it to a chord to process the responses
-    # for logging pourposes.
-    # The propagate false will prevent it to raise
-    # an exception if any of the schedds query failed.
+
+    # - Use the get to wait for results. We could also chain it to a chord to process the responses
+    # for logging purposes.
+    #
+    # The propagate false will prevent it to raise an exception if any of the schedds query failed.
+    #: list(tuple): results of `query_schedd` function, i.e [('vocmsXXXX.xxx.xx', 6), ...]
     _query_res = res.get(propagate=False)
-    logging.debug(_query_res)
+    print("Get schedds query result:", _query_res)
     if res.failed():
-        logging.warning("At least one of the schedd queries failed")
+        print("At least one of the schedd queries failed")
     duration = time.time() - start_time
-    logging.info("Duration of whole process: {} seconds".format(round(duration, 2)))
+    print("Duration of whole process: {} seconds".format(round(duration, 2)))
     if duration > 60*10:  # if duration is greater than 10 minutes
-        logging.warning("Duration exceeded 10 minutes!")
+        print("Duration exceeded 10 minutes!")
     if duration > 60*12:  # if duration is greater than 12 minutes
-        logging.error("ATTENTION: Duration exceeded 12 minutes!")
+        print("ATTENTION: Duration exceeded 12 minutes!")
 
 
 def main():
     """
-    Main method for the spider_cms script.
-    Parses arguments and invokes main_driver
+    Main method for the spider_cms script. Parses arguments and invokes main_driver
+
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -105,7 +164,7 @@ def main():
         "--read_only",
         action="store_true",
         dest="read_only",
-        help="Only read the info, don't submit it.",
+        help="Only read the info, don't inject it.",
     )
     parser.add_argument(
         "--dry_run",
@@ -130,14 +189,15 @@ def main():
         "--keep_full_queue_data",
         action="store_true",
         dest="keep_full_queue_data",
-        help="Drop all but some fields for running jobs.",
+        help="Drop all but some fields for running jobs. See `running_fields` in convert_to_json",
     )
     parser.add_argument(
         "--amq_bunch_size",
         default=5000,
         type=int,
         dest="amq_bunch_size",
-        help=("Send docs to AMQ in bunches of this number " "[default: %(default)d]"),
+        help=("Send docs to AMQ in bunches of this number "
+              "[default: %(default)d]"),
     )
 
     parser.add_argument(
@@ -146,7 +206,8 @@ def main():
         type=int,
         dest="query_queue_batch_size",
         help=(
-            "Send docs to listener in batches of this number " "[default: %(default)d]"
+            "Send docs to listener in batches of this number "
+            "[default: %(default)d]"
         ),
     )
     parser.add_argument(
@@ -160,9 +221,12 @@ def main():
         "--collectors_file",
         default=os.getenv("COLLECTORS_FILE_LOCATION", None),
         action="store",
-        type=argparse.FileType("r"),
+        type=str,
         dest="collectors_file",
-        help="FIle defining the pools and collectors",
+        help=(
+            "File defining the pools and collectors"
+            "`COLLECTORS_FILE_LOCATION` should be provided as environment variable"
+            ),
     )
     parser.add_argument(
         "--es_index_template",
@@ -191,4 +255,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

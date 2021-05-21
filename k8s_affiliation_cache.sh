@@ -1,6 +1,10 @@
 #!/bin/bash
-##H Usage: k8s_affiliation_cache.sh <output_file>
-##H
+##H Usage:
+##H        k8s_affiliation_cache.sh <output_file>
+##H Accepts only one parameter which is the output affiliations json file.
+##H        Runs affiliation_cache.py which query crics and writes results to affiliation json file.
+##H Usage in k8s:
+##H        https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/cronjobs/spider-cron-affiliation.yaml
 set -e # exit script if error occurs
 
 # help definition
@@ -16,7 +20,8 @@ fi
 for i in 1 2 3 4 5
 do
     python affiliation_cache.py --output=$ofile
-    if [ -f $ofile ]; then
+    sleep 5s # In case of write buffer wait time or retry
+    if [ -f $ofile ]; then # If file exist, break the retry loop
         break
     else
         echo "Unable to create $ofile in $i attempt"

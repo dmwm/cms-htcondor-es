@@ -1,22 +1,21 @@
-#!/usr/bin/python
-import os
-import re
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import datetime
 import json
-import time
-import datetime
-import classad
-import datetime
 import logging
-import htcondor
-import socket
+import os
+import time
+
 import elasticsearch
+
 import htcondor_es.convert_to_json
 
 
 def filter_name(keys):
     for key in keys:
         if key.startswith("MATCH_EXP_JOB_"):
-            key = key[len("MATCH_EXP_JOB_") :]
+            key = key[len("MATCH_EXP_JOB_"):]
         if key.endswith("_RAW"):
             key = key[: -len("_RAW")]
         yield key
@@ -89,7 +88,7 @@ class ElasticInterface(object):
 
     def __init__(self, hostname=None, port=None):
         """
-        Init the ES interface. 
+        Init the ES interface.
         It will use the CMS_ES_CONF_FILE to obtain the credentials,
         and the default host and port (that can be overwrited by parameter)
         """
@@ -119,7 +118,8 @@ class ElasticInterface(object):
                 ],
                 verify_certs=True,
                 use_ssl=True,
-                ca_certs="/etc/pki/tls/certs/ca-bundle.trust.crt",
+                # REQUESTS_CA_BUNDLE set in Dockerfile, if not set OpenSSL gives error.
+                ca_certs=os.getenv("REQUESTS_CA_BUNDLE", "/etc/pki/tls/certs/ca-bundle.trust.crt")
             )
         else:
             self.handle = elasticsearch.Elasticsearch()

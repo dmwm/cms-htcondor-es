@@ -1,27 +1,21 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Author: Christian Ariza <christian.ariza AT gmail [DOT] com>
+
 """The tasks module define the spider's celery tasks
 i.e. the task a spider celery worker knows.
 """
 
-import collections
-import logging
 import os
 import time
-from itertools import zip_longest, islice
+import traceback
 
 import classad
 import htcondor
+
 import htcondor_es.es
 import redis
-import traceback
-from celery.utils.log import get_task_logger
-
-# Local htcondor_es
-from htcondor_es.AffiliationManager import (
-    AffiliationManager,
-    AffiliationManagerException,
-)
+from htcondor_es.AffiliationManager import AffiliationManager
 from htcondor_es.amq import post_ads
 from htcondor_es.celery.celery import app
 from htcondor_es.convert_to_json import (
@@ -29,11 +23,7 @@ from htcondor_es.convert_to_json import (
     unique_doc_id,
     convert_dates_to_millisecs,
 )
-from htcondor_es.utils import (
-    collect_metadata,
-    send_email_alert,
-    TIMEOUT_MINS,
-)
+from htcondor_es.utils import collect_metadata, grouper, send_email_alert, TIMEOUT_MINS
 
 QUERY_QUEUES = """
          (JobStatus < 3 || JobStatus > 4
@@ -48,7 +38,7 @@ QUERY_HISTORY = """
         """
 __REDIS_CONN = None
 
-logger = get_task_logger(__name__)
+# logger = get_task_logger(__name__)
 
 
 def log_failure(self, exc, task_id, args, kwargs, einfo):
@@ -56,7 +46,8 @@ def log_failure(self, exc, task_id, args, kwargs, einfo):
     (this only should be send if all retries failed)
     """
     message = f"failed to query {args}, {kwargs}, {exc}, task_id: {task_id}, einfo: {einfo}"
-    logger.error(f"failed to query {args}, {kwargs}")
+    print(f"failed to query {args}, {kwargs}")
+    # logger.error(f"failed to query {args}, {kwargs}")
     # TODO: Change email with parameters
     send_email_alert("ceyhun.uzunoglu@cern.ch", "[Spider] Failed to query", message)
 
@@ -190,8 +181,10 @@ def process_docs(
             ):
                 es_docs.append((unique_doc_id(c_doc), c_doc))
         except Exception as e:
-            logging.error("[LOGGING - test]Error on convert_to_json: {} {}".format(str(e), str(traceback.format_exc())))
-            logger.error("Error on convert_to_json: {}".format(str(e)))
+            print("[LOGGING - test]Error on convert_to_json: {} {}".format(str(e), str(traceback.format_exc())))
+            # logging.error("[LOGGING - test]Error on convert_to_json: {} {}".
+            # format(str(e), str(traceback.format_exc())))
+            # logger.error("Error on convert_to_json: {}".format(str(e)))
             continue
     if es_docs:
         post_ads_es.si(es_docs, es_index, metadata).apply_async()
@@ -223,8 +216,9 @@ def post_ads_es(es_docs, es_index, metadata=None):
                 es.handle, _idx, es_indexes[_idx], metadata=metadata
             )
     except Exception as e:
-        logging.error("[LOGGING - test] Error on post_ads_es: {}".format(str(e)))
-        logger.error("Error on post_ads_es: {}".format(str(e)))
+        print("[LOGGING - test] Error on post_ads_es: {}".format(str(e)))
+        # logging.error("[LOGGING - test] Error on post_ads_es: {}".format(str(e)))
+        # logger.error("Error on post_ads_es: {}".format(str(e)))
 
 
 @app.task(ignore_result=True)
@@ -235,33 +229,12 @@ def create_affiliation_dir(days=1):
             AffiliationManager._AffiliationManager__DEFAULT_DIR_PATH,
         )
         AffiliationManager(recreate_older_days=days, dir_file=output_file)
+        print("Affiliation creation successful.")
     except Exception as e:
-        logging.error("[LOGGING - test] Error on create_affiliation_dir: {}".format(str(e)))
-        logger.error("Error on create_affiliation_dir: {}".format(str(e)))
+        print("[LOGGING - test] Error on create_affiliation_dir: {}".format(str(e)))
+        # logging.error("[LOGGING - test] Error on create_affiliation_dir: {}".format(str(e)))
+        # logger.error("Error on create_affiliation_dir: {}".format(str(e)))
         pass
-
-
-# ---Utils---
-def grouper(iterable, n, fillvalue=None):
-    """Collect data into fixed-length chunks or blocks
-    see https://docs.python.org/3/library/itertools.html#itertools-recipes
-    """
-    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
-    args = [iter(iterable)] * n
-    return zip_longest(*args, fillvalue=fillvalue)
-
-
-def consume(iterator, n=None):
-    """Advance the iterator n-steps ahead. If n is None, consume entirely.
-    see https://docs.python.org/3/library/itertools.html#itertools-recipes
-    """
-    # Use functions that consume iterators at C speed.
-    if n is None:
-        # feed the entire iterator into a zero-length deque
-        collections.deque(iterator, maxlen=0)
-    else:
-        # advance to the empty slice starting at position n
-        next(islice(iterator, n, n), None)
 
 
 def send_data(
@@ -288,12 +261,12 @@ def send_data(
         feed_es: should we send the data to es?
         es_index: index prefix.
     """
-    responses = []
+    # responses = []
     total_tasks = 0
     for docs_bunch in grouper(query_iter, bunch):
-        process_and_send = [
+        for X in grouper(docs_bunch, chunk_size):
             process_docs(
-                list(filter(None, X)),
+                list(filter(None, X)),  # filter: If function is None, return the items that are true.
                 reduce_data=not keep_full_queue_data,
                 pool_name=pool_name,
                 feed_es=feed_es,
@@ -301,8 +274,6 @@ def send_data(
                 metadata=metadata,
                 start_time=start_time,
             )
-            for X in grouper(docs_bunch, chunk_size)
-        ]
         total_tasks += len(list(filter(None, docs_bunch)))
         # responses.append(process_and_send.apply_async(serializer="pickle"))
     return total_tasks
@@ -322,4 +293,3 @@ def get_redis_connection():
             os.getenv("SPIDER_CHECKPOINT", "redis://localhost/1")
         )
     return __REDIS_CONN
-

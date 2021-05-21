@@ -1,21 +1,25 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 """
 Various helper utilities for the HTCondor-ES integration
 """
 
+import email.mime.text
+import errno
+import json
+import logging
+import logging.handlers
 import os
 import pwd
+import random
+import shlex
+import smtplib
+import socket
+import subprocess
 import sys
 import time
-import errno
-import shlex
-import socket
-import random
-import logging
-import smtplib
-import subprocess
-import email.mime.text
-import logging.handlers
-import json
+from itertools import zip_longest
 
 import classad
 import htcondor
@@ -27,7 +31,8 @@ def get_schedds_from_file(args=None, collectors_file=None):
     schedds = []
     names = set()
     try:
-        pools = json.load(collectors_file)
+        with open(collectors_file) as f:  # Takes collectors_file as string
+            pools = json.loads(f.read())
         for pool in pools:
             _pool_schedds = get_schedds(args, collectors=pools[pool], pool_name=pool)
             schedds.extend([s for s in _pool_schedds if s.get("Name") not in names])
@@ -39,9 +44,20 @@ def get_schedds_from_file(args=None, collectors_file=None):
     return schedds
 
 
-def get_schedds(args=None, collectors=None, pool_name="Unknown"):
+def get_schedds(args=None, collectors=None, pool_name="Unknown") -> list:
     """
     Return a list of schedd ads representing all the schedds in the pool.
+
+    Returns:
+        [
+            [
+                CMS_Pool = "YYY";
+                MyAddress = "<x.x.x.x:x?addrs=x&alias=x&y&sock=x>";
+                Name = "x";
+                ScheddIpAddr = "<x.x.x.x:x?addrs=x&alias=x&y&sock=x>"
+            ]
+            ...
+        ]
     """
     collectors = collectors or []
     schedd_query = classad.ExprTree("!isUndefined(CMSGWMS_Type)")
@@ -174,3 +190,21 @@ def get_githash():
     except Exception as e:
         logging.warning(str(e))
         return "unknown"
+
+
+def grouper(iterable, n, fillvalue=None):
+    """Collect data into fixed-length chunks or blocks
+
+    See https://docs.python.org/3/library/itertools.html#itertools-recipes
+
+    Returns:
+        itertools.zip_longest: Iterator
+
+    Examples:
+        - list(grouper('ABCDEFG', 3, 'x'))
+            `[('A', 'B', 'C'), ('D', 'E', 'F'), ('G', 'x', 'x')]`
+        - list(grouper([1,2,4], 10, 'x'))
+            `[(1, 2, 4, 'x', 'x', 'x', 'x', 'x', 'x', 'x')]`
+    """
+    args = [iter(iterable)] * n
+    return zip_longest(*args, fillvalue=fillvalue)
