@@ -1,5 +1,5 @@
 wheel
-htcondor==9.0.1
+htcondor==9.1.0
 elasticsearch>=7.0.0,<8.0.0
 CMSMonitoring==0.4.2
 requests

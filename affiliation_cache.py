@@ -35,6 +35,7 @@ Raises:
 Examples:
     $ python affiliation_cache.py --output /htcondor_es/aff_dir.json --days 3
     $ python affiliation_cache.py # k8s_affiliation_cache.sh calls like this, which run in ``spider-cron-affiliation``.
+
 """
 import argparse
 import os
@@ -51,6 +52,7 @@ def generate_affiliation_cache(output_file, days=1):
     Args:
         output_file (string): Output file to write affiliations
         days (int): recreate_older_days parameter for AffiliationManager
+
     """
     try:
         AffiliationManager(recreate_older_days=days, dir_file=output_file)

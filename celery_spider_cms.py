@@ -12,7 +12,7 @@ This version has some major changes:
 Used in `spider-cron-queues` CronJob which runs in each 12 minutes.
 
 Note:
-    ``COLLECTORS_FILE_LOCATION`` should be set in k8s pods. Currently, it is provided by the secret ``collectors``.
+    - ``COLLECTORS_FILE_LOCATION`` should be set in k8s pods. Currently, it is provided by the secret ``collectors``.
         Collectors file is necessary to get schedds information from htcondor.
         Usage in k8s:
             In Kubernetes, this environment variable set the collectors file location. Used in:
@@ -20,6 +20,8 @@ Note:
             https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/deployments/spider-worker.yaml
         Deployment of ``collectors`` secret:
             https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/deploy.sh
+    - celery `group` primitive runs `query_schedd` tasks in parallel, however, because of `worker_prefetch_multiplier`
+        is set as 1 in ``htcondor_es.celery.celery.py``, `query_schedd` tasks are evenly distributed among workers.
 
 Attributes:
     __TYPE_HISTORY (str): Used to set type is history. History results send to es-cms directly.
@@ -36,6 +38,7 @@ Examples:
             # --es_index_template "cms-test-k8s" # default
             # --schedd_filter "" # default, No filter
             # --collectors_file is set by `COLLECTORS_FILE_LOCATION` in argument defaults
+
 """
 
 import argparse
@@ -52,27 +55,35 @@ __TYPE_QUEUE = "queue"
 
 
 def main_driver(args):
-    """Gets schedds and calls celery `query_schedd` task for each schedd.
+    """Gets condor schedds and calls celery `query_schedd` task for each schedd.
 
-    Submission of tasks to queue entailed with `group`[1] primitive of celery. `group` accepts list of tasks and
-    they are applied in parallel. Details of current task submission:
-        - `query_schedd.si()` creates a signature of `query_schedd` task. This signature will be passed to workers.
-        - `query_schedd` task signature is created for each types(queue, history) of each schedd.
-            -- `htcondor_es.utils.get_schedds_from_file` describes the schedd format.
-        - All task signatures of all types of all schedds are given to `group` primitive to run in parallel.
-        - `query_schedd` task is the initial task, it calls `process_docs` and `post_ads_es` with indirect calls.
-            -- Indirect calls means, for example, it runs `send_data` but `send_data` calls `process_docs` task.
-        - `propagate=False` important. Because, if it is not given, default value is True which raise exception
-            if any schedd query fails. This means that the rest of the schedds in queue will also be terminated.
-    References:
+    Important:
+        Tasks are called in order.
+        - ``query_schedd`` task runs `send_data` method.
+        - `send_data` method calls ``process_docs`` task.
+        - ``process_docs`` task runs `convert_to_json`, `amq_post_ads` methods and calls ``post_ads_es`` task.
+
+    Notes:
+        Submission of tasks to queue entailed with `group`[1] primitive of celery. `group` accepts list of tasks and
+        they are applied in parallel. Details of current task submission:
+            - `query_schedd.si()` creates a signature of `query_schedd` task. This signature will be passed to workers.
+            - `query_schedd` task signature is created for each types(queue, history) of each schedd.
+                -- `htcondor_es.utils.get_schedds_from_file` describes the schedd format.
+            - All task signatures of all types of all schedds are given to `group` primitive to run in parallel.
+            - `query_schedd` task is the initial task, it calls `process_docs` and `post_ads_es` with indirect calls.
+                -- Indirect calls means, for example, it runs `send_data` but `send_data` calls `process_docs` task.
+            - `propagate=False` important. Because, if it is not given, default value is True which raise exception
+                if any schedd query fails. This means that the rest of the schedds in queue will also be terminated.
+        References:
         [1]: https://docs.celeryproject.org/en/stable/userguide/canvas.html#the-primitives
 
     Args:
-        args (argparse.Namespace): Please see main function argument definitions
+        args (argparse.Namespace): Please see main method argument definitions
+
     """
     start_time = time.time()
     """int: Used for `start_time` of `query_schedd` task. And used in calculation of task duration.
-    Please see src.htcondor_es.celery.tasks.query_schedd function for usage of `start_time`.
+    Please see src.htcondor_es.celery.tasks.query_schedd method for usage of `start_time`.
     """
 
     if args.collectors_file:
@@ -80,7 +91,7 @@ def main_driver(args):
         """list: Htcondor schedds to query. `collectors_file`, which is defined by `COLLECTORS_FILE_LOCATION` in k8s,
         used to get schedds information.
 
-        Please see what `htcondor_es.utils.get_schedds_from_file` function returns.
+        Please see what `htcondor_es.utils.get_schedds_from_file` method returns.
         """
         del args.collectors_file  # sending a file through postprocessing will cause problems.
     else:
@@ -94,11 +105,11 @@ def main_driver(args):
     if not args.skip_queues:
         _types.append(__TYPE_QUEUE)
 
-    #: celery.result.AsyncResult: Async function to update affiliations. `get()` waits for the results.
+    #: celery.result.AsyncResult: Async method to update affiliations. `get()` waits for the results.
     aff_res = create_affiliation_dir.si().apply_async()
     aff_res.get()
 
-    #: celery.result.GroupResult: Async function for group call for query_schedd task
+    #: celery.result.GroupResult: Async method for group call for query_schedd task
     res = group(
         query_schedd.si(
             sched,
@@ -119,7 +130,7 @@ def main_driver(args):
     # for logging purposes.
     #
     # The propagate false will prevent it to raise an exception if any of the schedds query failed.
-    #: list(tuple): results of `query_schedd` function, i.e [('vocmsXXXX.xxx.xx', 6), ...]
+    #: list(tuple): results of `query_schedd` method, i.e [('vocmsXXXX.xxx.xx', 6), ...]
     _query_res = res.get(propagate=False)
     print("Get schedds query result:", _query_res)
     if res.failed():
@@ -133,10 +144,7 @@ def main_driver(args):
 
 
 def main():
-    """
-    Main method for the spider_cms script. Parses arguments and invokes main_driver
-
-    """
+    """Main method for the spider_cms script. Parses arguments and invokes main_driver."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--schedd_filter",

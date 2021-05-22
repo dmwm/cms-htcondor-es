@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""Converts ClassAds to json format."""
 import base64
 import calendar
 import datetime
 import json
-import logging
 import os
 import re
 import time
+import traceback
 import zlib
 
 import classad
-from celery.utils.log import get_task_logger
 
 from htcondor_es.AffiliationManager import (
     AffiliationManager,
@@ -591,23 +591,39 @@ postjob_status_decode = {
     "FINISHED": "finished",
 }
 
-clogger = get_task_logger(__name__)  # Celery logger
-
 # Initialize aff_mgr
 aff_mgr = None
-try:
-    aff_mgr = AffiliationManager(
-        recreate=False,
-        dir_file=os.getenv(
-            "AFFILIATION_DIR_LOCATION",
-            AffiliationManager._AffiliationManager__DEFAULT_DIR_PATH,
-        ),
-    )
-except AffiliationManagerException as e:
-    # If its not possible to create the affiliation manager
-    # Log it
-    logging.error("There were an error creating the affiliation manager, %s", e)
-    # Continue execution without affiliation.
+__aff_err = False
+
+
+def __generate_aff_mgr():
+    """Generates affiliation manager.
+
+    Defined as function instead of global run in this file. Because, it produces affiliation error on import,
+    such as in `spider-cron-queues` which does not use `conver_to_json` but just import it.
+
+    Notes:
+        - ``AFFILIATION_DIR_LOCATION``, please see ``affiliation_cache.py`` for more information
+
+    """
+    global aff_mgr, __aff_err
+    if __aff_err:
+        return
+    try:
+        aff_mgr = AffiliationManager(
+            recreate=False,
+            dir_file=os.getenv(
+                "AFFILIATION_DIR_LOCATION",
+                AffiliationManager._AffiliationManager__DEFAULT_DIR_PATH,
+            ),
+        )
+    except AffiliationManagerException as e:
+        # If its not possible to create the affiliation manager
+        # Log it
+        __aff_err = True
+        print("ERROR: There were an error creating the affiliation manager, %s", e)
+        traceback.print_exc()
+        # Continue execution without affiliation.
 
 
 def make_list_from_string_field(ad, key, split_re=r"[\s,]+\s*", default=None):
@@ -619,10 +635,11 @@ def make_list_from_string_field(ad, key, split_re=r"[\s,]+\s*", default=None):
 
 
 def get_creation_time_from_taskname(ad):
-    """
-    returns the task creation date as a timestamp given the task name.
+    """Returns the task creation date as a timestamp given the task name.
+
     CRAB task names includes the creation time in format %y%m%d_%H%M%S:
     190309_085131:adeiorio_crab_80xV2_ST_t-channel_top_4f_scaleup_inclusiveDecays_13TeV-powhegV2-madspin-pythia8
+
     """
     try:
         _str_date = ad["CRAB_Workflow"].split(":")[0]
@@ -657,6 +674,8 @@ def convert_to_json(
     pool_name="Unknown",
     start_time=None,
 ):
+    if not aff_mgr:
+        __generate_aff_mgr()
     if ad.get("TaskType") == "ROOT":
         return None
     _launch_time = int(start_time or time.time())
@@ -1000,8 +1019,7 @@ def set_outliers(result):
 
 
 def recordTime(ad, launch_time=None):
-    """
-    RecordTime falls back to launch time as last-resort and for jobs in the queue
+    """RecordTime falls back to launch time as last-resort and for jobs in the queue
 
     For Completed/Removed/Error jobs, try to update it:
         - to CompletionDate if present
@@ -1081,17 +1099,16 @@ def guessCampaign(ad, analysis, cms_campaign_type):
         m = _rereco_re.match(camp)
         if m and ("DataProcessing" in ad.get("WMAgent_SubTaskName", "")):
             return m.groups()[0] + "Reprocessing"
-    print("Campaign will be CMS_CampaignType. camp:{}".format(camp))
-    # clogger.warning("Campaign will be CMS_CampaignType. camp:{}".format(camp))
-    # logging.warning("Campaign will be CMS_CampaignType. camp:{}".format(camp))
+    print("INFO: Campaign will be CMS_CampaignType. camp:{}".format(camp))
     return cms_campaign_type
 
 
 def guess_campaign_type(ad, analysis):
-    """
-        Based on the request name return a campaign type.
-        The campaign type is based on the classification defined at
-        https://its.cern.ch/jira/browse/CMSMONIT-174#comment-3050384
+    """Based on the request name return a campaign type.
+
+    References:
+        - The campaign type is based on the classification defined at
+            https://its.cern.ch/jira/browse/CMSMONIT-174#comment-3050384
     """
     camp = ad.get("WMAgent_RequestName", "UNKNOWN")
     if analysis:
@@ -1138,10 +1155,7 @@ def chirpCMSSWIOSiteName(key):
 
 
 def jobFailed(ad):
-    """
-    Returns 0 when none of the exitcode fields has a non-zero value
-    otherwise returns 1
-    """
+    """Returns 0 when none of the exitcode fields has a non-zero valueotherwise returns 1"""
     ec_fields = [
         "ExitCode",
         "Chirp_CRAB3_Job_ExitCode",
@@ -1156,12 +1170,10 @@ def jobFailed(ad):
 
 
 def commonExitCode(ad):
-    """
-    Consolidate the exit code values of JobExitCode,
-    the  chirped CRAB and WMCore values, and
+    """Consolidate the exit code values of JobExitCode, the  chirped CRAB and WMCore values, and
     the original condor exit code.
-    JobExitCode and Chirp_CRAB3_Job_ExitCode
-    exists only on analysis jobs.
+
+    JobExitCode and Chirp_CRAB3_Job_ExitCode exists only on analysis jobs.
     """
     return ad.get(
         "JobExitCode",
@@ -1173,15 +1185,15 @@ def commonExitCode(ad):
 
 
 def errorType(ad):
-    """
-    Categorization of exit codes into a handful of readable error types.
+    """Categorization of exit codes into a handful of readable error types.
+    Notes:
+        - Allowed values are:
+            'Success', 'Environment' 'Executable', 'Stageout', 'Publication',
+            'JobWrapper', 'FileOpen', 'FileRead', 'OutOfBounds', 'Other'
 
-    Allowed values are:
-    'Success', 'Environment' 'Executable', 'Stageout', 'Publication',
-    'JobWrapper', 'FileOpen', 'FileRead', 'OutOfBounds', 'Other'
+        - This currently only works for CRAB jobs. Production jobs will always
+            fall into 'Other' as they don't have the Chirp_CRAB3_Job_ExitCode
 
-    This currently only works for CRAB jobs. Production jobs will always
-    fall into 'Other' as they don't have the Chirp_CRAB3_Job_ExitCode
     """
     if not jobFailed(ad):
         return "Success"
@@ -1218,9 +1230,7 @@ def errorType(ad):
 
 
 def errorClass(result):
-    """
-    Further classify error types into even broader failure classes
-    """
+    """Further classify error types into even broader failure classes"""
     if result["ErrorType"] in [
         "Environment",
         "Publication",
@@ -1242,8 +1252,7 @@ def errorClass(result):
 
 
 def handle_chirp_info(ad, result):
-    """
-    Process any data present from the Chirp ads.
+    """Process any data present from the Chirp ads.
 
     Chirp statistics should be available in CMSSW_8_0_0 and later.
     """
@@ -1343,9 +1352,7 @@ _CONVERT_CPU = 0
 
 
 def bulk_convert_ad_data(ad, result):
-    """
-    Given a ClassAd, bulk convert to a python dictionary.
-    """
+    """Given a ClassAd, bulk convert to a python dictionary."""
     _keys = set(ad.keys()) - ignore
     for key in _keys:
         if key.startswith("HasBeen") and (key not in bool_vals):
@@ -1359,7 +1366,7 @@ def bulk_convert_ad_data(ad, result):
             continue
 
         if isinstance(value, classad.classad.Value):
-            # This should be use after ad.eval(value)
+            # This should be used after ad.eval(value)
             if value is classad.classad.Value.Error:
                 continue
             else:
@@ -1373,16 +1380,8 @@ def bulk_convert_ad_data(ad, result):
                 if value == "Unknown":
                     value = None
                 else:
-                    # logging.warning(
-                    #     "Failed to convert key %s with value %s to int"
-                    #     % (key, repr(value))
-                    # )
-                    # clogger.warning(
-                    #     "Failed to convert key %s with value %s to int"
-                    #     % (key, repr(value))
-                    # )
                     print(
-                        "Failed to convert key %s with value %s to int"
+                        "WARNING: Failed to convert key %s with value %s to int"
                         % (key, repr(value))
                     )
                     continue
@@ -1395,16 +1394,8 @@ def bulk_convert_ad_data(ad, result):
                 try:
                     value = int(value)
                 except ValueError:
-                    # logging.warning(
-                    #     "Failed to convert key %s with value %s to int for a date field"
-                    #     % (key, repr(value))
-                    # )
-                    # clogger.warning(
-                    #     "Failed to convert key %s with value %s to int for a date field"
-                    #     % (key, repr(value))
-                    # )
                     print(
-                        "Failed to convert key %s with value %s to int for a date field"
+                        "WARNING: Failed to convert key %s with value %s to int for a date field"
                         % (key, repr(value))
                     )
                     value = None
@@ -1426,18 +1417,14 @@ def evaluate_fields(result, ad):
         try:
             result["RequestMemory_Eval"] = ad.eval("RequestMemory")
         except Exception as exp:
-            # logging.error("Could not evaluate RequestMemory exp, error: %s" % (str(exp)))
-            # clogger.error("Could not evaluate RequestMemory exp, error: %s" % (str(exp)))
-            print("Could not evaluate RequestMemory exp, error: %s" % (str(exp)))
+            print("WARNING: Could not evaluate RequestMemory exp, error: %s" % (str(exp)))
 
 
 def decode_and_decompress(value):
     try:
         value = str(zlib.decompress(base64.b64decode(value)))
     except (TypeError, zlib.error):
-        # logging.warning("Failed to decode and decompress value: %s" % (repr(value)))
-        # clogger.warning("Failed to decode and decompress value: %s" % (repr(value)))
-        print("Failed to decode and decompress value: %s" % (repr(value)))
+        print("WARNING: Failed to decode and decompress value: %s" % (repr(value)))
 
     return value
 
@@ -1453,10 +1440,7 @@ def convert_dates_to_millisecs(record):
 
 
 def drop_fields_for_running_jobs(record):
-    """
-        Check if the job is running or pending
-        and prune it if it is.
-    """
+    """Check if the job is running or pending and prune it if it is."""
     if "Status" in record and record["Status"] not in ["Running", "Idle", "Held"]:
         return record
     _fields = running_fields.intersection(set(record.keys()))
@@ -1465,31 +1449,32 @@ def drop_fields_for_running_jobs(record):
 
 
 def unique_doc_id(doc):
-    """
-    Return a string of format "<GlobalJobId>#<RecordTime>"
-    To uniquely identify documents (not jobs)
+    """Return a string of format "<GlobalJobId>#<RecordTime>" To uniquely identify documents (not jobs)
 
-    Note that this uniqueness breaks if the same jobs are submitted
-    with the same RecordTime
+    Notes:
+        Note that this uniqueness breaks if the same jobs are submitted with the same RecordTime
+
     """
     return "%s#%d" % (doc["GlobalJobId"], doc["RecordTime"])
 
 
 def get_formatted_CRAB_Id(CRAB_Id):
-    # FormattedCrabId
-    # In this field, we want to format the crab_id (if exists)
-    #  to ensure that the lexicographical order is the desired.
-    # Currently there are two CRAB_Id formats:
-    #  a positive integer or an integer tuple formated as X-N
-    #
-    # The desired order is start with the 0-N then the integer values then the
-    # 1-N...X-N
-    # To do that we will use leading zeros to ensure the lexicographical order,
-    # e.g:
-    # 0.000001,0.000002 ...0.000012, 000001,000002,....009999,010000,
-    # 1.000001....3,009999.
-    # Falls back to '000000'
-    # args: CRAB_Id
+    """FormattedCrabId
+
+    In this field, we want to format the crab_id (if exists) to ensure that the lexicographical order is the desired.
+    Currently there are two CRAB_Id formats: a positive integer or an integer tuple formated as X-N
+    The desired order is start with the 0-N then the integer values then the 1-N...X-N
+    To do that we will use leading zeros to ensure the lexicographical order,
+
+
+    Examples:
+        0.000001,0.000002 ...0.000012, 000001,000002,....009999,010000,
+        1.000001....3,009999.
+        Falls back to '000000'
+    Args:
+        CRAB_Id
+
+    """
     _cid = CRAB_Id
     formatted = "000000"
     try:

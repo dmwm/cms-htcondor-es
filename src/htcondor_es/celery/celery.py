@@ -6,14 +6,29 @@
 Configuration for the Celery application.
 
 Notes:
-    Please be aware of the `-Ofair` and `-E` parameters in `spider-worker`[1]
-        - `-Ofair` is required to prevent long-running task which may block all future tasks [2]
+    - ``CELERY_BROKER_URL`` stands for `redis://$(REDIS_SERVICE_HOST):$(REDIS_SERVICE_PORT_6379)/0` endpoint
+        which is the `redis` service used for ``celery broker`` and ``result backend``.
+        ``REDIS_SERVICE_*`` values represents `redis` deployment[1] and service[2] in k8s cluster.
+        Celery broker uses the `redis` service's database id of **0**.
+    - ``CELERY_RESULT_BACKEND`` stands for `redis://$(REDIS_SERVICE_HOST):$(REDIS_SERVICE_PORT_6379)/1` endpoint
+        which is the `redis` service used for celery broker and result backend. Celery result backend uses
+        `redis` service's database id of **1**.
+    - These two environment variables should be set in
+        `cronjobs/spider-cron-affiliation.yaml`, `cronjobs/spider-cron-queues.yaml`, `deployments/spider-worker.yaml`.
+
+Important:
+    Please be aware of the `-Ofair` and `-E` parameters in `spider-worker`[3]
+        - `-Ofair` is required to prevent long-running task which may block all future tasks [4]
         - `-E` is required for monitoring: worker_send_task_events
+
 References:
     - https://docs.celeryproject.org/en/stable/userguide/configuration.html
     - https://docs.celeryproject.org/en/stable/userguide/configuration.html#std-setting-broker_transport_options
-    - [1]: https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/deployments/spider-worker.yaml
-    - [2]: https://www.lorenzogil.com/blog/2020/03/01/celery-tasks/
+    - [1] https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/deployments/spider-redis.yaml
+    - [2] https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/service/spider-redis.yaml
+    - [3] https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/deployments/spider-worker.yaml
+    - [4] https://www.lorenzogil.com/blog/2020/03/01/celery-tasks/
+
 """
 from celery import Celery
 import os

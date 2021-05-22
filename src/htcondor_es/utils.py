@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-Various helper utilities for the HTCondor-ES integration
-"""
-
+"""Various helper utilities for the HTCondor-ES integration"""
 import email.mime.text
 import errno
 import json
@@ -28,6 +25,20 @@ TIMEOUT_MINS = 11
 
 
 def get_schedds_from_file(args=None, collectors_file=None):
+    """Reads collectors_file to get pools and gets schedds according to pool information.
+
+    Calls `get_schedds` function.
+
+    Notes:
+        In previous version, `collectors_file` given as File object in `--collectors_file` arguments which is used in
+        `celery_spider_cms.py` and read with `json.load`. This produces some drawbacks regarding proper file closing.
+        Currently, instead of `json.load`, file read and converted to json properly. And file name is passed as var.
+
+    Args:
+        collectors_file (str): Collectors file name.
+        args: Comes from `celery_spider_cms`
+
+    """
     schedds = []
     names = set()
     try:
@@ -39,14 +50,13 @@ def get_schedds_from_file(args=None, collectors_file=None):
             names.update([s.get("Name") for s in _pool_schedds])
 
     except (IOError, json.JSONDecodeError) as e:
-        logging.warning(f"There was a problem opening the collectors file {e}")
+        print(f"ERROR: There was a problem opening the collectors file {e}")
         schedds = get_schedds(args)
     return schedds
 
 
 def get_schedds(args=None, collectors=None, pool_name="Unknown") -> list:
-    """
-    Return a list of schedd ads representing all the schedds in the pool.
+    """Return a list of schedds representing all the schedds in the pool.
 
     Returns:
         [
@@ -55,9 +65,9 @@ def get_schedds(args=None, collectors=None, pool_name="Unknown") -> list:
                 MyAddress = "<x.x.x.x:x?addrs=x&alias=x&y&sock=x>";
                 Name = "x";
                 ScheddIpAddr = "<x.x.x.x:x?addrs=x&alias=x&y&sock=x>"
-            ]
-            ...
+            ],
         ]
+
     """
     collectors = collectors or []
     schedd_query = classad.ExprTree("!isUndefined(CMSGWMS_Type)")
@@ -72,7 +82,7 @@ def get_schedds(args=None, collectors=None, pool_name="Unknown") -> list:
                 projection=["MyAddress", "ScheddIpAddr", "Name"],
             )
         except IOError as e:
-            logging.warning(str(e))
+            print("WARNING:", str(e))
             continue
 
         for schedd in schedds:
@@ -117,7 +127,7 @@ def send_email_alert(recipients, subject, message):
         sess.sendmail(msg["From"], recipients, msg.as_string())
         sess.quit()
     except Exception as exn:  # pylint: disable=broad-except
-        logging.warning("Email notification failed: %s", str(exn))
+        print("WARNING: Email notification failed: %s", str(exn))
 
 
 def time_remaining(starttime, timeout=TIMEOUT_MINS * 60, positive=True):
@@ -163,12 +173,16 @@ def set_up_logging(args):
 
 
 def collect_metadata():
-    """
-    Return a dictionary with:
-    - hostname
-    - username
-    - current time (in epoch millisec)
-    - hash of current git commit
+    """Returns metadata dictionary.
+
+    Returns:
+        {
+            "spider_git_hash": b'2fe30f76198e6992d14a85eddf82e55e8cedadbd', # current git commit hash
+            "spider_hostname": "spider-worker-669d9bcc49-zd4tb", # worker name
+            "spider_username": "spider",
+            "spider_runtime": 1621715109553 # current time in msec
+        }
+
     """
     result = {}
     result["spider_git_hash"] = get_githash()
@@ -195,7 +209,8 @@ def get_githash():
 def grouper(iterable, n, fillvalue=None):
     """Collect data into fixed-length chunks or blocks
 
-    See https://docs.python.org/3/library/itertools.html#itertools-recipes
+    References:
+        - https://docs.python.org/3/library/itertools.html#itertools-recipes
 
     Returns:
         itertools.zip_longest: Iterator
@@ -205,6 +220,7 @@ def grouper(iterable, n, fillvalue=None):
             `[('A', 'B', 'C'), ('D', 'E', 'F'), ('G', 'x', 'x')]`
         - list(grouper([1,2,4], 10, 'x'))
             `[(1, 2, 4, 'x', 'x', 'x', 'x', 'x', 'x', 'x')]`
+
     """
     args = [iter(iterable)] * n
     return zip_longest(*args, fillvalue=fillvalue)

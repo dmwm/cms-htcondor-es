@@ -1,6 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""Elasticsearch interface to post ClassAd jsons to ES.
+
+Important:
+    ``REQUESTS_CA_BUNDLE`` environment variable set in the Dockerfile.
+    `ca-bundle.trust.crt` copied from cern's image.
+    If not set, default cert will produce OpenSSL file not found error!
+
+"""
 import datetime
 import json
 import logging
