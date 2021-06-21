@@ -41,5 +41,5 @@ jobs:
         context: .
         file: ./Dockerfile
         load: true
-        tags: cmssw/cms_htcondor_es:${{steps.get-ref.outputs.tag}}
-    - run: docker push cmssw/cms_htcondor_es:${{steps.get-ref.outputs.tag}}
+        tags: cmssw/cms-htcondor-es:${{steps.get-ref.outputs.tag}}
+    - run: docker push cmssw/cms-htcondor-es:${{steps.get-ref.outputs.tag}}
