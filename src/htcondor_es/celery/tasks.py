@@ -82,6 +82,7 @@ def log_failure(self, exc, task_id, args, kwargs, einfo):
     on_failure=log_failure,
     task_reject_on_worker_lost=True,
     soft_time_limit=300,  # 5 min
+    result_expires=864000,  # delete tasks in Redis if older than 10 days
 )
 def query_schedd(
     schedd_ad,
@@ -157,10 +158,9 @@ def query_schedd(
             QUERY_HISTORY % {"last_completion": last_completion}
         )
         hist_time = time.time()
-        query_iter = schedd.history(
-                                        constraint=history_query,
-                                        projection=[],  # An empty list (the default) returns all attributes.
-                                        match=10000  # An limit on the number of jobs to include.
+        query_iter = schedd.history(constraint=history_query,
+                                    projection=[],  # An empty list (the default) returns all attributes.
+                                    match=10000  # An limit on the number of jobs to include.
                                     ) if not dry_run else []
     _metadata = collect_metadata()
 
@@ -186,6 +186,7 @@ def query_schedd(
     acks_late=True,
     max_retries=3,
     autoretry_for=(OSError,),
+    result_expires=864000,  # delete tasks in Redis if older than 10 days
 )
 def process_docs(
     docs,
@@ -237,7 +238,8 @@ def process_docs(
             if (
                 feed_es
                 and c_doc
-                and (
+                and
+                (
                     not feed_es_only_completed
                     or c_doc["Status"] in ("Completed", "Removed")
                 )
