@@ -82,7 +82,7 @@ def log_failure(self, exc, task_id, args, kwargs, einfo):
     on_failure=log_failure,
     task_reject_on_worker_lost=True,
     soft_time_limit=1440,  # 24 min
-    result_expires=43200,  # Delete tasks from Redis backend if older than 12 hours
+    result_expires=86400,  # Delete tasks from Redis backend if older than 1 day
 )
 def query_schedd(
     schedd_ad,
@@ -186,7 +186,7 @@ def query_schedd(
     acks_late=True,
     max_retries=3,
     autoretry_for=(OSError,),
-    result_expires=43200,  # delete tasks from Redis backend if older than 12 hours
+    result_expires=86400,  # delete tasks from Redis backend if older than 1 day
 )
 def process_docs(
     docs,

@@ -31,6 +31,11 @@ import traceback
 from CMSMonitoring.StompAMQ import StompAMQ
 
 _amq_interface = None
+# Log once
+print("INFO: StompAMQ attributes - producer:{}, topic:{}, broker:{}, port:{}".format(os.getenv("CMS_HTCONDOR_PRODUCER"),
+                                                                                     os.getenv("CMS_HTCONDOR_TOPIC"),
+                                                                                     os.getenv("CMS_HTCONDOR_BROKER"),
+                                                                                     61313))
 
 
 def get_amq_interface():
@@ -82,7 +87,6 @@ def amq_post_ads(ads, metadata=None):
 
     metadata = metadata or {}
     interface = get_amq_interface()
-    print("INFO: interface", interface)
     list_data = []
     for id_, ad in ads:
         notif, _, _ = interface.make_notification(
@@ -100,3 +104,4 @@ def amq_post_ads(ads, metadata=None):
     elapsed = round(time.time() - starttime, 2)
     print("INFO: amq.post_ads doc size: {}, failed: {}, elapsed sec: {}".format(len(ads), len(failed_to_send), elapsed))
     return len(ads) - len(failed_to_send), len(ads), elapsed
+

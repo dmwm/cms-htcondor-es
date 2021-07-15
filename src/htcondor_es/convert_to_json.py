@@ -591,6 +591,9 @@ postjob_status_decode = {
     "FINISHED": "finished",
 }
 
+# Ignore value conversion warnings for these values
+ignore_warn_list = ["GLIDEIN_MaxMemMBs"]
+
 # Initialize aff_mgr
 aff_mgr = None
 __aff_err = False
@@ -1099,7 +1102,7 @@ def guessCampaign(ad, analysis, cms_campaign_type):
         m = _rereco_re.match(camp)
         if m and ("DataProcessing" in ad.get("WMAgent_SubTaskName", "")):
             return m.groups()[0] + "Reprocessing"
-    print("INFO: Campaign will be CMS_CampaignType. camp:{}".format(camp))
+    # print("INFO: Campaign will be CMS_CampaignType. camp:{}".format(camp))
     return cms_campaign_type
 
 
@@ -1379,6 +1382,8 @@ def bulk_convert_ad_data(ad, result):
             except ValueError:
                 if value == "Unknown":
                     value = None
+                elif value in ignore_warn_list:
+                    continue
                 else:
                     print(
                         "WARNING: Failed to convert key %s with value %s to int"
