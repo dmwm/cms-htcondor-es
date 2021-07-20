@@ -15,26 +15,31 @@ the optional parameters:
 This script can be setup as a daily cronjob and use the parameters to modify
 how often the script is updated.
 
-Notes:
-    ``AFFILIATION_DIR_LOCATION`` env variable should be provided.
-
 Attributes:
     output_file (string):  environment variable for affiliation json file output.
-        Default is ``AFFILIATION_DIR_LOCATION``. It used in k8s deployment to define affiliation file location.
-            ``AFFILIATION_DIR_LOCATION`` file is updated once a day by ``spider-cron-affiliation`` CronJob.
-            It is stored in persistent volume called ``shared-spider``.
-        Usage in k8s:
+
+        - Default is ``AFFILIATION_DIR_LOCATION``. It used in k8s deployment to define affiliation file location.
+            - ``AFFILIATION_DIR_LOCATION`` file is updated once a day by ``spider-cron-affiliation`` CronJob.
+            - It is stored in persistent volume called ``shared-spider``.
+
+        - Usage in k8s:
             - https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/cronjobs/spider-cron-affiliation.yaml
             - https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/cronjobs/spider-cron-queues.yaml
             - https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/deployments/spider-worker.yaml
-        Usage in ``convert_to_json`` is to fetch affiliations and enrich ClassAd attributes with them.
+
+        - Usage in ``convert_to_json`` is to fetch affiliations and enrich ClassAd attributes with them.
 
 Raises:
-        AffiliationManagerException: Generic exception of AffiliationManager
+    AffiliationManagerException: Generic exception of AffiliationManager
+
+Notes:
+    - ``AFFILIATION_DIR_LOCATION`` env variable should be provided.
 
 Examples:
-    $ python affiliation_cache.py --output /htcondor_es/aff_dir.json --days 3
-    $ python affiliation_cache.py # k8s_affiliation_cache.sh calls like this, which run in ``spider-cron-affiliation``.
+    ``python affiliation_cache.py --output /htcondor_es/aff_dir.json --days 3``
+
+    # k8s_affiliation_cache.sh calls like this, which run in ``spider-cron-affiliation``
+    ``python affiliation_cache.py```
 
 """
 import argparse
@@ -48,10 +53,12 @@ from htcondor_es.AffiliationManager import (
 
 
 def generate_affiliation_cache(output_file, days=1):
-    """Update the cache file if older than a given number of days.
-    Args:
-        output_file (string): Output file to write affiliations
-        days (int): recreate_older_days parameter for AffiliationManager
+    """
+Update the cache file if older than a given number of days.
+
+Args:
+    output_file (string): Output file to write affiliations
+    days (int): recreate_older_days parameter for AffiliationManager
 
     """
     try:
