@@ -1,0 +1,430 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>src.htcondor_es.utils &mdash; cms-htcondor-es  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> cms-htcondor-es
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../src.html">src</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cms-htcondor-es.html">affiliation_cache.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cms-htcondor-es.html#celery-spider-cms-py">celery_spider_cms.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cms-htcondor-es.html#module-celeryconfig">celeryconfig.py</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">cms-htcondor-es</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>src.htcondor_es.utils</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for src.htcondor_es.utils</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+
+<span class="sd">&quot;&quot;&quot;Various helper utilities for the HTCondor-ES integration&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">email.mime.text</span>
+<span class="kn">import</span> <span class="nn">errno</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">logging.handlers</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">pwd</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">shlex</span>
+<span class="kn">import</span> <span class="nn">smtplib</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">zip_longest</span>
+
+<span class="kn">import</span> <span class="nn">classad</span>
+<span class="kn">import</span> <span class="nn">htcondor</span>
+
+<span class="n">TIMEOUT_MINS</span> <span class="o">=</span> <span class="mi">11</span>
+
+
+<div class="viewcode-block" id="get_schedds_from_file"><a class="viewcode-back" href="../../../src.htcondor_es.html#src.htcondor_es.utils.get_schedds_from_file">[docs]</a><span class="k">def</span> <span class="nf">get_schedds_from_file</span><span class="p">(</span><span class="n">args</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">collectors_file</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Reads collectors_file to get pools and gets schedds according to pool information.</span>
+
+<span class="sd">    Calls `get_schedds` function.</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">        In previous version, `collectors_file` given as File object in `--collectors_file` arguments which is used in</span>
+<span class="sd">        `celery_spider_cms.py` and read with `json.load`. This produces some drawbacks regarding proper file closing.</span>
+<span class="sd">        Currently, instead of `json.load`, file read and converted to json properly. And file name is passed as var.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        collectors_file (str): Collectors file name.</span>
+<span class="sd">        args: Comes from `celery_spider_cms`</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">schedds</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">collectors_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>  <span class="c1"># Takes collectors_file as string</span>
+            <span class="n">pools</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">pool</span> <span class="ow">in</span> <span class="n">pools</span><span class="p">:</span>
+            <span class="n">_pool_schedds</span> <span class="o">=</span> <span class="n">get_schedds</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">collectors</span><span class="o">=</span><span class="n">pools</span><span class="p">[</span><span class="n">pool</span><span class="p">],</span> <span class="n">pool_name</span><span class="o">=</span><span class="n">pool</span><span class="p">)</span>
+            <span class="n">schedds</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">_pool_schedds</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Name&quot;</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">names</span><span class="p">])</span>
+            <span class="n">names</span><span class="o">.</span><span class="n">update</span><span class="p">([</span><span class="n">s</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Name&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">_pool_schedds</span><span class="p">])</span>
+
+    <span class="k">except</span> <span class="p">(</span><span class="ne">IOError</span><span class="p">,</span> <span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ERROR: There was a problem opening the collectors file </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">schedds</span> <span class="o">=</span> <span class="n">get_schedds</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">schedds</span></div>
+
+
+<div class="viewcode-block" id="get_schedds"><a class="viewcode-back" href="../../../src.htcondor_es.html#src.htcondor_es.utils.get_schedds">[docs]</a><span class="k">def</span> <span class="nf">get_schedds</span><span class="p">(</span><span class="n">args</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">collectors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pool_name</span><span class="o">=</span><span class="s2">&quot;Unknown&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Return a list of schedds representing all the schedds in the pool.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        [</span>
+<span class="sd">            [</span>
+<span class="sd">                CMS_Pool = &quot;YYY&quot;;</span>
+<span class="sd">                MyAddress = &quot;&lt;x.x.x.x:x?addrs=x&amp;alias=x&amp;y&amp;sock=x&gt;&quot;;</span>
+<span class="sd">                Name = &quot;x&quot;;</span>
+<span class="sd">                ScheddIpAddr = &quot;&lt;x.x.x.x:x?addrs=x&amp;alias=x&amp;y&amp;sock=x&gt;&quot;</span>
+<span class="sd">            ],</span>
+<span class="sd">        ]</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">collectors</span> <span class="o">=</span> <span class="n">collectors</span> <span class="ow">or</span> <span class="p">[]</span>
+    <span class="n">schedd_query</span> <span class="o">=</span> <span class="n">classad</span><span class="o">.</span><span class="n">ExprTree</span><span class="p">(</span><span class="s2">&quot;!isUndefined(CMSGWMS_Type)&quot;</span><span class="p">)</span>
+
+    <span class="n">schedd_ads</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">host</span> <span class="ow">in</span> <span class="n">collectors</span><span class="p">:</span>
+        <span class="n">coll</span> <span class="o">=</span> <span class="n">htcondor</span><span class="o">.</span><span class="n">Collector</span><span class="p">(</span><span class="n">host</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">schedds</span> <span class="o">=</span> <span class="n">coll</span><span class="o">.</span><span class="n">query</span><span class="p">(</span>
+                <span class="n">htcondor</span><span class="o">.</span><span class="n">AdTypes</span><span class="o">.</span><span class="n">Schedd</span><span class="p">,</span>
+                <span class="n">schedd_query</span><span class="p">,</span>
+                <span class="n">projection</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;MyAddress&quot;</span><span class="p">,</span> <span class="s2">&quot;ScheddIpAddr&quot;</span><span class="p">,</span> <span class="s2">&quot;Name&quot;</span><span class="p">],</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">IOError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING:&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+            <span class="k">continue</span>
+
+        <span class="k">for</span> <span class="n">schedd</span> <span class="ow">in</span> <span class="n">schedds</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">schedd</span><span class="p">[</span><span class="s2">&quot;CMS_Pool&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pool_name</span>
+                <span class="n">schedd_ads</span><span class="p">[</span><span class="n">schedd</span><span class="p">[</span><span class="s2">&quot;Name&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">schedd</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="k">pass</span>
+
+    <span class="n">schedd_ads</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">schedd_ads</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">schedd_ads</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">args</span> <span class="ow">and</span> <span class="n">args</span><span class="o">.</span><span class="n">schedd_filter</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">schedd_ads</span> <span class="k">if</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;Name&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">schedd_filter</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)]</span>
+
+    <span class="k">return</span> <span class="n">schedd_ads</span></div>
+
+
+<div class="viewcode-block" id="send_email_alert"><a class="viewcode-back" href="../../../src.htcondor_es.html#src.htcondor_es.utils.send_email_alert">[docs]</a><span class="k">def</span> <span class="nf">send_email_alert</span><span class="p">(</span><span class="n">recipients</span><span class="p">,</span> <span class="n">subject</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Send a simple email alert (typically of failure).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">recipients</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="n">email</span><span class="o">.</span><span class="n">mime</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">MIMEText</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    <span class="n">msg</span><span class="p">[</span><span class="s2">&quot;Subject&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> - </span><span class="si">%s</span><span class="s2">h: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span>
+        <span class="n">socket</span><span class="o">.</span><span class="n">gethostname</span><span class="p">(),</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%b </span><span class="si">%d</span><span class="s2">, %H:%M&quot;</span><span class="p">),</span>
+        <span class="n">subject</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">domain</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">getfqdn</span><span class="p">()</span>
+    <span class="n">uid</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">geteuid</span><span class="p">()</span>
+    <span class="n">pw_info</span> <span class="o">=</span> <span class="n">pwd</span><span class="o">.</span><span class="n">getpwuid</span><span class="p">(</span><span class="n">uid</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">&quot;cern.ch&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">domain</span><span class="p">:</span>
+        <span class="n">domain</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">.unl.edu&quot;</span> <span class="o">%</span> <span class="n">socket</span><span class="o">.</span><span class="n">gethostname</span><span class="p">()</span>
+    <span class="n">msg</span><span class="p">[</span><span class="s2">&quot;From&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">@</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pw_info</span><span class="o">.</span><span class="n">pw_name</span><span class="p">,</span> <span class="n">domain</span><span class="p">)</span>
+    <span class="n">msg</span><span class="p">[</span><span class="s2">&quot;To&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">recipients</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">sess</span> <span class="o">=</span> <span class="n">smtplib</span><span class="o">.</span><span class="n">SMTP</span><span class="p">(</span><span class="s2">&quot;localhost&quot;</span><span class="p">)</span>
+        <span class="n">sess</span><span class="o">.</span><span class="n">sendmail</span><span class="p">(</span><span class="n">msg</span><span class="p">[</span><span class="s2">&quot;From&quot;</span><span class="p">],</span> <span class="n">recipients</span><span class="p">,</span> <span class="n">msg</span><span class="o">.</span><span class="n">as_string</span><span class="p">())</span>
+        <span class="n">sess</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exn</span><span class="p">:</span>  <span class="c1"># pylint: disable=broad-except</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING: Email notification failed: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">exn</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="time_remaining"><a class="viewcode-back" href="../../../src.htcondor_es.html#src.htcondor_es.utils.time_remaining">[docs]</a><span class="k">def</span> <span class="nf">time_remaining</span><span class="p">(</span><span class="n">starttime</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">TIMEOUT_MINS</span> <span class="o">*</span> <span class="mi">60</span><span class="p">,</span> <span class="n">positive</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the remaining time (in seconds) until starttime + timeout</span>
+<span class="sd">    Returns 0 if there is no time remaining</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">elapsed</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">starttime</span>
+    <span class="k">if</span> <span class="n">positive</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">timeout</span> <span class="o">-</span> <span class="n">elapsed</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">timeout</span> <span class="o">-</span> <span class="n">elapsed</span></div>
+
+
+<div class="viewcode-block" id="set_up_logging"><a class="viewcode-back" href="../../../src.htcondor_es.html#src.htcondor_es.utils.set_up_logging">[docs]</a><span class="k">def</span> <span class="nf">set_up_logging</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Configure root logger with rotating file handler&quot;&quot;&quot;</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span>
+
+    <span class="n">log_level</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">logging</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">log_level</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">log_level</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid log level: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">log_level</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">log_level</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">log_level</span> <span class="o">&lt;=</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;CMSMonitoring.StompAMQ&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">log_level</span> <span class="o">+</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;stomp.py&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">log_level</span> <span class="o">+</span> <span class="mi">10</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">log_dir</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">oserr</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">oserr</span><span class="o">.</span><span class="n">errno</span> <span class="o">!=</span> <span class="n">errno</span><span class="o">.</span><span class="n">EEXIST</span><span class="p">:</span>
+            <span class="k">raise</span>
+
+    <span class="n">log_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">log_dir</span><span class="p">,</span> <span class="s2">&quot;spider_cms.log&quot;</span><span class="p">)</span>
+    <span class="n">filehandler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">handlers</span><span class="o">.</span><span class="n">RotatingFileHandler</span><span class="p">(</span><span class="n">log_file</span><span class="p">,</span> <span class="n">maxBytes</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
+    <span class="n">filehandler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%(asctime)s</span><span class="s2"> : </span><span class="si">%(name)s</span><span class="s2">:</span><span class="si">%(levelname)s</span><span class="s2"> - </span><span class="si">%(message)s</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">filehandler</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">isatty</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">fileno</span><span class="p">()):</span>
+        <span class="n">streamhandler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">streamhandler</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="collect_metadata"><a class="viewcode-back" href="../../../src.htcondor_es.html#src.htcondor_es.utils.collect_metadata">[docs]</a><span class="k">def</span> <span class="nf">collect_metadata</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Returns metadata dictionary.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        {</span>
+<span class="sd">            &quot;spider_git_hash&quot;: b&#39;2fe30f76198e6992d14a85eddf82e55e8cedadbd&#39;, # current git commit hash</span>
+<span class="sd">            &quot;spider_hostname&quot;: &quot;spider-worker-669d9bcc49-zd4tb&quot;, # worker name</span>
+<span class="sd">            &quot;spider_username&quot;: &quot;spider&quot;,</span>
+<span class="sd">            &quot;spider_runtime&quot;: 1621715109553 # current time in msec</span>
+<span class="sd">        }</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">result</span><span class="p">[</span><span class="s2">&quot;spider_git_hash&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">get_githash</span><span class="p">()</span>
+    <span class="n">result</span><span class="p">[</span><span class="s2">&quot;spider_hostname&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">gethostname</span><span class="p">()</span>
+    <span class="n">result</span><span class="p">[</span><span class="s2">&quot;spider_username&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pwd</span><span class="o">.</span><span class="n">getpwuid</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">geteuid</span><span class="p">())</span><span class="o">.</span><span class="n">pw_name</span>
+    <span class="n">result</span><span class="p">[</span><span class="s2">&quot;spider_runtime&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="get_githash"><a class="viewcode-back" href="../../../src.htcondor_es.html#src.htcondor_es.utils.get_githash">[docs]</a><span class="k">def</span> <span class="nf">get_githash</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Returns the git hash of the current commit in the scripts repository&quot;&quot;&quot;</span>
+    <span class="n">gitwd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+    <span class="n">cmd</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;git rev-parse --verify HEAD&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">call</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">shlex</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">cmd</span><span class="p">),</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span> <span class="n">cwd</span><span class="o">=</span><span class="n">gitwd</span><span class="p">)</span>
+        <span class="n">out</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="n">call</span><span class="o">.</span><span class="n">communicate</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+        <span class="k">return</span> <span class="s2">&quot;unknown&quot;</span></div>
+
+
+<div class="viewcode-block" id="grouper"><a class="viewcode-back" href="../../../src.htcondor_es.html#src.htcondor_es.utils.grouper">[docs]</a><span class="k">def</span> <span class="nf">grouper</span><span class="p">(</span><span class="n">iterable</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">fillvalue</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Collect data into fixed-length chunks or blocks</span>
+
+<span class="sd">    References:</span>
+<span class="sd">        - https://docs.python.org/3/library/itertools.html#itertools-recipes</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        itertools.zip_longest: Iterator</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        - list(grouper(&#39;ABCDEFG&#39;, 3, &#39;x&#39;))</span>
+<span class="sd">            `[(&#39;A&#39;, &#39;B&#39;, &#39;C&#39;), (&#39;D&#39;, &#39;E&#39;, &#39;F&#39;), (&#39;G&#39;, &#39;x&#39;, &#39;x&#39;)]`</span>
+<span class="sd">        - list(grouper([1,2,4], 10, &#39;x&#39;))</span>
+<span class="sd">            `[(1, 2, 4, &#39;x&#39;, &#39;x&#39;, &#39;x&#39;, &#39;x&#39;, &#39;x&#39;, &#39;x&#39;, &#39;x&#39;)]`</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="nb">iter</span><span class="p">(</span><span class="n">iterable</span><span class="p">)]</span> <span class="o">*</span> <span class="n">n</span>
+    <span class="k">return</span> <span class="n">zip_longest</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">fillvalue</span><span class="o">=</span><span class="n">fillvalue</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Brian P Bockelman(bbockelm), Benjamin Stieger(stiegerb), Christian Ariza(cronosnull), Valentin Kuznetsov(vkuznet), Ceyhun Uzunoglu(mrceyhun), todor-ivanov, Kenyi Hurtado(khurtado), Leonardo Cristella(lecriste), Stefano Belforte(belforte).
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

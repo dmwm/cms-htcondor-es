@@ -1,0 +1,354 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>src.htcondor_es.AffiliationManager &mdash; cms-htcondor-es  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> cms-htcondor-es
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../src.html">src</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cms-htcondor-es.html">affiliation_cache.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cms-htcondor-es.html#celery-spider-cms-py">celery_spider_cms.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cms-htcondor-es.html#module-celeryconfig">celeryconfig.py</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">cms-htcondor-es</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>src.htcondor_es.AffiliationManager</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for src.htcondor_es.AffiliationManager</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1"># Author: Christian Ariza &lt;christian.ariza AT gmail [DOT] com&gt;, Ceyhun Uzunoglu &lt;cuzunogl AT gmail [DOT] com&gt;</span>
+<span class="c1"># pylint: disable=line-too-long</span>
+
+<span class="sd">&quot;&quot;&quot;Manages affiliation, username/login, affiliation institution and country from cric data</span>
+
+<span class="sd">Fetches affiliation data from CRIC, writes to file and serve affiliation data in json to clients.</span>
+
+<span class="sd">Attributes:</span>
+<span class="sd">    `__DEFAULT_URL`: CRIC endpoint.</span>
+<span class="sd">    `__DEFAULT_DIR_PATH`: default affiliation file location to write and read.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">errno</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span> <span class="nn">requests</span>
+
+
+<div class="viewcode-block" id="AffiliationManager"><a class="viewcode-back" href="../../../src.htcondor_es.html#src.htcondor_es.AffiliationManager.AffiliationManager">[docs]</a><span class="k">class</span> <span class="nc">AffiliationManager</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;AffiliationManager class writes and reads affiliations&quot;&quot;&quot;</span>
+    <span class="n">__DEFAULT_URL</span> <span class="o">=</span> <span class="s2">&quot;https://cms-cric.cern.ch/api/accounts/user/query/?json&quot;</span>
+    <span class="n">__DEFAULT_DIR_PATH</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="s2">&quot;.affiliation_dir.json&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">dir_file</span><span class="o">=</span><span class="n">__DEFAULT_DIR_PATH</span><span class="p">,</span>
+        <span class="n">recreate</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">recreate_older_days</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">service_url</span><span class="o">=</span><span class="n">__DEFAULT_URL</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            dir_file (str): affiliation file path.</span>
+<span class="sd">            recreate (bool): update with new cric data or now.</span>
+<span class="sd">            recreate_older_days (int): recreate the dir if it is older than that number of days.</span>
+<span class="sd">            service_url (str): CRIC endpoint</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">dir_file</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">service_url</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">recreate</span> <span class="ow">and</span> <span class="n">recreate_older_days</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+                <span class="n">_min_date</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="n">recreate_older_days</span><span class="p">)</span>
+                <span class="n">_dir_time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_mtime</span><span class="p">)</span>  <span class="c1"># most recent content modification</span>
+                <span class="n">recreate</span> <span class="o">=</span> <span class="n">_dir_time</span> <span class="o">&lt;</span> <span class="n">_min_date</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">recreate</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;AFFILIATION MANAGER RECREATE </span><span class="si">{</span><span class="n">recreate</span><span class="si">}</span><span class="s2">,  &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;recreate_older_days is </span><span class="si">{</span><span class="n">recreate_older_days</span><span class="si">}</span><span class="s2"> and &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;is file: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span><span class="si">}</span><span class="s2"> and &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="n">recreate_older_days</span><span class="p">)</span> <span class="k">if</span> <span class="n">recreate_older_days</span> <span class="k">else</span> <span class="s1">&#39;None&#39;</span><span class="si">}</span><span class="s2"> and &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;is path </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="si">}</span><span class="s2"> and &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;mtime: </span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_mtime</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;NO FILE&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadOrCreateDirectory</span><span class="p">(</span><span class="n">recreate</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__dn_dir</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">person</span><span class="p">[</span><span class="s2">&quot;dn&quot;</span><span class="p">]:</span> <span class="n">person</span> <span class="k">for</span> <span class="n">person</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dir</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+            <span class="p">}</span>
+        <span class="k">except</span> <span class="p">(</span>
+            <span class="ne">IOError</span><span class="p">,</span>
+            <span class="n">requests</span><span class="o">.</span><span class="n">RequestException</span><span class="p">,</span>
+            <span class="n">requests</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">,</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">,</span>
+        <span class="p">)</span> <span class="k">as</span> <span class="n">cause</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">AffiliationManagerException</span> <span class="kn">from</span> <span class="nn">cause</span>
+
+<div class="viewcode-block" id="AffiliationManager.loadOrCreateDirectory"><a class="viewcode-back" href="../../../src.htcondor_es.html#src.htcondor_es.AffiliationManager.AffiliationManager.loadOrCreateDirectory">[docs]</a>    <span class="k">def</span> <span class="nf">loadOrCreateDirectory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recreate</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create or load from a json file an inverted index of instutions by person login.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            recreate (bool): Recreate or not.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            {</span>
+<span class="sd">                &#39;valya&#39;:{u&#39;country&#39;: u&#39;US&#39;, u&#39;institute&#39;: u&#39;Cornell University&#39;},</span>
+<span class="sd">                &#39;belforte&#39;: {u&#39;country&#39;: u&#39;IT&#39;, u&#39;institute&#39;: u&#39;Universita e INFN Trieste&#39;}</span>
+<span class="sd">            }</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            IOError: If the file doesn&#39;t exists (or it cannot be read).</span>
+<span class="sd">            RequestException: If something happen with the request.</span>
+<span class="sd">            HTTPError: If the response was something different to a success.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">_tmp_dir</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">recreate</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+            <span class="n">_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+            <span class="n">_tmp_dir</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">person</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">_json</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
+                <span class="n">login</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">for</span> <span class="n">profile</span> <span class="ow">in</span> <span class="n">person</span><span class="p">[</span><span class="s2">&quot;profiles&quot;</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="s2">&quot;login&quot;</span> <span class="ow">in</span> <span class="n">profile</span><span class="p">:</span>
+                        <span class="n">login</span> <span class="o">=</span> <span class="n">profile</span><span class="p">[</span><span class="s2">&quot;login&quot;</span><span class="p">]</span>
+                        <span class="k">break</span>
+                <span class="k">if</span> <span class="n">login</span> <span class="ow">and</span> <span class="s2">&quot;institute&quot;</span> <span class="ow">in</span> <span class="n">person</span><span class="p">:</span>
+                    <span class="n">_tmp_dir</span><span class="p">[</span><span class="n">login</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;institute&quot;</span><span class="p">:</span> <span class="n">person</span><span class="p">[</span><span class="s2">&quot;institute&quot;</span><span class="p">],</span>
+                                       <span class="s2">&quot;country&quot;</span><span class="p">:</span> <span class="n">person</span><span class="p">[</span><span class="s2">&quot;institute_country&quot;</span><span class="p">],</span>
+                                       <span class="s2">&quot;dn&quot;</span><span class="p">:</span> <span class="n">person</span><span class="p">[</span><span class="s2">&quot;dn&quot;</span><span class="p">],</span>
+                                       <span class="p">}</span>
+            <span class="c1"># Only override the file if the dict is not empty.</span>
+            <span class="k">if</span> <span class="n">_tmp_dir</span><span class="p">:</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">_dir_file</span><span class="p">:</span>
+                    <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">_tmp_dir</span><span class="p">,</span> <span class="n">_dir_file</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">_tmp_dir</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The response from the service was empty: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">_tmp_dir</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># If recreate=false</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">_tmp_dir</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">dir_file</span><span class="p">:</span>
+                <span class="n">_tmp_dir</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">dir_file</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="n">errno</span><span class="o">.</span><span class="n">ENOENT</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">strerror</span><span class="p">(</span><span class="n">errno</span><span class="o">.</span><span class="n">ENOENT</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_tmp_dir</span></div>
+
+<div class="viewcode-block" id="AffiliationManager.getAffiliation"><a class="viewcode-back" href="../../../src.htcondor_es.html#src.htcondor_es.AffiliationManager.AffiliationManager.getAffiliation">[docs]</a>    <span class="k">def</span> <span class="nf">getAffiliation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">login</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dn</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns a python dictionary with the institute and country for the given login or dn.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            Returns None if not found.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            login (str): User name.</span>
+<span class="sd">            dn (str): Distinguished name.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: {&#39;institute&#39;: &#39;CERN&#39;, &#39;country&#39;: &#39;CH&#39;, &#39;dn&#39;: &#39;/DC=ch/DC=cern/OU=Organic Units...&#39;} # ``login``</span>
+<span class="sd">            str: &#39;/DC=ch/DC=cern/OU=Organic Units/...&#39; # ``dn``</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">login</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dir</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">login</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dn</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dn_dir</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dn</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div></div>
+
+
+<div class="viewcode-block" id="AffiliationManagerException"><a class="viewcode-back" href="../../../src.htcondor_es.html#src.htcondor_es.AffiliationManager.AffiliationManagerException">[docs]</a><span class="k">class</span> <span class="nc">AffiliationManagerException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Exception wrapper for problems that prevents us to obtain the affiliation info.&quot;&quot;&quot;</span>
+    <span class="k">pass</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Brian P Bockelman(bbockelm), Benjamin Stieger(stiegerb), Christian Ariza(cronosnull), Valentin Kuznetsov(vkuznet), Ceyhun Uzunoglu(mrceyhun), todor-ivanov, Kenyi Hurtado(khurtado), Leonardo Cristella(lecriste), Stefano Belforte(belforte).
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

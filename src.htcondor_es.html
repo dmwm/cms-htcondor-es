@@ -1,0 +1,485 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>htcondor_es &mdash; cms-htcondor-es  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="celery" href="src.htcondor_es.celery.html" />
+    <link rel="prev" title="src" href="src.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> cms-htcondor-es
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="src.html">src</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">htcondor_es</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="src.htcondor_es.celery.html">celery</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-src.htcondor_es.AffiliationManager">AffiliationManager.py</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-src.htcondor_es.amq">amq.py</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#convert-to-json-py">convert_to_json.py</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#es-py">es.py</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-src.htcondor_es.utils">utils.py</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cms-htcondor-es.html">affiliation_cache.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cms-htcondor-es.html#celery-spider-cms-py">celery_spider_cms.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cms-htcondor-es.html#module-celeryconfig">celeryconfig.py</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">cms-htcondor-es</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="cms-htcondor-es.html">affiliation_cache.py</a> &raquo;</li>
+        
+          <li><a href="src.html">src</a> &raquo;</li>
+        
+      <li>htcondor_es</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/src.htcondor_es.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="htcondor-es">
+<h1>htcondor_es<a class="headerlink" href="#htcondor-es" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="src.htcondor_es.celery.html">celery</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.htcondor_es.celery.html#module-src.htcondor_es.celery.celery">celery.py</a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.htcondor_es.celery.html#tasks-py">tasks.py</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="module-src.htcondor_es.AffiliationManager">
+<span id="affiliationmanager-py"></span><h2>AffiliationManager.py<a class="headerlink" href="#module-src.htcondor_es.AffiliationManager" title="Permalink to this headline">¶</a></h2>
+<p>Manages affiliation, username/login, affiliation institution and country from cric data</p>
+<p>Fetches affiliation data from CRIC, writes to file and serve affiliation data in json to clients.</p>
+<dl class="simple">
+<dt>Attributes:</dt><dd><p><cite>__DEFAULT_URL</cite>: CRIC endpoint.
+<cite>__DEFAULT_DIR_PATH</cite>: default affiliation file location to write and read.</p>
+</dd>
+</dl>
+<dl class="py class">
+<dt class="sig sig-object py" id="src.htcondor_es.AffiliationManager.AffiliationManager">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">src.htcondor_es.AffiliationManager.</span></span><span class="sig-name descname"><span class="pre">AffiliationManager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dir_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">PosixPath('/home/runner/.affiliation_dir.json')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recreate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recreate_older_days</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service_url</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'https://cms-cric.cern.ch/api/accounts/user/query/?json'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/htcondor_es/AffiliationManager.html#AffiliationManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.htcondor_es.AffiliationManager.AffiliationManager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>AffiliationManager class writes and reads affiliations</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.htcondor_es.AffiliationManager.AffiliationManager.getAffiliation">
+<span class="sig-name descname"><span class="pre">getAffiliation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">login</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/htcondor_es/AffiliationManager.html#AffiliationManager.getAffiliation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.htcondor_es.AffiliationManager.AffiliationManager.getAffiliation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a python dictionary with the institute and country for the given login or dn.</p>
+<dl class="simple">
+<dt>Notes:</dt><dd><p>Returns None if not found.</p>
+</dd>
+<dt>Args:</dt><dd><p>login (str): User name.
+dn (str): Distinguished name.</p>
+</dd>
+<dt>Returns:</dt><dd><p>dict: {‘institute’: ‘CERN’, ‘country’: ‘CH’, ‘dn’: ‘/DC=ch/DC=cern/OU=Organic Units…’} # <code class="docutils literal notranslate"><span class="pre">login</span></code>
+str: ‘/DC=ch/DC=cern/OU=Organic Units/…’ # <code class="docutils literal notranslate"><span class="pre">dn</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.htcondor_es.AffiliationManager.AffiliationManager.loadOrCreateDirectory">
+<span class="sig-name descname"><span class="pre">loadOrCreateDirectory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">recreate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/htcondor_es/AffiliationManager.html#AffiliationManager.loadOrCreateDirectory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.htcondor_es.AffiliationManager.AffiliationManager.loadOrCreateDirectory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create or load from a json file an inverted index of instutions by person login.</p>
+<dl>
+<dt>Args:</dt><dd><p>recreate (bool): Recreate or not.</p>
+</dd>
+<dt>Examples:</dt><dd><dl class="simple">
+<dt>{</dt><dd><p>‘valya’:{u’country’: u’US’, u’institute’: u’Cornell University’},
+‘belforte’: {u’country’: u’IT’, u’institute’: u’Universita e INFN Trieste’}</p>
+</dd>
+</dl>
+<p>}</p>
+</dd>
+<dt>Raises:</dt><dd><p>IOError: If the file doesn’t exists (or it cannot be read).
+RequestException: If something happen with the request.
+HTTPError: If the response was something different to a success.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="src.htcondor_es.AffiliationManager.AffiliationManagerException">
+<em class="property"><span class="pre">exception</span> </em><span class="sig-prename descclassname"><span class="pre">src.htcondor_es.AffiliationManager.</span></span><span class="sig-name descname"><span class="pre">AffiliationManagerException</span></span><a class="reference internal" href="_modules/src/htcondor_es/AffiliationManager.html#AffiliationManagerException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.htcondor_es.AffiliationManager.AffiliationManagerException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Exception wrapper for problems that prevents us to obtain the affiliation info.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-src.htcondor_es.amq">
+<span id="amq-py"></span><h2>amq.py<a class="headerlink" href="#module-src.htcondor_es.amq" title="Permalink to this headline">¶</a></h2>
+<p>Creates connection with AMQ broker and sends converted json data through AMQ with <code class="docutils literal notranslate"><span class="pre">condor</span></code> producer</p>
+<dl class="simple">
+<dt>Notes:</dt><dd><dl class="simple">
+<dt>Requirements in k8s:</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">CMS_AMQ_USERNAME_FILE</span></code>, AMQ username credential, should be provided. In current deployment,</dt><dd><p>it is provided by the k8s secret <code class="docutils literal notranslate"><span class="pre">amq-username</span></code> and mounted in <cite>/cms_secrets/amq-username</cite> path.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">CMS_AMQ_PASSWORD_FILE</span></code>, AMQ password credential, should be provided. In current deployment,</dt><dd><p>it is provided by the k8s secret <code class="docutils literal notranslate"><span class="pre">amq-password</span></code> and mounted in <cite>/cms_secrets/amq-password</cite> path.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">CMS_HTCONDOR_PRODUCER</span></code>, producer name in MONIT infrastructure, should be provided. In current</dt><dd><p>deployment, it’s set as <cite>condor-test</cite>, but in production it will be <cite>condor</cite>. Provided as env var.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">CMS_HTCONDOR_TOPIC</span></code>, topic name of AMQ broker, should be provided. In current deployment,</dt><dd><p>it’s set as <cite>/topic/cms.jobmon.condor</cite>, and in production it will be same. Provided as env var.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">CMS_HTCONDOR_BROKER</span></code>, AMQ broker endpoint, should be provided. In current deployment,</dt><dd><p>it’s set as <cite>cms-test-mb.cern.ch</cite>, and in production it will change. Provided as env var.</p>
+</dd>
+</dl>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">61313</span></code> is used as AMQ broker port.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt>References:</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>All mentioned environment variables in <code class="docutils literal notranslate"><span class="pre">Notes</span></code> are used only in:</dt><dd><p>– <a class="reference external" href="https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/deployments/spider-worker.yaml">https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/deployments/spider-worker.yaml</a>
+– <a class="reference external" href="https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/cronjobs/spider-cron-queues.yaml">https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/cronjobs/spider-cron-queues.yaml</a></p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="src.htcondor_es.amq.amq_post_ads">
+<span class="sig-prename descclassname"><span class="pre">src.htcondor_es.amq.</span></span><span class="sig-name descname"><span class="pre">amq_post_ads</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ads</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/htcondor_es/amq.html#amq_post_ads"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.htcondor_es.amq.amq_post_ads" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sends converted ClassAds through AMQ, using StompAMQ module</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>ads (list): Lits of converted ClassAds in json format.
+metadata (dict): Metadata of documents. If None defaults is used i.e. <cite>producer</cite>, <cite>ts</cite> set by StompAMQ</p>
+</dd>
+<dt>Returns:</dt><dd><p>tuple: (successful tasks, total tasks, elapsed time) # i.e. (90, 100, 10.08)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.htcondor_es.amq.get_amq_interface">
+<span class="sig-prename descclassname"><span class="pre">src.htcondor_es.amq.</span></span><span class="sig-name descname"><span class="pre">get_amq_interface</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/htcondor_es/amq.html#get_amq_interface"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.htcondor_es.amq.get_amq_interface" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates StompAMQ object, providing credentials and argument, to send data</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p><cite>_amq_interface</cite> (object): StompAMQ object</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="convert-to-json-py">
+<h2>convert_to_json.py<a class="headerlink" href="#convert-to-json-py" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="es-py">
+<h2>es.py<a class="headerlink" href="#es-py" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-src.htcondor_es.utils">
+<span id="utils-py"></span><h2>utils.py<a class="headerlink" href="#module-src.htcondor_es.utils" title="Permalink to this headline">¶</a></h2>
+<p>Various helper utilities for the HTCondor-ES integration</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="src.htcondor_es.utils.collect_metadata">
+<span class="sig-prename descclassname"><span class="pre">src.htcondor_es.utils.</span></span><span class="sig-name descname"><span class="pre">collect_metadata</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/htcondor_es/utils.html#collect_metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.htcondor_es.utils.collect_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns metadata dictionary.</p>
+<dl>
+<dt>Returns:</dt><dd><dl class="simple">
+<dt>{</dt><dd><p>“spider_git_hash”: b’2fe30f76198e6992d14a85eddf82e55e8cedadbd’, # current git commit hash
+“spider_hostname”: “spider-worker-669d9bcc49-zd4tb”, # worker name
+“spider_username”: “spider”,
+“spider_runtime”: 1621715109553 # current time in msec</p>
+</dd>
+</dl>
+<p>}</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.htcondor_es.utils.get_githash">
+<span class="sig-prename descclassname"><span class="pre">src.htcondor_es.utils.</span></span><span class="sig-name descname"><span class="pre">get_githash</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/htcondor_es/utils.html#get_githash"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.htcondor_es.utils.get_githash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the git hash of the current commit in the scripts repository</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.htcondor_es.utils.get_schedds">
+<span class="sig-prename descclassname"><span class="pre">src.htcondor_es.utils.</span></span><span class="sig-name descname"><span class="pre">get_schedds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collectors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pool_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Unknown'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="reference internal" href="_modules/src/htcondor_es/utils.html#get_schedds"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.htcondor_es.utils.get_schedds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of schedds representing all the schedds in the pool.</p>
+<dl>
+<dt>Returns:</dt><dd><dl>
+<dt>[</dt><dd><dl class="simple">
+<dt>[</dt><dd><p>CMS_Pool = “YYY”;
+MyAddress = “&lt;x.x.x.x:x?addrs=x&amp;alias=x&amp;y&amp;sock=x&gt;”;
+Name = “x”;
+ScheddIpAddr = “&lt;x.x.x.x:x?addrs=x&amp;alias=x&amp;y&amp;sock=x&gt;”</p>
+</dd>
+</dl>
+<p>],</p>
+</dd>
+</dl>
+<p>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.htcondor_es.utils.get_schedds_from_file">
+<span class="sig-prename descclassname"><span class="pre">src.htcondor_es.utils.</span></span><span class="sig-name descname"><span class="pre">get_schedds_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collectors_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/htcondor_es/utils.html#get_schedds_from_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.htcondor_es.utils.get_schedds_from_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads collectors_file to get pools and gets schedds according to pool information.</p>
+<p>Calls <cite>get_schedds</cite> function.</p>
+<dl class="simple">
+<dt>Notes:</dt><dd><p>In previous version, <cite>collectors_file</cite> given as File object in <cite>–collectors_file</cite> arguments which is used in
+<cite>celery_spider_cms.py</cite> and read with <cite>json.load</cite>. This produces some drawbacks regarding proper file closing.
+Currently, instead of <cite>json.load</cite>, file read and converted to json properly. And file name is passed as var.</p>
+</dd>
+<dt>Args:</dt><dd><p>collectors_file (str): Collectors file name.
+args: Comes from <cite>celery_spider_cms</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.htcondor_es.utils.grouper">
+<span class="sig-prename descclassname"><span class="pre">src.htcondor_es.utils.</span></span><span class="sig-name descname"><span class="pre">grouper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iterable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fillvalue</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/htcondor_es/utils.html#grouper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.htcondor_es.utils.grouper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Collect data into fixed-length chunks or blocks</p>
+<dl class="simple">
+<dt>References:</dt><dd><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/itertools.html#itertools-recipes">https://docs.python.org/3/library/itertools.html#itertools-recipes</a></p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><p>itertools.zip_longest: Iterator</p>
+</dd>
+<dt>Examples:</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>list(grouper(‘ABCDEFG’, 3, ‘x’))</dt><dd><p><cite>[(‘A’, ‘B’, ‘C’), (‘D’, ‘E’, ‘F’), (‘G’, ‘x’, ‘x’)]</cite></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>list(grouper([1,2,4], 10, ‘x’))</dt><dd><p><cite>[(1, 2, 4, ‘x’, ‘x’, ‘x’, ‘x’, ‘x’, ‘x’, ‘x’)]</cite></p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.htcondor_es.utils.send_email_alert">
+<span class="sig-prename descclassname"><span class="pre">src.htcondor_es.utils.</span></span><span class="sig-name descname"><span class="pre">send_email_alert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">recipients</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subject</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/htcondor_es/utils.html#send_email_alert"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.htcondor_es.utils.send_email_alert" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send a simple email alert (typically of failure).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.htcondor_es.utils.set_up_logging">
+<span class="sig-prename descclassname"><span class="pre">src.htcondor_es.utils.</span></span><span class="sig-name descname"><span class="pre">set_up_logging</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/htcondor_es/utils.html#set_up_logging"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.htcondor_es.utils.set_up_logging" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configure root logger with rotating file handler</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.htcondor_es.utils.time_remaining">
+<span class="sig-prename descclassname"><span class="pre">src.htcondor_es.utils.</span></span><span class="sig-name descname"><span class="pre">time_remaining</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">starttime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">660</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">positive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/htcondor_es/utils.html#time_remaining"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.htcondor_es.utils.time_remaining" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the remaining time (in seconds) until starttime + timeout
+Returns 0 if there is no time remaining</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="src.htcondor_es.celery.html" class="btn btn-neutral float-right" title="celery" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="src.html" class="btn btn-neutral float-left" title="src" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Brian P Bockelman(bbockelm), Benjamin Stieger(stiegerb), Christian Ariza(cronosnull), Valentin Kuznetsov(vkuznet), Ceyhun Uzunoglu(mrceyhun), todor-ivanov, Kenyi Hurtado(khurtado), Leonardo Cristella(lecriste), Stefano Belforte(belforte).
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

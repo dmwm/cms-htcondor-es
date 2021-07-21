@@ -1,0 +1,311 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>src.htcondor_es.amq &mdash; cms-htcondor-es  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> cms-htcondor-es
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../src.html">src</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cms-htcondor-es.html">affiliation_cache.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cms-htcondor-es.html#celery-spider-cms-py">celery_spider_cms.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cms-htcondor-es.html#module-celeryconfig">celeryconfig.py</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">cms-htcondor-es</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>src.htcondor_es.amq</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for src.htcondor_es.amq</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="c1"># Author: Christian Ariza &lt;christian.ariza AT gmail [DOT] com&gt;, Ceyhun Uzunoglu &lt;cuzunogl AT gmail [DOT] com&gt;</span>
+
+<span class="sd">&quot;&quot;&quot;Creates connection with AMQ broker and sends converted json data through AMQ with ``condor`` producer</span>
+
+<span class="sd">Notes:</span>
+<span class="sd">    Requirements in k8s:</span>
+<span class="sd">        - ``CMS_AMQ_USERNAME_FILE``, AMQ username credential, should be provided. In current deployment,</span>
+<span class="sd">            it is provided by the k8s secret ``amq-username`` and mounted in `/cms_secrets/amq-username` path.</span>
+<span class="sd">        - ``CMS_AMQ_PASSWORD_FILE``, AMQ password credential, should be provided. In current deployment,</span>
+<span class="sd">            it is provided by the k8s secret ``amq-password`` and mounted in `/cms_secrets/amq-password` path.</span>
+<span class="sd">        -  ``CMS_HTCONDOR_PRODUCER``, producer name in MONIT infrastructure, should be provided. In current</span>
+<span class="sd">            deployment, it&#39;s set as `condor-test`, but in production it will be `condor`. Provided as env var.</span>
+<span class="sd">        - ``CMS_HTCONDOR_TOPIC``, topic name of AMQ broker, should be provided. In current deployment,</span>
+<span class="sd">            it&#39;s set as `/topic/cms.jobmon.condor`, and in production it will be same. Provided as env var.</span>
+<span class="sd">        - ``CMS_HTCONDOR_BROKER``, AMQ broker endpoint, should be provided. In current deployment,</span>
+<span class="sd">            it&#39;s set as `cms-test-mb.cern.ch`, and in production it will change. Provided as env var.</span>
+<span class="sd">        - ``61313`` is used as AMQ broker port.</span>
+
+<span class="sd">References:</span>
+<span class="sd">    - All mentioned environment variables in ``Notes`` are used only in:</span>
+<span class="sd">        -- https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/deployments/spider-worker.yaml</span>
+<span class="sd">        -- https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/cronjobs/spider-cron-queues.yaml</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+
+<span class="kn">from</span> <span class="nn">CMSMonitoring.StompAMQ</span> <span class="kn">import</span> <span class="n">StompAMQ</span>
+
+<span class="n">_amq_interface</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="c1"># Log once</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;INFO: StompAMQ attributes - producer:</span><span class="si">{}</span><span class="s2">, topic:</span><span class="si">{}</span><span class="s2">, broker:</span><span class="si">{}</span><span class="s2">, port:</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMS_HTCONDOR_PRODUCER&quot;</span><span class="p">),</span>
+                                                                                     <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMS_HTCONDOR_TOPIC&quot;</span><span class="p">),</span>
+                                                                                     <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMS_HTCONDOR_BROKER&quot;</span><span class="p">),</span>
+                                                                                     <span class="mi">61313</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="get_amq_interface"><a class="viewcode-back" href="../../../src.htcondor_es.html#src.htcondor_es.amq.get_amq_interface">[docs]</a><span class="k">def</span> <span class="nf">get_amq_interface</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Creates StompAMQ object, providing credentials and argument, to send data</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        `_amq_interface` (object): StompAMQ object</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">_amq_interface</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">_amq_interface</span><span class="p">:</span>
+        <span class="n">username_file</span><span class="p">,</span> <span class="n">password_file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">username_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMS_AMQ_USERNAME_FILE&quot;</span><span class="p">,</span> <span class="s2">&quot;username&quot;</span><span class="p">)</span>
+            <span class="n">password_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMS_AMQ_PASSWORD_FILE&quot;</span><span class="p">,</span> <span class="s2">&quot;password&quot;</span><span class="p">)</span>
+            <span class="n">username</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">username_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">password</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">password_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ERROR: Provide username/password for CERN AMQ&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ERROR: username_file </span><span class="si">{}</span><span class="se">\n</span><span class="s2">password_file </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">username_file</span><span class="p">,</span> <span class="n">password_file</span><span class="p">))</span>
+            <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">()</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="n">_amq_interface</span> <span class="o">=</span> <span class="n">StompAMQ</span><span class="p">(</span>
+            <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">password</span><span class="o">=</span><span class="n">password</span><span class="p">,</span>
+            <span class="n">producer</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMS_HTCONDOR_PRODUCER&quot;</span><span class="p">),</span>  <span class="c1"># do not set default value</span>
+            <span class="n">topic</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMS_HTCONDOR_TOPIC&quot;</span><span class="p">),</span>  <span class="c1"># do not set default value</span>
+            <span class="n">host_and_ports</span><span class="o">=</span><span class="p">[(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;CMS_HTCONDOR_BROKER&quot;</span><span class="p">),</span> <span class="mi">61313</span><span class="p">)],</span>  <span class="c1"># check whether 61313, or 61323</span>
+            <span class="n">validation_schema</span><span class="o">=</span><span class="s2">&quot;JobMonitoring.json&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_amq_interface</span></div>
+
+
+<div class="viewcode-block" id="amq_post_ads"><a class="viewcode-back" href="../../../src.htcondor_es.html#src.htcondor_es.amq.amq_post_ads">[docs]</a><span class="k">def</span> <span class="nf">amq_post_ads</span><span class="p">(</span><span class="n">ads</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Sends converted ClassAds through AMQ, using StompAMQ module</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ads (list): Lits of converted ClassAds in json format.</span>
+<span class="sd">        metadata (dict): Metadata of documents. If None defaults is used i.e. `producer`, `ts` set by StompAMQ</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: (successful tasks, total tasks, elapsed time) # i.e. (90, 100, 10.08)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">ads</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING: No new documents found&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="n">metadata</span> <span class="o">=</span> <span class="n">metadata</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="n">interface</span> <span class="o">=</span> <span class="n">get_amq_interface</span><span class="p">()</span>
+    <span class="n">list_data</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">id_</span><span class="p">,</span> <span class="n">ad</span> <span class="ow">in</span> <span class="n">ads</span><span class="p">:</span>
+        <span class="n">notif</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">interface</span><span class="o">.</span><span class="n">make_notification</span><span class="p">(</span>
+            <span class="n">payload</span><span class="o">=</span><span class="n">ad</span><span class="p">,</span>
+            <span class="n">docType</span><span class="o">=</span><span class="s2">&quot;htcondor_job_info&quot;</span><span class="p">,</span>
+            <span class="n">docId</span><span class="o">=</span><span class="n">id_</span><span class="p">,</span>
+            <span class="n">ts</span><span class="o">=</span><span class="n">ad</span><span class="p">[</span><span class="s2">&quot;RecordTime&quot;</span><span class="p">],</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+            <span class="n">dataSubfield</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">list_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">notif</span><span class="p">)</span>
+
+    <span class="n">starttime</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">failed_to_send</span> <span class="o">=</span> <span class="n">interface</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">list_data</span><span class="p">)</span>
+    <span class="n">elapsed</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">starttime</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;INFO: amq.post_ads doc size: </span><span class="si">{}</span><span class="s2">, failed: </span><span class="si">{}</span><span class="s2">, elapsed sec: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ads</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">failed_to_send</span><span class="p">),</span> <span class="n">elapsed</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">ads</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">failed_to_send</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">ads</span><span class="p">),</span> <span class="n">elapsed</span></div>
+
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Brian P Bockelman(bbockelm), Benjamin Stieger(stiegerb), Christian Ariza(cronosnull), Valentin Kuznetsov(vkuznet), Ceyhun Uzunoglu(mrceyhun), todor-ivanov, Kenyi Hurtado(khurtado), Leonardo Cristella(lecriste), Stefano Belforte(belforte).
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

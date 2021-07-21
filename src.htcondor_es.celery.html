@@ -1,0 +1,280 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>celery &mdash; cms-htcondor-es  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="htcondor_es" href="src.htcondor_es.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> cms-htcondor-es
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="src.html">src</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="src.htcondor_es.html">htcondor_es</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">celery</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#module-src.htcondor_es.celery.celery">celery.py</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tasks-py">tasks.py</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.htcondor_es.html#module-src.htcondor_es.AffiliationManager">AffiliationManager.py</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.htcondor_es.html#module-src.htcondor_es.amq">amq.py</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.htcondor_es.html#convert-to-json-py">convert_to_json.py</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.htcondor_es.html#es-py">es.py</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.htcondor_es.html#module-src.htcondor_es.utils">utils.py</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cms-htcondor-es.html">affiliation_cache.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cms-htcondor-es.html#celery-spider-cms-py">celery_spider_cms.py</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cms-htcondor-es.html#module-celeryconfig">celeryconfig.py</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">cms-htcondor-es</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="cms-htcondor-es.html">affiliation_cache.py</a> &raquo;</li>
+        
+          <li><a href="src.html">src</a> &raquo;</li>
+        
+          <li><a href="src.htcondor_es.html">htcondor_es</a> &raquo;</li>
+        
+      <li>celery</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/src.htcondor_es.celery.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="celery">
+<h1>celery<a class="headerlink" href="#celery" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-src.htcondor_es.celery.celery">
+<span id="celery-py"></span><h2>celery.py<a class="headerlink" href="#module-src.htcondor_es.celery.celery" title="Permalink to this headline">¶</a></h2>
+<p>Configuration for the Celery application.</p>
+<dl class="simple">
+<dt>Notes:</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">CELERY_BROKER_URL</span></code> stands for <cite>redis://$(REDIS_SERVICE_HOST):$(REDIS_SERVICE_PORT_6379)/0</cite> endpoint</dt><dd><p>which is the <cite>redis</cite> service used for <code class="docutils literal notranslate"><span class="pre">celery</span> <span class="pre">broker</span></code> and <code class="docutils literal notranslate"><span class="pre">result</span> <span class="pre">backend</span></code>.
+<code class="docutils literal notranslate"><span class="pre">REDIS_SERVICE_*</span></code> values represents <cite>redis</cite> deployment[1] and service[2] in k8s cluster.
+Celery broker uses the <cite>redis</cite> service’s database id of <strong>0</strong>.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">CELERY_RESULT_BACKEND</span></code> stands for <cite>redis://$(REDIS_SERVICE_HOST):$(REDIS_SERVICE_PORT_6379)/1</cite> endpoint</dt><dd><p>which is the <cite>redis</cite> service used for celery broker and result backend. Celery result backend uses
+<cite>redis</cite> service’s database id of <strong>1</strong>.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>These two environment variables should be set in</dt><dd><p><cite>cronjobs/spider-cron-affiliation.yaml</cite>, <cite>cronjobs/spider-cron-queues.yaml</cite>, <cite>deployments/spider-worker.yaml</cite>.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+<dt>Important:</dt><dd><dl class="simple">
+<dt>Please be aware of the <cite>-Ofair</cite> and <cite>-E</cite> parameters in <a href="#id1"><span class="problematic" id="id2">`</span></a>spider-worker`[3]</dt><dd><ul class="simple">
+<li><p><cite>-Ofair</cite> is required to prevent long-running task which may block all future tasks [4]</p></li>
+<li><p><cite>-E</cite> is required for monitoring: worker_send_task_events</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt>References:</dt><dd><ul class="simple">
+<li><p><a class="reference external" href="https://docs.celeryproject.org/en/stable/userguide/configuration.html">https://docs.celeryproject.org/en/stable/userguide/configuration.html</a></p></li>
+<li><p><a class="reference external" href="https://docs.celeryproject.org/en/stable/userguide/configuration.html#std-setting-broker_transport_options">https://docs.celeryproject.org/en/stable/userguide/configuration.html#std-setting-broker_transport_options</a></p></li>
+<li><p>[1] <a class="reference external" href="https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/deployments/spider-redis.yaml">https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/deployments/spider-redis.yaml</a></p></li>
+<li><p>[2] <a class="reference external" href="https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/service/spider-redis.yaml">https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/service/spider-redis.yaml</a></p></li>
+<li><p>[3] <a class="reference external" href="https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/deployments/spider-worker.yaml">https://github.com/dmwm/CMSKubernetes/blob/master/kubernetes/spider/deployments/spider-worker.yaml</a></p></li>
+<li><p>[4] <a class="reference external" href="https://www.lorenzogil.com/blog/2020/03/01/celery-tasks/">https://www.lorenzogil.com/blog/2020/03/01/celery-tasks/</a></p></li>
+</ul>
+</dd>
+</dl>
+</div>
+<div class="section" id="tasks-py">
+<h2>tasks.py<a class="headerlink" href="#tasks-py" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="src.htcondor_es.html" class="btn btn-neutral float-left" title="htcondor_es" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Brian P Bockelman(bbockelm), Benjamin Stieger(stiegerb), Christian Ariza(cronosnull), Valentin Kuznetsov(vkuznet), Ceyhun Uzunoglu(mrceyhun), todor-ivanov, Kenyi Hurtado(khurtado), Leonardo Cristella(lecriste), Stefano Belforte(belforte).
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
