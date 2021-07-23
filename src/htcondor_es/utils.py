@@ -224,3 +224,32 @@ def grouper(iterable, n, fillvalue=None):
     """
     args = [iter(iterable)] * n
     return zip_longest(*args, fillvalue=fillvalue)
+
+
+def helper_condor_hist_query(collectors_file, schedd_name, query="", limit=1):
+    """Get raw ClassAd for testing purpose
+
+    Sometimes we may need to see raw ClassAd. This function helps to print a raw ClassAd with queries.
+    You may find all schedds in `schedd_ads` list or "ScheddName" field in condor data in ES/Kibana.
+
+    Args:
+        schedd_name (str): Schedd name.
+        collectors_file (str): Collectors file name.
+        query (str): htcondor constraints query.
+        limit (int): Limit of the results.
+
+    Examples:
+        custom_condor_hist_query(collectors_file="y",
+                         schedd_name="x",
+                         query='''MachineAttrCMSProcessingSiteName0 == "zzzz"''',
+                         limit=1)
+    """
+    # "secrets/cms-htcondor-es/collectors"
+    schedd_ads = get_schedds_from_file(None, collectors_file=collectors_file)
+    print(schedd_ads)
+    idx = [i for i, r in enumerate(schedd_ads) if (schedd_name in r.get("Name"))][0]
+    schedd = htcondor.Schedd(schedd_ads[idx])
+    print(schedd)
+    query_iter = schedd.history(constraint=query, projection=[], match=limit)
+    for r in query_iter:
+        print(r)
