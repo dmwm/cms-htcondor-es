@@ -413,6 +413,28 @@ args: Comes from <cite>celery_spider_cms</cite></p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="src.htcondor_es.utils.helper_condor_hist_query">
+<span class="sig-prename descclassname"><span class="pre">src.htcondor_es.utils.</span></span><span class="sig-name descname"><span class="pre">helper_condor_hist_query</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collectors_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">schedd_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/htcondor_es/utils.html#helper_condor_hist_query"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.htcondor_es.utils.helper_condor_hist_query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get raw ClassAd for testing purpose</p>
+<p>Sometimes we may need to see raw ClassAd. This function helps to print a raw ClassAd with queries.
+You may find all schedds in <cite>schedd_ads</cite> list or “ScheddName” field in condor data in ES/Kibana.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>schedd_name (str): Schedd name.
+collectors_file (str): Collectors file name.
+query (str): htcondor constraints query.
+limit (int): Limit of the results.</p>
+</dd>
+<dt>Examples:</dt><dd><dl class="simple">
+<dt>custom_condor_hist_query(collectors_file=”y”,</dt><dd><p>schedd_name=”x”,
+query=’’’MachineAttrCMSProcessingSiteName0 == “zzzz”’’’,
+limit=1)</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="src.htcondor_es.utils.send_email_alert">
 <span class="sig-prename descclassname"><span class="pre">src.htcondor_es.utils.</span></span><span class="sig-name descname"><span class="pre">send_email_alert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">recipients</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subject</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/src/htcondor_es/utils.html#send_email_alert"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#src.htcondor_es.utils.send_email_alert" title="Permalink to this definition">¶</a></dt>
 <dd><p>Send a simple email alert (typically of failure).</p>
