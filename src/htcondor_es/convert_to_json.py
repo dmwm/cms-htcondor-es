@@ -672,7 +672,8 @@ def convert_to_json(
             "MATCH_EXP_JOB_GLIDEIN_CMSSite",
             ad.get("MATCH_EXP_JOBGLIDEIN_CMSSite",
                    ad.get("MATCH_GLIDEIN_CMSSite",
-                          ad.get("MachineAttrGLIDEIN_CMSSite0", "Unknown"))),
+                          ad.get("MachineAttrGLIDEIN_CMSSite0",
+                                 ad.get("MachineAttrCMSProcessingSiteName0", "Unknown")))),
         )
 
     bulk_convert_ad_data(ad, result)
