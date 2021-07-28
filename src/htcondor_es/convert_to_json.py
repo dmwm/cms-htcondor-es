@@ -786,6 +786,8 @@ def convert_to_json(
     if cms:
         result["CMSGroups"] = make_list_from_string_field(ad, "CMSGroups")
         result["Site"] = ad.get("MATCH_EXP_JOB_GLIDEIN_CMSSite", "UNKNOWN")
+        if result["Site"].endswith("_Disk"):
+            result["Site"] = result["Site"].strip("_Disk")
     elif ("GlideinEntryName" in ad) and ("MATCH_EXP_JOBGLIDEIN_ResourceName" not in ad):
         m = _generic_site.match(ad["GlideinEntryName"])
         m2 = _cms_site.match(ad["GlideinEntryName"])
