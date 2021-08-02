@@ -514,6 +514,7 @@ running_fields = set(
         "JobUniverse",
         "KEvents",
         "MachineAttrCMSSubSiteName0",
+        "MaxWallTimeMins",
         "MegaEvents",
         "MemoryMB",
         "OutputGB",
