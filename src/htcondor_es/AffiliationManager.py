@@ -13,6 +13,9 @@ from datetime import datetime, timedelta
 class AffiliationManager:
     __DEFAULT_URL = "https://cms-cric.cern.ch/api/accounts/user/query/?json"
     __DEFAULT_DIR_PATH = Path.home().joinpath(".affiliation_dir.json")
+    __DEFAULT_CA_CERT = "/etc/pki/tls/certs/CERN-bundle.pem"
+    __DEFAULT_ROBOT_CERT = "/home/cmsjobmon/.globus/usercert.pem"
+    __DEFAULT_ROBOT_KEY = "/home/cmsjobmon/.globus/userkey.pem"
 
     def __init__(
         self,
@@ -20,6 +23,9 @@ class AffiliationManager:
         recreate=False,
         recreate_older_days=None,
         service_url=__DEFAULT_URL,
+        robot_cert=__DEFAULT_ROBOT_CERT,
+        robot_key=__DEFAULT_ROBOT_KEY,
+        ca_cert=__DEFAULT_CA_CERT    
     ):
         """
         params:
@@ -29,6 +35,11 @@ class AffiliationManager:
         """
         self.path = Path(dir_file)
         self.url = service_url
+        self.path = Path(dir_file)
+        self.url = service_url
+        self.robot_cert = robot_cert
+        self.robot_key = robot_key
+        self.ca_cert = ca_cert       
         if not recreate and recreate_older_days:
             if self.path.is_file():
                 _min_date = datetime.now() - timedelta(days=recreate_older_days)
@@ -69,7 +80,9 @@ class AffiliationManager:
         """
         _tmp_dir = None
         if recreate:
-            response = requests.get(self.url)
+            #response = requests.get(self.url) #no auth
+            cert = (self.robot_cert, self.robot_key)
+            response = requests.get(self.url, cert = cert, verify = self.ca_cert)
             response.raise_for_status()
             _json = json.loads(response.text)
             _tmp_dir = {}
