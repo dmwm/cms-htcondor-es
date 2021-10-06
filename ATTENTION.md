@@ -11,7 +11,7 @@ In order to update the code base,
 
 - In virtual machine, fetch: `git fetch --all`
 
-- Check the difference between local and remote to be sure: `git diff vm-legacy origin/vm-leagcy`
+- Check the difference between local and remote to be sure: `git diff vm-legacy origin/vm-legacy`
 
 - Before rebase, please make sure if 12m period is finished:
 
