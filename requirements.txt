@@ -8,3 +8,4 @@ https://github.com/mher/flower/zipball/master#egg=flower # flower dev version
 sphinx
 sphinx_rtd_theme
 myst_parser
+stomp.py>=4.1.22 # not directly required, pinned by Snyk to avoid a vulnerability
