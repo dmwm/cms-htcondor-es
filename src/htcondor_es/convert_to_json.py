@@ -1105,6 +1105,9 @@ def guess_campaign_type(ad, analysis):
         return "RelVal"
     elif re.match(r".*(RunII|(Summer|Fall|Autumn|Winter|Spring)(1[5-9]|20)).*", camp): # [!] Should be after UL
         return "Run2 requests"
+    elif "SnowmassWinter21" in camp:
+        # Example WMAgent_RequestName: pdmvserv_task_TSG-SnowmassWinter21wmLHEGEN-00229__v1_T_211208_125036_3179
+        return "SnowmassWinter21"
     else:
         return "UNKNOWN"
 
