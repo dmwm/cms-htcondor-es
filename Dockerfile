@@ -1,7 +1,7 @@
 FROM cern/cc7-base:20210501-2.x86_64 as cern
 
 # Do not use python:alpine because of long build time and some bugs
-FROM python:3.8-slim
+FROM python:3.9-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 
