@@ -1,5 +1,7 @@
 """
 Methods for processing the history in a schedd queue.
+
+Created for backup script "history_backup_spider_cms.py". It will not use checkpoint.json file but backup_start and backup_end parameters.
 """
 
 import json
@@ -19,6 +21,11 @@ from htcondor_es.utils import send_email_alert, time_remaining, TIMEOUT_MINS
 from htcondor_es.convert_to_json import convert_to_json
 from htcondor_es.convert_to_json import convert_dates_to_millisecs
 from htcondor_es.convert_to_json import unique_doc_id
+
+
+def unix_ts_to_str(ts):
+    """Convert UTC timestamp in seconds to date string"""
+    return datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def process_schedd(
@@ -42,16 +49,19 @@ def process_schedd(
     metadata = metadata or {}
     schedd = htcondor.Schedd(schedd_ad)
     _q = """
-        ( EnteredCurrentStatus >= %(last_completion)d 
-        || CRAB_PostJobLastUpdate >= %(last_completion)d )
+        ( 
+          ( EnteredCurrentStatus >= %(backup_start)d && EnteredCurrentStatus < %(backup_end)d ) 
+          || 
+          ( CRAB_PostJobLastUpdate >= %(backup_start)d && CRAB_PostJobLastUpdate < %(backup_end)d ) 
+        )
         && (CMS_Type != "DONOTMONIT")
         """
-    history_query = classad.ExprTree(_q % {"last_completion": last_completion - 720})
+    history_query = classad.ExprTree(_q % {"backup_start": args.backup_start, "backup_end": args.backup_end})
     logging.info(
-        "Querying %s for history: %s.  " "%.1f minutes of ads",
+        "Querying %s for history: %s.  " " between %s ",
         schedd_ad["Name"],
         history_query,
-        (time.time() - last_completion) / 60.0,
+        unix_ts_to_str(args.backup_start) + " - " + unix_ts_to_str(args.backup_end),
     )
     buffered_ads = {}
     count = 0
@@ -211,15 +221,15 @@ def process_schedd(
 
 def update_checkpoint(name, completion_date):
     try:
-        with open("checkpoint.json", "r") as fd:
+        with open("checkpoint_test.json", "r") as fd:
             checkpoint = json.load(fd)
     except Exception as e:
-        logging.warning("ERROR - checkpoint.json is not readable as json. " + str(e))
+        logging.warning("ERROR - checkpoint_test.json is not readable as json. " + str(e))
         checkpoint = {}
 
     checkpoint[name] = completion_date
 
-    with open("checkpoint.json", "w") as fd:
+    with open("checkpoint_test.json", "w") as fd:
         json.dump(checkpoint, fd)
 
 
@@ -228,12 +238,7 @@ def process_histories(schedd_ads, starttime, pool, args, metadata=None):
     Process history files for each schedd listed in a given
     multiprocessing pool
     """
-    try:
-        checkpoint = json.load(open("checkpoint.json"))
-    except Exception as e:
-        # Exception should be general
-        logging.warning("ERROR - checkpoint.json is not readable as json. " + str(e))
-        checkpoint = {}
+    checkpoint = {}
 
     futures = []
     metadata = metadata or {}
@@ -247,11 +252,8 @@ def process_histories(schedd_ads, starttime, pool, args, metadata=None):
 
         # Check for last completion time
         # If there was no previous completion, get last 12 h
-        last_completion = checkpoint.get(name, time.time() - 12 * 3600)
+        last_completion = args.backup_start
 
-        # For CRAB, only ever get a maximum of 12 h
-        if name.startswith("crab") and last_completion < time.time() - 12 * 3600:
-            last_completion = time.time() - 12 * 3600
 
         future = pool.apply_async(
             process_schedd,

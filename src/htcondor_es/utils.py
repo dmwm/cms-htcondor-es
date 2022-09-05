@@ -79,6 +79,10 @@ def send_email_alert(recipients, subject, message):
     """
     Send a simple email alert (typically of failure).
     """
+    # TMP: somehow send_email_alert still sending alerts
+    # let's disablee this feature for now
+    return
+
     if not recipients:
         return
     msg = email.mime.text.MIMEText(message)
