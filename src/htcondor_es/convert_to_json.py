@@ -1339,7 +1339,12 @@ def bulk_convert_ad_data(ad, result):
         except:
             continue
         if isinstance(value, classad.Value):
-            if value == classad.Value.Error:
+            if classad.version()[0] <= '8':
+                _is_err_cond = value == classad.Value.Error
+            else:
+                _is_err_cond = value is classad.Value.Error
+            #
+            if _is_err_cond:
                 continue
             else:
                 value = None

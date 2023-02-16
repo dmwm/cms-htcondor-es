@@ -9,6 +9,7 @@ import traceback
 import queue
 import multiprocessing
 
+import classad
 import htcondor
 
 import htcondor_es.es
@@ -97,7 +98,7 @@ class ListenAndBunch(multiprocessing.Process):
                     self.buffer[: self.bunch_size],
                     timeout=time_remaining(self.starttime),
                 )
-                self.buffer = self.buffer[self.bunch_size :]
+                self.buffer = self.buffer[self.bunch_size:]
 
     def close(self):
         """Clear the buffer, send a poison pill and the total number of docs"""
@@ -148,7 +149,10 @@ def query_schedd_queue(starttime, schedd_ad, queue, args):
         "completed_since": _completed_since
     }
     try:
-        query_iter = schedd.xquery(requirements=query) if not args.dry_run else []
+        if classad.version()[0] <= '8':
+            query_iter = schedd.xquery(requirements=query) if not args.dry_run else []
+        else:
+            query_iter = schedd.xquery(constraint=query) if not args.dry_run else []
         for job_ad in query_iter:
             dict_ad = None
             try:
@@ -299,16 +303,17 @@ def process_queues(schedd_ads, starttime, pool, args, metadata=None):
             break
 
         if args.feed_es_for_queues and not args.read_only:
-            ## Note that these bunches are sized according to --amq_bunch_size
-            ## FIXME: Why are we determining the index from one ad?
+            # Note that these bunches are sized according to --amq_bunch_size
+            # FIXME: Why are we determining the index from one ad?
             idx = htcondor_es.es.get_index(
-                bunch[0][1].get("QDate", int(time.time())),
+                timestamp=bunch[0][1].get("QDate", int(time.time())),
                 template=args.es_index_template,
+                args=args,
                 update_es=(args.feed_es and not args.read_only),
             )
 
             future = upload_pool.apply_async(
-                htcondor_es.es.post_ads_nohandle, args=(idx, bunch, args, metadata)
+                htcondor_es.es.post_ads, args=(args, idx, bunch, metadata)
             )
             futures.append(("UPLOADER_ES", future))
 

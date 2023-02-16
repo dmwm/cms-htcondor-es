@@ -1,0 +1,15 @@
+{
+"notification_endpoint":"http://monit-alarms.cern.ch:10011",
+
+"default_case":{
+    "targets":["email"],
+    "source":"cms-monit-notifier",
+    "alert_name":"cms-monit-notifier",
+    "status":"OK",
+    "entities":["default entity"],
+    "email":{
+        "to":["cms-comp-monit-alerts@cern.ch"],
+        "send_ok":true
+        }
+    }
+}

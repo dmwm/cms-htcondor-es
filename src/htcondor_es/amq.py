@@ -1,29 +1,33 @@
 import os
 import time
 import logging
-from CMSMonitoring.StompAMQ import StompAMQ
+from CMSMonitoring.StompAMQ7 import StompAMQ7 as StompAMQ
 
 _amq_interface = None
+_WORKDIR = os.getenv("SPIDER_WORKDIR", "/home/cmsjobmon/cms-htcondor-es")
 
 
 def get_amq_interface():
     global _amq_interface
     if not _amq_interface:
         try:
-            username = open("username", "r").read().strip()
-            password = open("password", "r").read().strip()
+            username = open(os.path.join(_WORKDIR, "etc/amq_username"), "r").read().strip()
+            password = open(os.path.join(_WORKDIR, "etc/amq_password"), "r").read().strip()
         except IOError:
             print("ERROR: Provide username/password for CERN AMQ")
             return []
         _amq_interface = StompAMQ(
             username=username,
             password=password,
-            producer=os.getenv("CMS_HTCONDOR_PRODUCER", "condor"),
-            topic=os.getenv("CMS_HTCONDOR_TOPIC", "/topic/cms.jobmon.condor"),
+            producer=os.getenv("CMS_HTCONDOR_PRODUCER"),
+            topic=os.getenv("CMS_HTCONDOR_TOPIC"),
             host_and_ports=[
-                (os.getenv("CMS_HTCONDOR_BROKER", "cms-mb.cern.ch"), 61313)
+                (
+                    os.getenv("CMS_HTCONDOR_BROKER"),
+                    61313
+                )
             ],
-            validation_schema="JobMonitoring.json",
+            validation_schema=os.path.join(_WORKDIR, "JobMonitoring.json"),
         )
 
     return _amq_interface
@@ -40,15 +44,15 @@ def post_ads(ads, metadata=None):
     for id_, ad in ads:
         notif, _, _ = interface.make_notification(
             payload=ad,
-            docType="htcondor_job_info",
-            docId=id_,
+            doc_type=None,  # will be default "metric"
+            doc_id=id_,
             ts=ad["RecordTime"],
             metadata=metadata,
-            dataSubfield=None,
+            data_subfield=None,
         )
         list_data.append(notif)
 
     starttime = time.time()
     failed_to_send = interface.send(list_data)
     elapsed = time.time() - starttime
-    return (len(ads) - len(failed_to_send), len(ads), elapsed)
+    return len(ads) - len(failed_to_send), len(ads), elapsed
