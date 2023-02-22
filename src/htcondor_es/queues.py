@@ -137,10 +137,13 @@ def query_schedd_queue(starttime, schedd_ad, queue, args):
     # but only the completed that had changed in the last period of time.
     _completed_since = starttime - (TIMEOUT_MINS + 1) * 60
     query = """
-         (JobStatus < 3 || JobStatus > 4 
-         || EnteredCurrentStatus >= %(completed_since)d
-         || CRAB_PostJobLastUpdate >= %(completed_since)d
-         ) && (CMS_Type != "DONOTMONIT")
+         (JobUniverse == 5) && (CMS_Type != "DONOTMONIT")
+         &&
+         (
+             JobStatus < 3 || JobStatus > 4
+             || EnteredCurrentStatus >= %(completed_since)d
+             || CRAB_PostJobLastUpdate >= %(completed_since)d
+         )
          """ % {
         "completed_since": _completed_since
     }
