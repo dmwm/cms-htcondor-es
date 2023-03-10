@@ -147,6 +147,8 @@ usage: spider_cms.py [-h] [--process_queue] [--feed_es] [--feed_es_for_queues]
                      [--log_dir LOG_DIR] [--log_level LOG_LEVEL]
                      [--email_alerts EMAIL_ALERTS] [--collectors COLLECTORS]
                      [--collectors_file COLLECTORS_FILE]
+                     [--history_query_max_n_minutes 12*60]
+                     [--mock_cern_domain]
 
 ```
 

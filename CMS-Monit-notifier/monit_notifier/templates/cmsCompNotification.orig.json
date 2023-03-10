@@ -1,0 +1,53 @@
+{
+  "notification_endpoint": "http://monit-alarms.cern.ch:10011",
+  "cases": {
+    "exit_0": {
+      "targets": []
+    },
+    "exit_3": {
+      "targets": [
+        "email",
+        "snow"
+      ],
+      "source": "cms-monit-notifier",
+      "alert_name": "cms-htcondor-es-validation",
+      "entities": [
+        "condor data",
+        "ES",
+        "Influxdb"
+      ],
+      "status": "ERROR",
+      "email": {
+        "to": [
+          "cms-comp-monit-alerts@cern.ch"
+        ],
+        "send_ok": true
+      },
+      "snow": {
+        "functional_element": "monitoring",
+        "service_element": "monitoring",
+        "assignment_level": 3,
+        "grouping": true
+      }
+    }
+  },
+  "default_case": {
+    "targets": [
+      "email"
+    ],
+    "source": "cms-monit-notifier",
+    "alert_name": "cms-htcondor-es-validation",
+    "status": "ERROR",
+    "entities": [
+      "condor data",
+      "ES",
+      "Influxdb"
+    ],
+    "email": {
+      "to": [
+        "cms-comp-monit-alerts@cern.ch"
+      ],
+      "send_ok": true
+    }
+  }
+}

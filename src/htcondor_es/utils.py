@@ -23,7 +23,6 @@ import htcondor
 TIMEOUT_MINS = 60
 
 
-
 def get_schedds_from_file(args=None, collectors_file=None):
     schedds = []
     names = set()
@@ -80,9 +79,6 @@ def send_email_alert(recipients, subject, message):
     Send a simple email alert (typically of failure).
     """
     # TMP: somehow send_email_alert still sending alerts
-    # let's disablee this feature for now
-    return
-
     if not recipients:
         return
     msg = email.mime.text.MIMEText(message)

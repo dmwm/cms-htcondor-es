@@ -2,23 +2,33 @@
 Methods for processing the history in a schedd queue.
 """
 
-import json
-import time
-import logging
 import datetime
-import traceback
+import json
+import logging
 import multiprocessing
+import os
+import time
+import traceback
 
 import classad
-import htcondor
 import elasticsearch
+import htcondor
 
-import htcondor_es.es
 import htcondor_es.amq
-from htcondor_es.utils import send_email_alert, time_remaining, TIMEOUT_MINS
-from htcondor_es.convert_to_json import convert_to_json
+import htcondor_es.es
 from htcondor_es.convert_to_json import convert_dates_to_millisecs
+from htcondor_es.convert_to_json import convert_to_json
 from htcondor_es.convert_to_json import unique_doc_id
+from htcondor_es.utils import send_email_alert, time_remaining, TIMEOUT_MINS
+
+# Main query time, should be same with cron schedule.
+QUERY_TIME_PERIOD = 720  # 12 minutes
+
+# Even in checkpoint.json last query time is older than this, older than "now()-12h" results will be ignored.
+CRAB_MAX_QUERY_TIME_SPAN = 12 * 3600  # 12 hours
+
+_WORKDIR = os.getenv("SPIDER_WORKDIR", "/home/cmsjobmon/cms-htcondor-es")
+_CHECKPOINT_JSON = os.path.join(_WORKDIR, "checkpoint.json")
 
 
 def process_schedd(
@@ -49,7 +59,7 @@ def process_schedd(
             || CRAB_PostJobLastUpdate >= %(last_completion)d
         )
         """
-    history_query = classad.ExprTree(_q % {"last_completion": last_completion - 720})
+    history_query = classad.ExprTree(_q % {"last_completion": last_completion - QUERY_TIME_PERIOD})
     logging.info(
         "Querying %s for history: %s.  " "%.1f minutes of ads",
         schedd_ad["Name"],
@@ -62,9 +72,6 @@ def process_schedd(
     sent_warnings = False
     timed_out = False
     error = False
-    if not args.read_only:
-        if args.feed_es:
-            es = htcondor_es.es.get_server_handle(args)
     try:
         if not args.dry_run:
             history_iter = schedd.history(history_query, [], match=-1)
@@ -95,20 +102,21 @@ def process_schedd(
                 continue
 
             idx = htcondor_es.es.get_index(
-                job_ad["QDate"],
+                timestamp=job_ad["QDate"],
                 template=args.es_index_template,
+                args=args,
                 update_es=(args.feed_es and not args.read_only),
             )
+            # Initialize in for loop. setdefault returns the value of the key always
             ad_list = buffered_ads.setdefault(idx, [])
+            # ad_list keeps the dict_ad values and is propagated in each iteration until buffered_ads[idx] set empty
             ad_list.append((unique_doc_id(dict_ad), dict_ad))
 
             if len(ad_list) == args.es_bunch_size:
                 st = time.time()
                 if not args.read_only:
                     if args.feed_es:
-                        htcondor_es.es.post_ads(
-                            es.handle, idx, ad_list, metadata=metadata
-                        )
+                        htcondor_es.es.post_ads(args=args, idx=idx, ads=ad_list, metadata=metadata)
                     if args.feed_amq:
                         data_for_amq = [
                             (id_, convert_dates_to_millisecs(dict_ad))
@@ -122,6 +130,7 @@ def process_schedd(
                     schedd_ad["Name"],
                 )
                 total_upload += time.time() - st
+                # Clear the buffer dict after batch post operation and set buffered_ads[idx] as empty list
                 buffered_ads[idx] = []
 
             count += 1
@@ -160,9 +169,7 @@ def process_schedd(
                 )
                 if not args.read_only:
                     if args.feed_es:
-                        htcondor_es.es.post_ads(
-                            es.handle, idx, ad_list, metadata=metadata
-                        )
+                        htcondor_es.es.post_ads(args=args, idx=idx, ads=ad_list, metadata=metadata)
                     if args.feed_amq:
                         data_for_amq = [
                             (id_, convert_dates_to_millisecs(dict_ad))
@@ -214,15 +221,16 @@ def process_schedd(
 
 def update_checkpoint(name, completion_date):
     try:
-        with open("checkpoint.json", "r") as fd:
+        with open(_CHECKPOINT_JSON, "r") as fd:
             checkpoint = json.load(fd)
     except Exception as e:
-        logging.warning("ERROR - checkpoint.json is not readable as json. " + str(e))
+        logging.warning("!!! checkpoint.json is not found or not readable. "
+                        "It will be created and fresh results will be written. " + str(e))
         checkpoint = {}
 
     checkpoint[name] = completion_date
 
-    with open("checkpoint.json", "w") as fd:
+    with open(_CHECKPOINT_JSON, "w") as fd:
         json.dump(checkpoint, fd)
 
 
@@ -232,10 +240,10 @@ def process_histories(schedd_ads, starttime, pool, args, metadata=None):
     multiprocessing pool
     """
     try:
-        checkpoint = json.load(open("checkpoint.json"))
+        checkpoint = json.load(open(_CHECKPOINT_JSON))
     except Exception as e:
         # Exception should be general
-        logging.warning("ERROR - checkpoint.json is not readable as json. " + str(e))
+        logging.warning("!!! checkpoint.json is not found or not readable. Empty dict will be used. " + str(e))
         checkpoint = {}
 
     futures = []
@@ -250,11 +258,12 @@ def process_histories(schedd_ads, starttime, pool, args, metadata=None):
 
         # Check for last completion time
         # If there was no previous completion, get last 12 h
-        last_completion = checkpoint.get(name, time.time() - 12 * 3600)
+        history_query_max_n_minutes = args.history_query_max_n_minutes  # Default 12 * 60
+        last_completion = checkpoint.get(name, time.time() - history_query_max_n_minutes * 60)
 
         # For CRAB, only ever get a maximum of 12 h
-        if name.startswith("crab") and last_completion < time.time() - 12 * 3600:
-            last_completion = time.time() - 12 * 3600
+        if name.startswith("crab") and last_completion < time.time() - CRAB_MAX_QUERY_TIME_SPAN:
+            last_completion = time.time() - history_query_max_n_minutes * 60
 
         future = pool.apply_async(
             process_schedd,
