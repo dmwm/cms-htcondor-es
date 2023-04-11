@@ -1,0 +1,32 @@
+################################################################################
+# These settings are ONLY used by $LS_HOME/bin/system-install to create a custom
+# startup script for Logstash and is not used by Logstash itself. It should
+# automagically use the init system (systemd, upstart, sysv, etc.) that your
+# Linux distribution uses.
+#
+# After changing anything here, you need to re-run $LS_HOME/bin/system-install
+# as root to push the changes to the init script.
+################################################################################
+
+# Override Java location
+#JAVACMD=/usr/bin/java
+
+LS_HOME=/usr/share/logstash
+LS_JAVA_HOME=/usr/share/logstash/jdk
+LS_SETTINGS_DIR=/etc/logstash
+LS_OPTS="--path.settings ${LS_SETTINGS_DIR}"
+LS_JAVA_OPTS=""
+LS_PIDFILE=/var/run/logstash.pid
+
+LS_USER=logstash
+LS_GROUP=logstash
+
+LS_GC_LOG_FILE=/var/log/logstash/gc.log
+LS_OPEN_FILES=16384
+LS_NICE=19
+
+# Change these to have the init script named and described differently
+# This is useful when running multiple instances of Logstash on the same
+# physical box or vm
+SERVICE_NAME="logstash"
+SERVICE_DESCRIPTION="logstash"
