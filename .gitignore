@@ -11,7 +11,8 @@ etc/*
 etc_orig/
 fix_task_type.py
 last_mappings.json
-log*
+log/*
+log_*
 password
 popdb.sqlite*
 spider_cms_test.sh*
@@ -22,3 +23,4 @@ src/htcondor_es/*.pyc
 tmp/
 username
 venv*
+.DS_Store

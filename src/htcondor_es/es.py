@@ -168,7 +168,7 @@ def post_ads(args, idx, ads, metadata=None):
     body = make_es_body(ads, metadata)
     result_n_failed = 0
     for _handle in _es_clients.handles:
-        res = _handle.bulk(body=body, index=idx, request_timeout=60)
+        res = _handle.bulk(body=body, index=idx, request_timeout=120)
         if res.get("errors"):
             result_n_failed += parse_errors(res)
     return result_n_failed
