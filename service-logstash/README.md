@@ -1,7 +1,7 @@
 ### Setup
 
-We have set up a logstash/filebeat instance on vocms0240.cern.ch to feed log files from running spider_cms to
-es-cms.cern.ch [`logmon` tenant] for monitoring. The way it works is that filebeat tails the logfiles and preformats the
+We have set up a logstash/filebeat instance on vocms0240.cern.ch to feed log files from running spider_cms cron job processes to
+https://es-cms.cern.ch (alias to es-cms1.cern.ch) `logmon` tenant to monitor. The way it works is that filebeat tails the logfiles and preformats the
 harvested messages, adding tags about the hostname, log-path, etc, and then feeds them to logstash. Logstash attempts to
 match the messages to a set of known formats, which extracts information from the messages, stores it in fields, and
 sets a `message_type` field.
@@ -34,14 +34,16 @@ watching:
 We manage Logstash manually as a systemctl service. It is installed manually and all production settings can be
 found in this repository.
 
-- `systemctl` service config: /usr/lib/systemd/system/logstash.service. Historically, you can find service settings in:
-    - /etc/systemd/system/logstash.service
-    - /etc/systemd/system/multi-user.target.wants/logstash.service
-- Current version: 8.5.2
-- Bin directory: /usr/share/logstash
-- ALL config directory: /etc/logstash
-- Log directory: /var/log/logstash
-- Registry /var/lib/logstash/
+- `systemctl` main service config: `/usr/lib/systemd/system/logstash.service`.
+- Historically, you can find service settings in:
+    - `/etc/systemd/system/logstash.service`
+    - `/etc/systemd/system/multi-user.target.wants/logstash.service`
+- Current version: `8.5.2`
+- Bin directory: `/usr/share/logstash`
+- ALL config directory: `/etc/logstash`
+- Log directory: `/var/log/logstash`
+- Registry `/var/lib/logstash/`
+- OpenSearch user redentials in `secrets/es-cms-opensearch/logmon_spider_tenant_secret`
 
 #### How to install Logstash
 
@@ -58,7 +60,7 @@ mv logstash-8.6.2 logstash
 # Prepare config files in /etc/logstash
 cp -R ~/cms-htcondor-es/service-logstash/logstash/etc /etc/logastash/
 
-# PROVIDE logmon-spider password which can be found in GitLab secrets/cms-htcondor-es/other-tenants/logmon-spider
+# PROVIDE logmon-spider password which can be found in GitLab secrets/es-cms-opensearch/logmon_spider_tenant_secret
 cat /etc/logstash/conf.d/logstash.conf | grep -in "<password>"
 
 # In systemctl config, logstash user is "logstash".
