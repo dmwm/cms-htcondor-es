@@ -91,14 +91,15 @@ found in this repository.
 
 As you can see, after OpenSearch migration, we started to use  **Input type: filestream** instead of  **type: log**
 
-- `systemctl` service config: /usr/lib/systemd/system/filebeat.service . Historically you can find service settings in
+- `systemctl` service config: `/usr/lib/systemd/system/filebeat.service` 
+- Historically you can find service settings in
     - /etc/rc.d/init.d/filebeat
     - /etc/systemd/system/multi-user.target.wants/filebeat.service
-- Current version: 8.7.0
-- Bin directory: /usr/share/filebeat
-- ALL config directory: /etc/filebeat
-- Log directory: /var/log/filebeat
-- **[IMPORTATNT FOR MIGRATIONS, TAKE BACKUP BEFORE ALWAYS]** Registry /var/lib/filebeat/
+- Current version: `8.7.0`
+- Bin directory: `/usr/share/filebeat`
+- ALL config directory: `/etc/filebeat`
+- Log directory: `/var/log/filebeat`
+- Registry `/var/lib/filebeat/` **[IMPORTANT FOR MIGRATIONS, TAKE BACKUP ALWAYS]**
 
 #### How to install Filebeat
 

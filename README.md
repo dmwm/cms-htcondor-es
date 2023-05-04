@@ -1,3 +1,4 @@
+> Deployment and service details documentation: [DEPLOYMENT.md](./DEPLOYMENT.md)
 
 ElasticSearch upload for CMS and HTCondor data
 ----------------------------------------------
