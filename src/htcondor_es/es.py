@@ -61,7 +61,9 @@ class ElasticAndOpenSearchInterfaces(object):
                             self.handles.add(
                                 OpenSearch(
                                     [url],
-                                    verify_certs=True,
+                                    verify_certs=False,
+                                    # TODO: Keep it false until we confirm that CERN grid
+                                    #       certificates are up-to-date
                                     use_ssl=True,
                                     ca_certs="/etc/pki/tls/certs/ca-bundle.trust.crt",
                                 )
