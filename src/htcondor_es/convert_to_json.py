@@ -1001,45 +1001,49 @@ def recordTime(ad):
 
 def guessTaskType(ad):
     """Guess the TaskType from the WMAgent subtask name"""
-    ttype = ad.get("WMAgent_SubTaskName", "/UNKNOWN").rsplit("/", 1)[-1]
+    jobType = ad.get("CMS_JobType", "UNKNOWN")
 
-    # Guess an alternate campaign name from the subtask
-    camp2_info = ttype.split("-")
-    if len(camp2_info) > 1:
-        camp2 = camp2_info[1]
+    if jobType == "Processing":
+        return "DataProcessing"
+    elif jobType == "Production":
+        ttype = ad.get("WMAgent_SubTaskName", "/UNKNOWN").rsplit("/", 1)[-1]
+        # Guess an alternate campaign name from the subtask
+        camp2_info = ttype.split("-")
+        if len(camp2_info) > 1:
+            camp2 = camp2_info[1]
+        else:
+            camp2 = ttype
+    
+        if "CleanupUnmerged" in ttype:
+            return "Cleanup"
+        elif "Merge" in ttype:
+            return "Merge"
+        elif "LogCollect" in ttype:
+            return "LogCollect"
+        elif ("MiniAOD" in ad.get("WMAgent_RequestName", "UNKNOWN")) and (
+            ttype == "StepOneProc"
+        ):
+            return "MINIAOD"
+        elif "MiniAOD" in ttype:
+            return "MINIAOD"
+        elif ttype == "StepOneProc" and (
+            re.search("[1-9][0-9]DR", camp2)
+        ):
+            return "DIGIRECO"
+        elif (
+            re.search("[1-9][0-9]GS", camp2)
+        ) and ttype.endswith("_0"):
+            return "GENSIM"
+        elif ttype.endswith("_0"):
+            return "DIGI"
+        elif ttype.endswith("_1") or ttype.lower() == "reco":
+            return "RECO"
+        elif ttype == "MonteCarloFromGEN":
+            return "GENSIM"
+        else:
+            return "UNKNOWN"
     else:
-        camp2 = ttype
-
-    if "CleanupUnmerged" in ttype:
-        return "Cleanup"
-    elif "Merge" in ttype:
-        return "Merge"
-    elif "LogCollect" in ttype:
-        return "LogCollect"
-    elif ("MiniAOD" in ad.get("WMAgent_RequestName", "UNKNOWN")) and (
-        ttype == "StepOneProc"
-    ):
-        return "MINIAOD"
-    elif "MiniAOD" in ttype:
-        return "MINIAOD"
-    elif ttype == "StepOneProc" and (
-        ("15DR" in camp2) or ("16DR" in camp2) or ("17DR" in camp2)
-    ):
-        return "DIGIRECO"
-    elif (
-        ("15GS" in camp2) or ("16GS" in camp2) or ("17GS" in camp2)
-    ) and ttype.endswith("_0"):
-        return "GENSIM"
-    elif ttype.endswith("_0"):
-        return "DIGI"
-    elif ttype.endswith("_1") or ttype.lower() == "reco":
-        return "RECO"
-    elif ttype == "MonteCarloFromGEN":
-        return "GENSIM"
-    elif ttype in ["DataProcessing", "Repack", "Express"]:
-        return ttype
-    else:
-        return "Unknown"
+        return jobType
 
 
 def guessCampaign(ad, analysis, cms_campaign_type):
