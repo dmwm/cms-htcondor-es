@@ -1154,7 +1154,7 @@ def commonExitCode(ad):
         "JobExitCode",
         ad.get(
             "Chirp_CRAB3_Job_ExitCode",
-            ad.get("Chirp_WMCore_cmsRun_ExitCode", ad.get("ExitCode", 0)),
+            ad.get("Chirp_WMCore_cmsRun_ExitCode", ad.get("ExitCode", 50666)),
         ),
     )
 
