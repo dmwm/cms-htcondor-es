@@ -645,9 +645,8 @@ def convert_to_json(
     # Determine type
     if cms:
         result["Type"] = ad.get("CMS_Type", "unknown").lower()
-    analysis = (
-        result.get("Type") == "analysis" or result.get("CMS_JobType") == "Analysis"
-    )
+    analysis = isAnalysisJob(ad)
+
     if "CRAB_Id" in ad:
         result["FormattedCrabId"] = get_formatted_CRAB_Id(ad.get("CRAB_Id"))
 
@@ -1141,23 +1140,46 @@ def jobFailed(ad):
         return 1
     return 0
 
+def isAnalysisJob(ad):
+    """
+    Check if this is an analysis job, based on 
+    the CMS_Type/CMS_JobType classads in the job.
+    """
+    if ad.get("CMS_Type", "unknown").lower() == "analysis" \
+        or ad.get("CMS_JobType", "unknown") == "Analysis":
+        return True
+
+    return False
+
 
 def commonExitCode(ad):
     """
     Consolidate the exit code values of JobExitCode,
     the  chirped CRAB and WMCore values, and
-    the original condor exit code.
-    JobExitCode and Chirp_CRAB3_Job_ExitCode
-    exists only on analysis jobs.
+    the original condor exit code, according to 
+    the workflow type: production or analysis.
     """
-    return ad.get(
-        "JobExitCode",
-        ad.get(
-            "Chirp_CRAB3_Job_ExitCode",
-            ad.get("Chirp_WMCore_cmsRun_ExitCode", ad.get("ExitCode", 50666)),
-        ),
-    )
+    # If the raw ExitCode in the ad is not present,
+    # the job was removed and its executable did not finish,
+    # hence we return 50666 for any workflow type.
+    if not "ExitCode" in ad:
+        return 50666
+    
+    condorExitCode = ad.get("ExitCode")
 
+    if isAnalysisJob(ad): # CRAB or CMS Connect job
+        return ad.get(
+            "JobExitCode",
+            ad.get("Chirp_CRAB3_Job_ExitCode", condorExitCode)
+        )
+    else: # production job
+        # If cmsRun exit code exists and was not 0, we consider the job failed
+        # even if the wrapper reported a sucess status in condor.
+        # Also, if cmsRunExitCode was 0, but not wrapper exit code, 
+        # we stick with the wrapper exit code and consider the job failed.
+        if ad.get("Chirp_WMCore_cmsRun_ExitCode", 0) > 0:
+            return ad["Chirp_WMCore_cmsRun_ExitCode"]
+        return condorExitCode
 
 def errorType(ad):
     """
