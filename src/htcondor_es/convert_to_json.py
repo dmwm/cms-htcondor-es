@@ -1128,17 +1128,10 @@ def jobFailed(ad):
     Returns 0 when none of the exitcode fields has a non-zero value
     otherwise returns 1
     """
-    ec_fields = [
-        "ExitCode",
-        "Chirp_CRAB3_Job_ExitCode",
-        "Chirp_WMCore_cmsRun_ExitCode",
-        "Chirp_WMCore_cmsRun1_ExitCode",
-        "Chirp_WMCore_cmsRun2_ExitCode",
-    ]
-
-    if sum([ad.get(k, 0) for k in ec_fields]) > 0:
-        return 1
-    return 0
+    if commonExitCode(ad) == 0:
+        return 0
+    else:
+        return 1 
 
 def isAnalysisJob(ad):
     """
