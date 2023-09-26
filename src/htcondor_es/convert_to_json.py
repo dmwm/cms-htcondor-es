@@ -1049,7 +1049,9 @@ def guessCampaign(ad, analysis, cms_campaign_type):
     # Guess the campaign from the request name.
     camp = ad.get("WMAgent_RequestName", "UNKNOWN")
     m = _camp_re.match(camp)
-    if analysis:
+    if ad.get("CMS_CampaignName"):
+        return ad.get("CMS_CampaignName")
+    elif analysis:
         return "crab_" + ad.get("CRAB_UserHN", "UNKNOWN")
     elif camp.startswith("PromptReco"):
         return "PromptReco"
