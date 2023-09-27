@@ -1048,25 +1048,24 @@ def guessTaskType(ad):
 def guessCampaign(ad, analysis, cms_campaign_type):
     # Guess the campaign from the request name.
     camp = ad.get("WMAgent_RequestName", "UNKNOWN")
-    m = _camp_re.match(camp)
     if ad.get("CMS_CampaignName"):
         return ad.get("CMS_CampaignName")
-    elif analysis:
+    if analysis:
         return "crab_" + ad.get("CRAB_UserHN", "UNKNOWN")
-    elif camp.startswith("PromptReco"):
+    if camp.startswith("PromptReco"):
         return "PromptReco"
-    elif camp.startswith("Repack"):
+    if camp.startswith("Repack"):
         return "Repack"
-    elif camp.startswith("Express"):
+    if camp.startswith("Express"):
         return "Express"
-    elif "RVCMSSW" in camp:
+    if "RVCMSSW" in camp:
         return "RelVal"
-    elif m:
+    m = _camp_re.match(camp)
+    if m:
         return m.groups()[0]
-    else:
-        m = _rereco_re.match(camp)
-        if m and ("DataProcessing" in ad.get("WMAgent_SubTaskName", "")):
-            return m.groups()[0] + "Reprocessing"
+    m = _rereco_re.match(camp)
+    if m and ("DataProcessing" in ad.get("WMAgent_SubTaskName", "")):
+        return m.groups()[0] + "Reprocessing"
     # [Temp solution] If Campaign not found, return CMS_CampaignType
     logging.info("Campaign will be CMS_CampaignType. camp:{}".format(camp))
     return cms_campaign_type
