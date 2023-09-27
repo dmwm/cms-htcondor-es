@@ -680,7 +680,11 @@ def convert_to_json(
         result["CMS_CampaignType"] = guess_campaign_type(ad, analysis)
         result["Campaign"] = guessCampaign(ad, analysis, result["CMS_CampaignType"])
         result["TaskType"] = result.get(
-            "CMS_TaskType", guessTaskType(ad) if not analysis else result["CMS_JobType"]
+            "CMS_extendedJobType",
+            result.get(
+                "CMS_TaskType",
+                guessTaskType(ad) if not analysis else result["CMS_JobType"],
+            ),
         )
         result["Workflow"] = guessWorkflow(ad, analysis)
     now = time.time()
