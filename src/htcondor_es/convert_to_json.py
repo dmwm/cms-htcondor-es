@@ -996,11 +996,11 @@ def recordTime(ad):
         - else fall back to launch time
     """
     if ad["JobStatus"] in [3, 4, 6]:
-        if ad.get("CompletionDate", 0) > 0:
+        if ad.get("CompletionDate", 0):
             return ad["CompletionDate"]
 
-        elif ad.get("EnteredCurrentStatus", 0) > 0:
-            return ad["EnteredCurrentStatus"]
+        elif ad.get("JobFinishedHookDone", 0):
+            return ad["JobFinishedHookDone"]
 
     return _launch_time
 
