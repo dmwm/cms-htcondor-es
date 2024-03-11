@@ -992,7 +992,7 @@ def recordTime(ad):
 
     For Completed/Removed/Error jobs, try to update it:
         - to CompletionDate if present
-        - else to EnteredCurrentStatus if present
+        - else to JobFinishedHookDone if present
         - else fall back to launch time
     """
     if ad["JobStatus"] in [3, 4, 6]:
