@@ -991,8 +991,8 @@ def recordTime(ad):
     RecordTime falls back to launch time as last-resort and for jobs in the queue
 
     For Completed/Removed/Error jobs, try to update it:
-        - to CompletionDate if present
-        - else to JobFinishedHookDone if present
+        - to CompletionDate if present (only available for completed jobs)
+        - else to JobFinishedHookDone if present (available for all completed and removed jobs)
         - else fall back to launch time
     """
     if ad["JobStatus"] in [3, 4, 6]:
