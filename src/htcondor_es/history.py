@@ -27,6 +27,10 @@ QUERY_TIME_PERIOD = 720  # 12 minutes
 # Even in checkpoint.json last query time is older than this, older than "now()-12h" results will be ignored.
 CRAB_MAX_QUERY_TIME_SPAN = 12 * 3600  # 12 hours
 
+# If last query time in checkpoint.json is too old, but not from crab, results older
+# than "now()-RETENTION_POLICY" will be ignored.
+RETENTION_POLICY = 39 * 24 * 3600  # 39 days
+
 _WORKDIR = os.getenv("SPIDER_WORKDIR", "/home/cmsjobmon/cms-htcondor-es")
 _CHECKPOINT_JSON = os.path.join(_WORKDIR, "checkpoint.json")
 
@@ -260,6 +264,7 @@ def process_histories(schedd_ads, starttime, pool, args, metadata=None):
         # If there was no previous completion, get last 12 h
         history_query_max_n_minutes = args.history_query_max_n_minutes  # Default 12 * 60
         last_completion = checkpoint.get(name, time.time() - history_query_max_n_minutes * 60)
+        last_completion = max(last_completion, time.time() - RETENTION_POLICY)
 
         # For CRAB, only ever get a maximum of 12 h
         if name.startswith("crab") and last_completion < time.time() - CRAB_MAX_QUERY_TIME_SPAN:
