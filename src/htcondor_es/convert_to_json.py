@@ -673,8 +673,8 @@ def convert_to_json(
         result["CondorExitCode"] = ad["ExitCode"]
 
     if cms:
-        result["CMS_JobType"] = str(
-            ad.get("CMS_JobType", "Analysis" if analysis else "Unknown")
+        result["CMS_JobType"] = str(  # temp fix for UCSD jobs since they come with an unknown type
+            ad.get("CMS_JobType", "Analysis" if analysis or pool_name == "UCSD" else "Unknown")
         )
         result["CRAB_AsyncDest"] = str(ad.get("CRAB_AsyncDest", "Unknown"))
         result["WMAgent_TaskType"] = ad.get("WMAgent_SubTaskName", "/UNKNOWN").rsplit(
