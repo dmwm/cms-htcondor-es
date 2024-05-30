@@ -684,7 +684,7 @@ def convert_to_json(
         result["Campaign"] = guessCampaign(ad, analysis, result["CMS_CampaignType"])
         task_type = result.get("CMS_extendedJobType")
         if task_type == "UNKNOWN" or task_type is None:
-            task_type = result.get("CMS_TaskType", guessTaskType(ad))
+            task_type = result.get("CMS_TaskType", result["CMS_JobType"] if analysis else guessTaskType(ad))
         result["TaskType"] = task_type
         result["Workflow"] = guessWorkflow(ad, analysis)
     now = time.time()
@@ -1003,10 +1003,7 @@ def recordTime(ad):
 
 
 def guessTaskType(ad):
-    """
-    Guess the TaskType from the WMAgent subtask name for Production jobs.
-    Otherwise, use the value from the CMS_JobType or set to UNKNOWN.
-    """
+    """Guess the TaskType from the WMAgent subtask name"""
     jobType = ad.get("CMS_JobType", "UNKNOWN")
 
     if jobType == "Processing":
