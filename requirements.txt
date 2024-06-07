@@ -1,18 +1,18 @@
 # be consistent with: https://gitlab.cern.ch/ai/it-puppet-hostgroup-vocms/-/blob/master/data/fqdns/vocms0240.cern.ch.yaml#L7
 # check breaking changes before any update and ask to HTCondor-users <htcondor-users> if you see any problem
-htcondor==9.0.17
+htcondor==23.0.3
 
 # will be removed after full migration to OpenSearch
 elasticsearch~=7.6.0
 
 # exact version is needed, previous versions include breaking changes;
 # installs also stomp.py==7.0.0
-CMSMonitoring==0.6.11
+CMSMonitoring==0.6.12
 
 # last version for Py v3.6
-requests~=2.27
+requests~=2.31
 
 # after any OpenSearch upgrade, it may change
-opensearch-py~=2.1
+opensearch-py~=2.5
 
 click
