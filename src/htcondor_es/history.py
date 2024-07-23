@@ -43,7 +43,7 @@ def process_schedd(
     """
     my_start = time.time()
     pool_name = schedd_ad.get("CMS_Pool", "Unknown")
-    if time_remaining(starttime) < 0:
+    if time_remaining(starttime) < 10:
         message = (
             "No time remaining to process %s history; exiting." % schedd_ad["Name"]
         )
@@ -145,7 +145,7 @@ def process_schedd(
             if job_completion > last_completion:
                 last_completion = job_completion
 
-            if time_remaining(starttime) < 0:
+            if time_remaining(starttime) < 10:
                 message = (
                     "History crawler on %s has been running for "
                     "more than %d minutes; exiting." % (schedd_ad["Name"], TIMEOUT_MINS)
