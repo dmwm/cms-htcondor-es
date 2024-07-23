@@ -1,7 +1,7 @@
 ### Setup
 
 We have set up a logstash/filebeat instance on vocms0240.cern.ch to feed log files from running spider_cms cron job processes to
-https://es-cms.cern.ch (alias to es-cms1.cern.ch) `logmon` tenant to monitor. The way it works is that filebeat tails the logfiles and preformats the
+https://os-cms.cern.ch `logmon` tenant to monitor. The way it works is that filebeat tails the logfiles and preformats the
 harvested messages, adding tags about the hostname, log-path, etc, and then feeds them to logstash. Logstash attempts to
 match the messages to a set of known formats, which extracts information from the messages, stores it in fields, and
 sets a `message_type` field.
@@ -43,7 +43,7 @@ found in this repository.
 - ALL config directory: `/etc/logstash`
 - Log directory: `/var/log/logstash`
 - Registry `/var/lib/logstash/`
-- OpenSearch user redentials in `secrets/es-cms-opensearch/logmon_spider_tenant_secret`
+- OpenSearch user credentials in `secrets/es-cms-opensearch/logmon_spider_tenant_secret`
 
 #### How to install Logstash
 
@@ -58,7 +58,7 @@ tar xvf logstash-oss-8.6.2-linux-x86_64.tar.gz
 mv logstash-8.6.2 logstash
 
 # Prepare config files in /etc/logstash
-cp -R ~/cms-htcondor-es/service-logstash/logstash/etc /etc/logastash/
+cp -R ~/cms-htcondor-es/service-logstash/logstash/etc /etc/logstash/
 
 # PROVIDE logmon-spider password which can be found in GitLab secrets/es-cms-opensearch/logmon_spider_tenant_secret
 cat /etc/logstash/conf.d/logstash.conf | grep -in "<password>"
