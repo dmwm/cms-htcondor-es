@@ -296,7 +296,7 @@ def process_histories(schedd_ads, starttime, pool, args, metadata=None):
     # completion checkpoint in case
     timed_out = False
     for name, future in futures:
-        if time_remaining(starttime) > -10:
+        if time_remaining(starttime, positive=False) > -20:
             try:
                 future.get(time_remaining(starttime) + 10)
             except multiprocessing.TimeoutError:
