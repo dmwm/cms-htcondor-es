@@ -38,7 +38,7 @@ found in this repository.
 - Historically, you can find service settings in:
     - `/etc/systemd/system/logstash.service`
     - `/etc/systemd/system/multi-user.target.wants/logstash.service`
-- Current version: `8.5.2`
+- Current version: `8.15.0`
 - Bin directory: `/usr/share/logstash`
 - ALL config directory: `/etc/logstash`
 - Log directory: `/var/log/logstash`
@@ -53,9 +53,9 @@ sudo su
 cd /usr/share
 
 # Get OSS version
-wget https://artifacts.elastic.co/downloads/logstash/logstash-oss-8.6.2-linux-x86_64.tar.gz
-tar xvf logstash-oss-8.6.2-linux-x86_64.tar.gz
-mv logstash-8.6.2 logstash
+wget https://artifacts.elastic.co/downloads/logstash/logstash-oss-8.15.0-linux-x86_64.tar.gz
+tar -xvf logstash-oss-8.15.0-linux-x86_64.tar.gz
+mv logstash-8.15.0 logstash
 
 # Prepare config files in /etc/logstash
 cp -R ~/cms-htcondor-es/service-logstash/logstash/etc /etc/logstash/
@@ -66,6 +66,8 @@ cat /etc/logstash/conf.d/logstash.conf | grep -in "<password>"
 # In systemctl config, logstash user is "logstash".
 chown -R logstash /etc/logstash
 
+# Copy filebeat.service into systemd and start logstash
+cp ~/cms-htcondor-es/service-logstash/logstash/logstash.service /usr/lib/systemd/system/logstash.service
 systemctl start logstash
 
 # Follow logs and fix if there is a problem [permission problem, new config in jvm, startup options, etc.]
@@ -95,7 +97,7 @@ As you can see, after OpenSearch migration, we started to use  **Input type: fil
 - Historically you can find service settings in
     - /etc/rc.d/init.d/filebeat
     - /etc/systemd/system/multi-user.target.wants/filebeat.service
-- Current version: `8.7.0`
+- Current version: `8.15.0`
 - Bin directory: `/usr/share/filebeat`
 - ALL config directory: `/etc/filebeat`
 - Log directory: `/var/log/filebeat`
@@ -109,13 +111,15 @@ sudo su
 cd /usr/share
 
 # Get OSS version
-wget https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-oss-8.6.2-linux-x86_64.tar.gz
-tar xvf filebeat-oss-8.6.2-linux-x86_64.tar.gz
-mv filebeat-8.6.2 filebeat
+wget https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-oss-8.15.0-linux-x86_64.tar.gz
+tar xvf filebeat-oss-8.15.0-linux-x86_64.tar.gz
+mv filebeat-8.15.0-linux-x86_64 filebeat
 
 # Prepare config files in /etc/logstash
 cp -R ~/cms-htcondor-es/service-logstash/filebeat/etc/filebeat.yml /etc/filebeat/filebeat.yml
 
+# Copy filebeat.service into systemd and start filebeat
+cp ~/cms-htcondor-es/service-logstash/filebeat/filebeat.service /usr/lib/systemd/system/filebeat.service
 systemctl start filebeat
 
 # Follow logs
