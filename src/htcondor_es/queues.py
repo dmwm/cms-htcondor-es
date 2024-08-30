@@ -149,7 +149,7 @@ def query_schedd_queue(starttime, schedd_ad, queue, args):
         "completed_since": _completed_since
     }
     try:
-        query_iter = schedd.query(constraint=query) if not args.dry_run else []
+        query_iter = schedd.xquery(constraint=query) if not args.dry_run else []
         for job_ad in query_iter:
             dict_ad = None
             try:
