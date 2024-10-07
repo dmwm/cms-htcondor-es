@@ -55,7 +55,7 @@ class ElasticAndOpenSearchInterfaces(object):
                     creds = json.loads(f.read())
                     self.host_count = len(creds)
                     for cred in creds:
-                        if cred["host"].endswith("/es"):
+                        if cred["host"].endswith("/os"):
                             logging.info("OpenSearch instance is initializing")
                             url = 'https://' + cred["username"] + ':' + cred["password"] + '@' + cred["host"]
                             self.handles.add(

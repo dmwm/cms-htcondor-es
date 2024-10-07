@@ -1,6 +1,6 @@
 ### Simple Deployment Procedure
 
-In order to update the codebase in the vocms0240 virtual machine,
+In order to update the codebase in the vocms0241 virtual machine,
 
 - Please push your commits or open your PRs against "https://github.com/dmwm/cms-htcondor-es/tree/master".
 - In virtual machine, fetch: `git fetch --all`
@@ -32,13 +32,13 @@ https://cmsmonit-docs.web.cern.ch/cms-htcondor-es/spider/
 
 ## VENV
 
-- Current virtual machine has python3.6 and before deployment, new virtual environment should be created with `venv3_6`
+- Current virtual machine has python3.9 and before deployment, new virtual environment should be created with `venv3_9`
   name.
 - Requirements should be installed before cron jobs are activated.
 - To make migrations easy, please use meaningful "venv" names:
 
 ```
-cd /home/cmsjobmon/cms-htcondor-es && python3 -m venv venv3_X ** ./venv3_X/bin/pip install --no-cache-dir -r requirements.txt
+cd /home/cmsjobmon/cms-htcondor-es && python3 -m venv venv3_X && ./venv3_X/bin/pip install --no-cache-dir -r requirements.txt
 ```
 
 
@@ -70,18 +70,17 @@ export AFFILIATION_DIR_LOCATION="$SPIDER_WORKDIR/.affiliation_dir.json"
 | `.affiliation_dir.json`     | `$SPIDER_WORKDIR/.affiliation_dir.json` | stores affiliations of all users in JSON format            |
 | `checkpoint.json`           | `$SPIDER_WORKDIR/checkpoint.json`       | last update times of each history schedd                   |
 | `collectors.json`           | `$SPIDER_WORKDIR/etc/collectors.json`   | Collectors that will be queried                            |
-| `es_conf.json`              | `$SPIDER_WORKDIR/etc/es_conf.json`      | CMS es-cms OpenSearch host, username, password credentials |
+| `es_conf.json`              | `$SPIDER_WORKDIR/etc/es_conf.json`      | CMS os-cms OpenSearch host, username, password credentials |
 | `JobMonitoring.json`        | `$SPIDER_WORKDIR/JobMonitoring.json`    | ClassAds to JSON format conversion schema                  |
-| `last_mappings.json`        | `$SPIDER_WORKDIR/last_mappings.json`    | CMS es-cms OpenSearch index mapping                        |
+| `last_mappings.json`        | `$SPIDER_WORKDIR/last_mappings.json`    | CMS os-cms OpenSearch index mapping                        |
 | `log, log_history, log_aff` | `$SPIDER_WORKDIR/log*`                  | Log directories                                            |
-| `venv`                      | `$SPIDER_WORKDIR/venv`(will deprecate)  | old venv                                                   |
 | `venv3_6`                   | `$SPIDER_WORKDIR/venv3_6`               | used venv                                                  |
 
 ## Prod es_conf.json format
 
 **CONVENTIONS:**
 
-- Host name ends with `/es` refers to **OpenSearch** otherwise it is behaved as **ElasticSearch** and port
+- Host name ends with `/os` refers to **OpenSearch** otherwise it is behaved as **ElasticSearch** and port
   should be provided.
 - No need to provide port for OpenSearch.
 - Supports multiple clusters and send data to all of them without querying schedds again.
@@ -96,7 +95,7 @@ export AFFILIATION_DIR_LOCATION="$SPIDER_WORKDIR/.affiliation_dir.json"
     "password": "pass"
   },
   {
-    "host": "es-cmsY(OpenSearch).cern.ch/es",
+    "host": "os-cmsY(OpenSearch).cern.ch/os",
     "username": "user",
     "password": "pass"
   }
@@ -107,8 +106,8 @@ Example scenario to send data to 2 OpenSearch instances:
 
 ```json
 [
-  {"host": "es-cms1.cern.ch/es", "username": "user", "password": "pass"},
-  {"host": "es-cms2.cern.ch/es", "username": "user", "password": "pass"}
+  {"host": "os-cms1.cern.ch/os", "username": "user", "password": "pass"},
+  {"host": "os-cms2.cern.ch/os", "username": "user", "password": "pass"}
 ]
 ```
 
@@ -138,8 +137,8 @@ Example scenario to send data to 2 OpenSearch instances:
 
 - Rollback to previous commit, directory&file structure and venv.
 - Rollback to back-up checkpoint: `mv checkpoint.json.back checkpoint.json`.
-- Delete documents from es-cms.cern.ch `cms-*` indices with `metadata.spider_git_hash='problematic_hash'`.
-- Ask MONIT to delete documents from monit-opensearch.cern.ch `monit_prod_condor_raw_metrics*` indices
+- Delete documents from os-cms.cern.ch `cms-*` indices with `metadata.spider_git_hash='problematic_hash'`.
+- Ask MONIT to delete documents from monit-opensearch.cern.ch `monit_prod_condor_raw_metric*` indices
   with `data.metadata.spider_git_hash='problematic_hash'`.
 - Inform and announce HDFS users to filter out `metadata.spider_git_hash='problematic_hash'` in their Spark jobs.
     - HDFS data deletion: it is not easy because of Flume data. It can be deleted after a couple of days later. Discuss
@@ -173,14 +172,14 @@ In any case, data loss is inevitable for Condor Job Monitoring schedds Queue dat
 
 ```
 # Get indices
-curl -s -XGET --negotiate -u $user:$pass https://es-cms1.cern.ch/es/_cat/indices | grep ceyhun | sort
+curl -s -XGET --negotiate -u $user:$pass https://os-cms1.cern.ch/os/_cat/indices | grep ceyhun | sort
 
-# Delete one indice
-curl -s -XDELETE --negotiate -u $user:$pass https://es-cms1.cern.ch/es/cms-test-ceyhun-2023-02-21
+# Delete one index
+curl -s -XDELETE --negotiate -u $user:$pass https://os-cms1.cern.ch/os/cms-test-ceyhun-2023-02-21
 
 # Deletion command(NO RUN, just echo) for multiple indices with regex
-echo 'curl -XDELETE --negotiate -u $user:$pass' https://es-cms1.cern.ch/es/"$(
-     curl -s -XGET --negotiate -u $user:$pass https://es-cms1.cern.ch/es/_cat/indices/cms-test-ceyhun* | sort | awk '{ORS=","; print $3}'
+echo 'curl -XDELETE --negotiate -u $user:$pass' https://os-cms1.cern.ch/os/"$(
+     curl -s -XGET --negotiate -u $user:$pass https://os-cms1.cern.ch/os/_cat/indices/cms-test-ceyhun* | sort | awk '{ORS=","; print $3}'
 )"
 ```
 
