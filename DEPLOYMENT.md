@@ -30,6 +30,11 @@ https://cmsmonit-docs.web.cern.ch/cms-htcondor-es/spider/
 # 0 * * * * /bin/bash "/home/cmsjobmon/scripts/sourcesCompare_cron.sh"
 ```
 
+## Users
+
+- `cmsjobmon` user is used to run the cron jobs.
+- `logstash` user is used to run the Logstash service.
+
 ## VENV
 
 - Current virtual machine has python3.9 and before deployment, new virtual environment should be created with `venv3_9`
@@ -74,7 +79,7 @@ export AFFILIATION_DIR_LOCATION="$SPIDER_WORKDIR/.affiliation_dir.json"
 | `JobMonitoring.json`        | `$SPIDER_WORKDIR/JobMonitoring.json`    | ClassAds to JSON format conversion schema                  |
 | `last_mappings.json`        | `$SPIDER_WORKDIR/last_mappings.json`    | CMS os-cms OpenSearch index mapping                        |
 | `log, log_history, log_aff` | `$SPIDER_WORKDIR/log*`                  | Log directories                                            |
-| `venv3_6`                   | `$SPIDER_WORKDIR/venv3_6`               | used venv                                                  |
+| `venv3_9`                   | `$SPIDER_WORKDIR/venv3_9`               | used venv                                                  |
 
 ## Prod es_conf.json format
 
