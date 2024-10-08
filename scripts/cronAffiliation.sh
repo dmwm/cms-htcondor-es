@@ -6,6 +6,6 @@ export PYTHONPATH="$SPIDER_WORKDIR/src/:$PYTHONPATH"
 export REQUESTS_CA_BUNDLE="/etc/pki/ca-trust/extracted/openssl/ca-bundle.trust.crt"
 
 cd $SPIDER_WORKDIR || exit
-source "$SPIDER_WORKDIR/venv3_6/bin/activate"
+source "$SPIDER_WORKDIR/venv3_9/bin/activate"
 
 python scripts/affiliation_cache.py --output "$AFFILIATION_DIR_LOCATION" --days 1

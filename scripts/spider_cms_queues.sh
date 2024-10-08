@@ -17,7 +17,7 @@ _QUERY_POOL_SIZE=16
 _UPLOAD_POOL_SIZE=8
 
 cd $SPIDER_WORKDIR || exit
-source "$SPIDER_WORKDIR/venv3_6/bin/activate"
+source "$SPIDER_WORKDIR/venv3_9/bin/activate"
 
 # ./scripts/cronAffiliation.sh # First run
 
