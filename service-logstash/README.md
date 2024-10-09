@@ -1,6 +1,6 @@
 ### Setup
 
-We have set up a logstash/filebeat instance on vocms0240.cern.ch to feed log files from running spider_cms cron job processes to
+We have set up a logstash/filebeat instance on vocms0241.cern.ch to feed log files from running spider_cms cron job processes to
 https://os-cms.cern.ch `logmon` tenant to monitor. The way it works is that filebeat tails the logfiles and preformats the
 harvested messages, adding tags about the hostname, log-path, etc, and then feeds them to logstash. Logstash attempts to
 match the messages to a set of known formats, which extracts information from the messages, stores it in fields, and
@@ -58,7 +58,7 @@ tar -xvf logstash-oss-8.15.0-linux-x86_64.tar.gz
 mv logstash-8.15.0 logstash
 
 # Prepare config files in /etc/logstash
-cp -R ~/cms-htcondor-es/service-logstash/logstash/etc /etc/logstash/
+cp -R /home/cmsjobmon/cms-htcondor-es/service-logstash/logstash/etc /etc/logstash/
 
 # PROVIDE logmon-spider password which can be found in GitLab secrets/es-cms-opensearch/logmon_spider_tenant_secret
 cat /etc/logstash/conf.d/logstash.conf | grep -in "<password>"
@@ -67,7 +67,7 @@ cat /etc/logstash/conf.d/logstash.conf | grep -in "<password>"
 chown -R logstash /etc/logstash
 
 # Copy filebeat.service into systemd and start logstash
-cp ~/cms-htcondor-es/service-logstash/logstash/logstash.service /usr/lib/systemd/system/logstash.service
+cp /home/cmsjobmon/cms-htcondor-es/service-logstash/logstash/logstash.service /usr/lib/systemd/system/logstash.service
 systemctl start logstash
 
 # Follow logs and fix if there is a problem [permission problem, new config in jvm, startup options, etc.]
@@ -112,14 +112,14 @@ cd /usr/share
 
 # Get OSS version
 wget https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-oss-8.15.0-linux-x86_64.tar.gz
-tar xvf filebeat-oss-8.15.0-linux-x86_64.tar.gz
+tar -xvf filebeat-oss-8.15.0-linux-x86_64.tar.gz
 mv filebeat-8.15.0-linux-x86_64 filebeat
 
 # Prepare config files in /etc/logstash
-cp -R ~/cms-htcondor-es/service-logstash/filebeat/etc/filebeat.yml /etc/filebeat/filebeat.yml
+cp -R /home/cmsjobmon/cms-htcondor-es/service-logstash/filebeat/etc/filebeat.yml /etc/filebeat/filebeat.yml
 
 # Copy filebeat.service into systemd and start filebeat
-cp ~/cms-htcondor-es/service-logstash/filebeat/filebeat.service /usr/lib/systemd/system/filebeat.service
+cp /home/cmsjobmon/cms-htcondor-es/service-logstash/filebeat/filebeat.service /usr/lib/systemd/system/filebeat.service
 systemctl start filebeat
 
 # Follow logs
