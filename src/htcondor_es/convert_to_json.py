@@ -653,6 +653,8 @@ def convert_to_json(
     if "CRAB_Id" in ad:
         result["FormattedCrabId"] = get_formatted_CRAB_Id(ad.get("CRAB_Id"))
 
+    result["AccountingGroupClass"] = ad.get("AccountingGroup", "unknown").split('.', 1)[0]
+
     if cms:
         ad.setdefault(
             "MATCH_EXP_JOB_GLIDEIN_CMSSite",
