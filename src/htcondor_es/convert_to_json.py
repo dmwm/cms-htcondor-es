@@ -673,6 +673,7 @@ def convert_to_json(
         result["CondorExitCode"] = ad["ExitCode"]
 
     if cms:
+        result["task"] = ad.get("WMAgent_SubTaskName")  # add "task" field to unify with WMArchive
         result["CMS_JobType"] = str(  # temp fix for UCSD jobs since they come with an unknown type
             ad.get("CMS_JobType", "Analysis" if analysis or pool_name == "UCSD" else "Unknown")
         )
