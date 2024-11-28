@@ -1,8 +1,8 @@
-FROM cern/cc7-base:20230201-1.x86_64 as cern
+FROM cern/alma9-base:20241101-1.x86_64 as cern
 
 # Do not use python:alpine because of long build time and some bugs
-# Prodcution spider uses 3.6
-FROM python:3.6-slim
+# Production spider uses 3.9
+FROM python:3.9-slim
 
 ENV HOME "/home/cmsjobmon"
 ENV PATH "${PATH}:/usr/bin/"
@@ -37,12 +37,9 @@ RUN mkdir $HOME/.globus && \
 
 # openssl is required for python requirements module. git procps unzip libaio1 wget are exist to be able to debug k8s pod
 RUN apt-get update && apt-get install -y bash apt-utils git curl procps unzip libaio1 wget openssl nano jq vim cron && \
-    curl -k -O -L https://storage.googleapis.com/kubernetes-release/release/$(curl -s $kubectl_stable_version)/bin/linux/amd64/kubectl && \
-    mv kubectl /usr/bin && \
-    chmod +x /usr/bin/kubectl && \
     chown -R cmsjobmon $HOME && \
-    python3 -m venv $HOME/cms-htcondor-es/venv3_6 && \
-    $HOME/cms-htcondor-es/venv3_6/bin/pip install --no-cache-dir -r $HOME/cms-htcondor-es/requirements.txt
+    python3 -m venv $HOME/cms-htcondor-es/venv3_9 && \
+    $HOME/cms-htcondor-es/venv3_9/bin/pip install --no-cache-dir -r $HOME/cms-htcondor-es/requirements.txt
 
 USER cmsjobmon
 

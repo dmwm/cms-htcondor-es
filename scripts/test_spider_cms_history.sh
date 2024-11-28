@@ -27,7 +27,7 @@ _UPLOAD_POOL_SIZE=1
 # ----- : =========== : -----
 
 cd $SPIDER_WORKDIR || exit
-source "$SPIDER_WORKDIR/venv3_6/bin/activate"
+source "$SPIDER_WORKDIR/venv3_9/bin/activate"
 
 # Clean test run, remove affiliation and checkpoint files before test run.
 #rm -f "$SPIDER_WORKDIR"/.affiliation_dir.json
