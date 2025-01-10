@@ -499,6 +499,7 @@ running_fields = {
     "JobLastStartDate",
     "JobUniverse",
     "KEvents",
+    "MachineAttrCMSSF_ResourceType0",
     "MachineAttrCMSSubSiteName0",
     "MachineAttrGLIDEIN_OVERLOAD_ENABLED0",
     "MaxWallTimeMins",
