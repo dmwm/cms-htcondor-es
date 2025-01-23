@@ -675,8 +675,8 @@ def convert_to_json(
 
     if cms:
         result["task"] = ad.get("WMAgent_SubTaskName")  # add "task" field to unify with WMArchive
-        result["CMS_JobType"] = str(  # temp fix for UCSD jobs since they come with an unknown type
-            ad.get("CMS_JobType", "Analysis" if analysis or pool_name == "UCSD" else "Unknown")
+        result["CMS_JobType"] = str(
+            ad.get("CMS_JobType", "Analysis" if analysis else "Unknown")
         )
         result["CRAB_AsyncDest"] = str(ad.get("CRAB_AsyncDest", "Unknown"))
         result["WMAgent_TaskType"] = ad.get("WMAgent_SubTaskName", "/UNKNOWN").rsplit(
@@ -686,8 +686,9 @@ def convert_to_json(
         result["Campaign"] = guessCampaign(ad, analysis, result["CMS_CampaignType"])
         task_type = result.get("CMS_extendedJobType")
         if task_type == "UNKNOWN" or task_type is None:
-            task_type = result.get("CMS_TaskType",  # temp fix for UCSD jobs since they come with an unknown type
-                                   result["CMS_JobType"] if analysis or pool_name == "UCSD" else guessTaskType(ad))
+            task_type = result.get(
+                "CMS_TaskType", result["CMS_JobType"] if analysis else guessTaskType(ad)
+            )
         result["TaskType"] = task_type
         result["Workflow"] = guessWorkflow(ad, analysis)
     now = time.time()
