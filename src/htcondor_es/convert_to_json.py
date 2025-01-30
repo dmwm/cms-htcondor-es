@@ -1094,7 +1094,7 @@ def guess_campaign_type(ad, analysis):
         return "Data Ultralegacy"
     elif re.match(r".*Phase2.*", camp):
         return "Phase2 requests"
-    elif re.match(r".*Run3.*", camp):
+    elif re.match(r".*(Run3|RunIII).*", camp):
         return "Run3 requests"
     elif "RVCMSSW" in camp:
         return "RelVal"
