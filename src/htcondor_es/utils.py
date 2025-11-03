@@ -137,8 +137,11 @@ def set_up_logging(args):
     log_file = os.path.join(args.log_dir, "spider_cms.log")
     filehandler = logging.handlers.RotatingFileHandler(log_file, maxBytes=100000)
     filehandler.setFormatter(
-        logging.Formatter("%(asctime)s : %(name)s:%(levelname)s - %(message)s")
+        logging.Formatter(
+            "%(asctime)s : %(name)s:%(levelname)s [PID %(process)d] - %(message)s"
+        )
     )
+
     logger.addHandler(filehandler)
 
     if os.isatty(sys.stdout.fileno()):

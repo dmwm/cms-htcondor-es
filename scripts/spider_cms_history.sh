@@ -12,7 +12,7 @@ export CMS_HTCONDOR_BROKER="cms-mb.cern.ch"
 _ES_INDEX_TEMPLATE="cms"
 
 _LOGDIR=$SPIDER_WORKDIR/log_history/
-_LOG_LEVEL="WARNING"
+_LOG_LEVEL="DEBUG"
 _ALERT_EMAILS="cms-comp-monit-alerts@cern.ch"
 _ES_BUNCH_SIZE=100
 _QUERY_POOL_SIZE=16
