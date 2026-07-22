@@ -693,9 +693,14 @@ def convert_to_json(
         result["Workflow"] = guessWorkflow(ad, analysis)
     now = time.time()
     if ad.get("JobStatus") == 2 and (ad.get("EnteredCurrentStatus", now + 1) < now):
-        ad["RemoteWallClockTime"] = int(now - ad["EnteredCurrentStatus"])
-        ad["CommittedTime"] = ad["RemoteWallClockTime"]
-    result["WallClockHr"] = ad.get("RemoteWallClockTime", 0) / 3600.0
+         # for a running job we recompute elapsed time metrics which exclude past evictions
+         timeSinceJobStart =   int(now - ad["EnteredCurrentStatus"]) 
+         ad["LastRemoteWallClockTime"] = timeSinceJobStart  # otherwise would be the time for last evicted attempt
+         ad["CommittedTime"] =  timeSinceJobStart  # this is simply to update to current time (useless?)
+    # following line now applies to all situtations and ensures that WallClockHr is
+    # computed excluding evictions, like HTC does for RemoteSystemCpu and RemoteUserCpu
+    # This allows us to evaluate consistently CpuEfficiency for both running and completed jobs
+    result["WallClockHr"] = ad.get("LastRemoteWallClockTime", 0) / 3600.0
 
     result["PilotRestLifeTimeMins"] = -1
     if analysis and ad.get("JobStatus") == 2 and "LastMatchTime" in ad:
