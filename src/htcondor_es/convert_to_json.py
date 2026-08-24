@@ -37,7 +37,6 @@ string_vals = {
     "CRAB_ISB",
     "CRAB_PostJobStatus",
     "CRAB_Workflow",
-    "CRAB_UserRole",
     "CMSGroups",
     "CRAB_UserHN",
     "CRAB_UserGroup",
@@ -422,6 +421,7 @@ no_analysis = {
 
 bool_vals = {
     "CurrentStatusUnknown",
+    "CRAB_IgnoreLocality",
     "CRAB_Publish",
     "CRAB_SaveLogsFlag",
     "CRAB_TransferOutputs",
@@ -924,8 +924,8 @@ def convert_to_json(
     # Affiliation data:
     if aff_mgr:
         _aff = None
-        if "CRAB_UserHN" in result:
-            _aff = aff_mgr.getAffiliation(login=result["CRAB_UserHN"])
+        if "HN" in result:
+            _aff = aff_mgr.getAffiliation(login=result["HN"])
         elif "x509userproxysubject" in result:
             _aff = aff_mgr.getAffiliation(dn=result["x509userproxysubject"])
 
@@ -1064,7 +1064,7 @@ def guessCampaign(ad, analysis, cms_campaign_type):
     if ad.get("CMS_CampaignName"):
         return ad.get("CMS_CampaignName")
     if analysis:
-        return "crab_" + ad.get("CRAB_UserHN", "UNKNOWN")
+        return "crab_" + ad.get("HN", "UNKNOWN")
     if camp.startswith("PromptReco"):
         return "PromptReco"
     if camp.startswith("Repack"):
