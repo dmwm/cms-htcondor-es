@@ -1153,7 +1153,8 @@ def isAnalysisJob(ad):
     the CMS_Type/CMS_JobType classads in the job.
     """
     if ad.get("CMS_Type", "unknown").lower() == "analysis" \
-        or ad.get("CMS_JobType", "unknown") == "Analysis":
+        or ad.get("CMS_JobType", "unknown") == "Analysis" \
+        or ad.get("CMS_JobType", "unknown") == "PrivateMC":
         return True
 
     return False
