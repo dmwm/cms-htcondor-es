@@ -34,7 +34,7 @@ string_vals = {
     "CRAB_JobSW",
     "CRAB_JobArch",
     "CRAB_Id",
-    "CRAB_ISB",
+    "CRAB_ForcefullyTerminated",
     "CRAB_PostJobStatus",
     "CRAB_Workflow",
     "CRAB_UserRole",
