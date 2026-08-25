@@ -37,7 +37,6 @@ string_vals = {
     "CRAB_ForcefullyTerminated",
     "CRAB_PostJobStatus",
     "CRAB_Workflow",
-    "CRAB_UserRole",
     "CMSGroups",
     "CRAB_UserHN",
     "CRAB_UserGroup",
@@ -422,6 +421,7 @@ no_analysis = {
 
 bool_vals = {
     "CurrentStatusUnknown",
+    "CRAB_IgnoreLocality",
     "CRAB_Publish",
     "CRAB_SaveLogsFlag",
     "CRAB_TransferOutputs",
