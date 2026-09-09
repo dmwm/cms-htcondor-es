@@ -200,6 +200,7 @@ int_vals = {
 date_vals = {
     "CompletionDate",
     "CRAB_TaskCreationDate",
+    "CRAB_PostJobLastUpdate",
     "EnteredCurrentStatus",
     "JobCurrentStartDate",
     "JobCurrentStartExecutingDate",
