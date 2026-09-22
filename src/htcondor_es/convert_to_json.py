@@ -736,7 +736,7 @@ def convert_to_json(
     result["RequestCpus"] = ad["RequestCpus"]
 
     result["CoreHr"] = (
-        ad.get("RequestCpus", 1.0) * int(ad.get("RemoteWallClockTime", 0)) / 3600.0
+        ad.get("RequestCpus", 1.0) * int(ad.get("LastRemoteWallClockTime", 0)) / 3600.0
     )
     result["CommittedCoreHr"] = (
         ad.get("RequestCpus", 1.0) * ad.get("CommittedTime", 0) / 3600.0
